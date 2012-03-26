@@ -1,0 +1,4 @@
+23	chr1	3500	4340	1270	N	3000000	centromere	no
+20	chr2	2500	3130	770	N	3000000	centromere	no
+2	chr3	1300	1700	784	N	3000000	centromere	no
+1	chrX	5862	6163	583	N	3000000	centromere	no
