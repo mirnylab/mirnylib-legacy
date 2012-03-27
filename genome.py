@@ -13,25 +13,134 @@ class Genome():
     Glossary
     --------
 
-    id : str
-        a string label of a chromosome. Examples: 'X', 'Y', '1', '22'.
+    positional identifier : a number that can be decomposed into a tuple 
+        (chromosome index, base pair).
 
-    idx : int
-        a zero-based index of a chromosome. 
-        For numbered chromosomes it is (id - 1).
-        The 'X', 'Y' and 'M' chromosomes are assigned an index after the 
-        numbered chromosomes, i.e. for human their indices are 22, 23 and 24.
-        The rest of the chromosomes are indexed after XYM in alphabetical order.
+    chromosome string label : the name of a chromosome. 
+        Examples: 'X', 'Y', '1', '22'.
+
+    chromosome index : a zero-based numeric index of a chromosome.
+        For numbered chromosomes it is int(label) - 1, unless some of the 
+        chromosomes are absent. The chromosomes 'X', 'Y', 'M' are indexed 
+        after, the rest is indexed in alphabetical order.
+
+    concatenated genome : a genome with all chromosomes merged together
+        into one sequence.
+
+    binned genome : a genome splitted into bins `resolution` bp each.
+
+    binned concatenated genome : a genome with chromosomes binned and merged.
+        GOTCHA: since the genome is binned FIRST and merged after that, the 
+        number of bins may be greater than (sum of lengths / resolution).
+        The reason for this behavior is that the last bins in the chromosomes
+        are usually shorter than `resolution`, but still count as a full bin.
 
     Attributes
     ----------
-    ids : list of str
+
+    chrmCount : int
+        the total number of chromosomes.
+
+    chrmLabels : list of str
         a list of chromosomal IDs sorted in ascending index order.
 
-    fasta_names : a list of FASTA files sorted in ascending index order.
+    fastaNames : list of str
+        FASTA files for sorted in ascending index order of respective
+        chromosomes.
 
+    genomeFolder : str
+        The path to the folder with the genome.
+
+    label2idx : dict
+        a dictionary for conversion between string chromosome labels and
+        zero-based indices.
+
+    idx2label : dict
+        a dictionary for conversion between zero-based indices and
+        string chromosome labels.
+
+    seqs : list of str
+        a list of chromosome sequences. Loads on demand.
+
+    chrmLens : list of int
+        The lengths of chromosomes.
+       
+    maxChrmLen : int
+        The length of the longest chromosome.
+
+    cntrStarts : array of int
+        The start positions of the centromeres.
+
+    cntrMids : array of int
+        The middle positions of the centromeres.
+
+    cntrEnds : array of int
+        The end positions of the centromeres.
+
+    -------------------------------------------------------------------------------
+
+    The following attributes are calculated after setResolution() is called:
+
+    Attributes
+    ----------
+
+    resolution : int
+        The size of a bin for the binned values.
+
+    chrmLensBin : array of int
+        The lengths of chromosomes in bins.
+
+    chrmStartsBinCont : array of int
+        The positions of the first bins of the chromosomes in the 
+        concatenated genome.
+        
+    chrmEndsBinCont : array of int
+        The positions of the last plus one bins of the chromosomes in the 
+        concatenated genome.
+
+    chrmIdxBinCont : array of int
+        The index of a chromosome in each bin of the concatenated genome.
+
+    posBinCont : array of int
+        The index of the first base pair in a bin in the concatenated 
+        genome.
+
+    cntrMidsBinCont : array of int
+        The position of the middle bin of a centromere in the concatenated
+        genome.
+
+    GCBin : list of arrays of float
+        % of GC content of bins in individual chromosomes.
+
+    -------------------------------------------------------------------------------
+        
+    The following attributes are calculated after setEnzyme() is called:
+
+    Attributes
+    ----------
+
+    rsites : list of arrays of int
+        The indices of the first base pairs of restriction fragments 
+        in individual chromosomes.
+
+    rfragMids : list of arrays of int
+        The indices of the middle base pairs of restriction fragments
+        in individual chromosomes.
+        
+    rsiteIds : array of int
+        The position identifiers of the first base pairs of restriction 
+        fragments.
+
+    rsiteMidIds : array of int
+        The position identifiers of the middle base pairs of restriction 
+        fragments.
+
+    rsiteChrms : array of int 
+        The indices of chromosomes for restriction sites in corresponding 
+        positions of rsiteIds and rsiteMidIds.
 
     '''
+
     def _memoize(self, func_name):
         '''Local version of joblib memoization.
         The key difference is that _memoize() takes into account only the 
@@ -80,78 +189,79 @@ class Genome():
 
         self.chr_file_template = chr_file_template
 
-        # Reading the basic properties of the chromosomes.
-        self._read_fasta_names()
-        self.chromosomes = self.loadChromosomeLength()   #loading cached chromosome length
-        self.chromosomeLength = self.chromosomes
-        self.maxChromLen = max(self.chromosomes)  
-        self.fragIDmult = self.maxChromLen + 1000   #to be used when calculating fragment IDs for HiC  
-        self._parseGapfile()  # Parsing gap file and mark the centromere positions.
+        # Scan the folder and obtain the list of chromosomes.
+        self._scanGenomeFolder()
 
-    def _read_fasta_names(self):
-        self.fasta_names = [os.path.join(self.genomeFolder, i)
+        # Get the lengths of the chromosomes.
+        self.chrmLens = self.getChrmLen()   
+        self.maxChrmLen = max(self.chrmLens)  
+        self.fragIDmult = self.maxChrmLen + 1000   #to be used when calculating fragment IDs for HiC  
+
+        # Parse a gap file and mark the centromere positions.
+        self._parseGapfile()  
+
+    def _scanGenomeFolder(self):
+        self.fastaNames = [os.path.join(self.genomeFolder, i)
             for i in glob.glob(os.path.join(
                 self.genomeFolder, self.chr_file_template % ('*',)))]
 
-        if len(self.fasta_names) == 0: 
+        if len(self.fastaNames) == 0: 
             raise('No Genome files found')
 
         # Read chromosome IDs.
-        self.chrm_ids = []
-        for i in self.fasta_names: 
+        self.chrmLabels = []
+        for i in self.fastaNames: 
             chrm = re.search(self.chr_file_template % ('(.*)',), i).group(1)
-            self.chrm_ids.append(chrm)
+            self.chrmLabels.append(chrm)
     
         # Convert IDs to indices:
         # A. Convert numerical IDs.
-        num_ids = [i for i in self.chrm_ids if i.isdigit()]
+        num_ids = [i for i in self.chrmLabels if i.isdigit()]
         # Sort IDs naturally, i.e. place '2' before '10'.
         num_ids.sort(key=lambda x: int(re.findall(r'\d+$', x)[0]))
         
-        self.chromosomeCount = len(num_ids)
-        self.id_to_idx = dict([(num_ids[i], int(i)) for i in xrange(len(num_ids))])
-        self.idx_to_id = dict([(int(i), num_ids[i]) for i in xrange(len(num_ids))])
+        self.chrmCount = len(num_ids)
+        self.label2idx = dict([(num_ids[i], int(i)) for i in xrange(len(num_ids))])
+        self.idx2label = dict([(int(i), num_ids[i]) for i in xrange(len(num_ids))])
 
         # B. Convert non-numerical IDs. Give the priority to XYM over the rest.
-        nonnum_ids = [i for i in self.chrm_ids if not i.isdigit()]
+        nonnum_ids = [i for i in self.chrmLabels if not i.isdigit()]
         for i in ['M', 'Y', 'X']:
             if i in nonnum_ids:
                 nonnum_ids.pop(nonnum_ids.index(i))
                 nonnum_ids.insert(0, i)
 
         for i in nonnum_ids:
-            self.id_to_idx[i] = self.chromosomeCount
-            self.idx_to_id[self.chromosomeCount] = i
-            self.chromosomeCount += 1
+            self.label2idx[i] = self.chrmCount
+            self.idx2label[self.chrmCount] = i
+            self.chrmCount += 1
 
-        # Sort fasta_names and self.chrm_ids according to the indices:
-        self.chrm_ids = zip(*sorted(self.idx_to_id.items(), key=lambda x: x[0]))[1]
-        self.fasta_names = [
+        # Sort fastaNames and self.chrmLabels according to the indices:
+        self.chrmLabels = zip(*sorted(self.idx2label.items(),
+                                      key=lambda x: x[0]))[1]
+        self.fastaNames = [
             os.path.join(self.genomeFolder, self.chr_file_template % i)
-            for i in self.chrm_ids]
+            for i in self.chrmLabels]
 
-    def loadChromosomeLength(self):
+    def getChrmLen(self):
         # At the first call redirects itself to a memoized private function.
-        self.loadChromosomeLength = self._memoize('_loadChromosomeLength')
-        return self.loadChromosomeLength()
+        self.getChrmLen = self._memoize('_getChrmLen')
+        return self.getChrmLen()
 
-    def _loadChromosomeLength(self):
-        self._loadSequence()
-        return numpy.array([len(self.genome[i]) 
-                            for i in xrange(0, self.chromosomeCount)])     
-    
-    def _loadSequence(self):
-        '''Load genomic sequence if it has not been loaded before.'''
-        if hasattr(self,"genome"): 
-            return 
-        self.genome = {}
-        for i in xrange(self.chromosomeCount):
-            self.genome[i] = Bio.SeqIO.read(open(self.fasta_names[i]), 'fasta')
-        
-    def getSequence(self, chromosome, start, end):
-        if not hasattr(self, "genome"):
-            self._loadSequence()        
-        return self.genome[chromosome][start:end]
+    def _getChrmLen(self):
+        return numpy.array([len(self.seqs[i]) 
+                            for i in xrange(0, self.chrmCount)])     
+    @property 
+    def seqs(self):
+        if not hasattr(self, "_seqs"): 
+            self._seqs = []
+            for i in xrange(self.chrmCount):
+                self._seqs.append(Bio.SeqIO.read(open(self.fastaNames[i]), 
+                                                 'fasta'))
+        return self._seqs
+
+    def getSeq(self, chrmIdx, start, end):
+        return self.seqs[chrmIdx][start:end]
 
     def _parseGapfile(self):
         """Parse a .gap file to determine centromere positions.
@@ -163,118 +273,128 @@ class Genome():
             print "Gap file not found! \n Please provide a link to a gapfile or put a file genome_name.gap in a genome directory"
             exit() 
 
-        self.centromereStarts = -1 * numpy.ones(self.chromosomeCount,int)
-        self.centromereEnds = -1 * numpy.zeros(self.chromosomeCount,int)
+        self.cntrStarts = -1 * numpy.ones(self.chrmCount,int)
+        self.cntrEnds = -1 * numpy.zeros(self.chrmCount,int)
 
         for line in gapfile:
             splitline = line.split()
             if splitline[7] == 'centromere':
-                chr_id = splitline[1][3:]
-                if chr_id in self.id_to_idx:
-                    chr_idx = self.id_to_idx[chr_id]
-                    self.centromereStarts[chr_idx] = int(splitline[2])
-                    self.centromereEnds[chr_idx] = int(splitline[3])
+                chrm_str = splitline[1][3:]
+                if chrm_str in self.label2idx:
+                    chrm_idx = self.label2idx[chrm_str]
+                    self.cntrStarts[chrm_idx] = int(splitline[2])
+                    self.cntrEnds[chrm_idx] = int(splitline[3])
 
-        self.centromeres = (self.centromereStarts + self.centromereEnds) / 2
-        lowarms = numpy.array(self.centromereStarts)
-        higharms = numpy.array(self.chromosomes) - numpy.array(self.centromereEnds)
-        self.maximumChromosomeArm = max(lowarms.max(), higharms.max())
-        self.maximumChromosome = max(self.chromosomes)          
+        self.cntrMids = (self.cntrStarts + self.cntrEnds) / 2
+        lowarms = numpy.array(self.cntrStarts)
+        higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
+        self.maxChrmArm = max(lowarms.max(), higharms.max())
             
-    def createMapping(self, resolution):
-        self.resolution = resolution
-        self.chromosomeSizes = self.chromosomes / self.resolution + 1 
-        self.chromosomeStarts = numpy.r_[0, numpy.cumsum(self.chromosomeSizes)[:-1]]
-        self.centromerePositions = (self.chromosomeStarts 
-                                    + self.centromeres / self.resolution)
-        self.chromosomeEnds = numpy.cumsum(self.chromosomeSizes)
-        self.N = self.chromosomeEnds[-1]
-        self.chromosomeIndex = numpy.zeros(self.N,int)
-        self.positionIndex = numpy.zeros(self.N,int)        
-        for i in xrange(self.chromosomeCount):
-            self.chromosomeIndex[self.chromosomeStarts[i]:self.chromosomeEnds[i]] = i
-            self.positionIndex[self.chromosomeStarts[i]:self.chromosomeEnds[i]] = (
-                numpy.arange(-self.chromosomeStarts[i]+self.chromosomeEnds[i])
-                * self.resolution)
+    def setResolution(self, resolution):
+        self.resolution = int(resolution)
+
+        # Bin chromosomes.
+        self.chrmLensBin = self.chrmLens / self.resolution + 1 
+        self.chrmStartsBinCont = numpy.r_[0, numpy.cumsum(self.chrmLensBin)[:-1]]
+        self.chrmEndsBinCont = numpy.cumsum(self.chrmLensBin)
+        self.numBins = self.chrmEndsBinCont[-1]
+
+        self.chrmIdxBinCont = numpy.zeros(self.numBins, int)
+        for i in xrange(self.chrmCount):
+            self.chrmIdxBinCont[
+                self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]] = i
+
+        self.posBinCont = numpy.zeros(self.numBins, int)        
+        for i in xrange(self.chrmCount):
+            self.posBinCont[
+                self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]] = (
+                    self.resolution
+                    * numpy.arange(- self.chrmStartsBinCont[i] 
+                                   + self.chrmEndsBinCont[i]))
+
+        # Bin centromeres.
+        self.cntrMidsBinCont = (self.chrmStartsBinCont
+                               + self.cntrMids / self.resolution)
+
+        # Bin GC content.
+        self.GCBin = self.getGCBin(self.resolution)
                     
-    def getGC(self,chromosome,start,end):
+    def getGC(self, chrmIdx, start, end):
         "Calculate the GC content of a region."
-        seq = self.getSequence(chromosome,start,end)
+        seq = self.getSeq(chrmIdx, start, end)
         return Bio.SeqUtils.GC(seq.seq)
 
-    def getBinnedGCContent(self, resolution):
-        # At the first call redirects itself to a memoized private function.
-        self.getBinnedGCContent = self._memoize('_getBinnedGCContent')
-        return self.getBinnedGCContent(resolution)
+    def getGCBin(self, resolution):
+        # At the first call the function rewrites itself with a memoized 
+        # private function.
+        self.getGCBin = self._memoize('_getGCBin')
+        return self.getGCBin(resolution)
     
-    def _getBinnedGCContent(self, resolution):
-        binnedGC = []
-        for chromNum in xrange(self.chromosomeCount):
-            binnedGC.append([])
-            for j in xrange(self.chromosomes[chromNum] / resolution + 1):
-                binnedGC[chromNum].append(
-                    self.getGC(chromNum+1, j*resolution, (j + 1) * resolution))
-                print "Chrom:", chromNum, "bin:", j
-        return binnedGC
+    def _getGCBin(self, resolution):
+        GCBin = []
+        for chrm in xrange(self.chrmCount):
+            chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
+            GCBin.append(numpy.ones(chrmSizeBin, dtype=numpy.float))
+            for j in xrange(chrmSizeBin):
+                GCBin[chrm][j] = self.getGC(
+                    chrm, j * int(resolution), (j + 1) * int(resolution))
+        return GCBin
 
-    def getRsitesRfrags(self, enzymeName):
+    def getRsites(self, enzymeName):
         # At the first call redirects itself to a memoized private function.
-        self.getRsitesRfrags = self._memoize('_getRsitesRfrags')
-        return self.getRsitesRfrags(enzymeName)
+        self.getRsites = self._memoize('_getRsites')
+        return self.getRsites(enzymeName)
 
-    def _getRsitesRfrags(self, enzymeName):
-        """returns: tuple(rsiteMap, rfragMap) 
+    def _getRsites(self, enzymeName):
+        """Returns: tuple(rsites, rfrags) 
         Finds restriction sites and mids of rfrags for a given enzyme
         Note that there is one extra rsite at beginning and end of chromosome
         Note that there are more rsites than rfrags (by 1)"""
         
         #Memorized function
-        self._loadSequence()
         enzymeSearchFunc = eval('Bio.Restriction.%s.search' % enzymeName)
-        rsiteMap = {}
-        rfragMap = {}        
-        for i in xrange(self.chromosomeCount):
-            rsites = numpy.r_[
-                0, numpy.array(enzymeSearchFunc(self.genome[i].seq)) + 1, 
-                len(self.genome[i].seq)] 
-            rfrags = (rsites[:-1] + rsites[1:]) / 2
-            rsiteMap[i] = rsites
-            rfragMap[i] = rfrags          
-        return rsiteMap, rfragMap 
+        rsites = []
+        rfragMids = []
+        for i in xrange(self.chrmCount):
+            rsites.append(numpy.r_[
+                0, numpy.array(enzymeSearchFunc(self.seqs[i].seq)) + 1, 
+                len(self.seqs[i].seq)])
+            rfragMids.append((rsites[i][:-1] + rsites[i][1:]) / 2)
+
+        # Remove the last trivial restriction site (the sequence end)
+        # to equalize the number of points in rsites and rfragMids.
+        for i in xrange(len(rsites)):
+            rsites[i] = rsites[i][:-1]
+
+        return rsites, rfragMids
     
-    def _calculateRsiteIDs(self, enzymeName):
+    def setEnzyme(self, enzymeName):
         """Calculates rsite/rfrag positions and IDs for a given enzyme name 
         and memoizes them"""
-        rsiteMap, rfragMap = self.getRsitesRfrags(enzymeName)
-        # Now truncating one "fake" rsite at the end of each chr, 
-        # so that number of rsites matches number of rfrags.
-        for i in rsiteMap:
-            rsiteMap[i] = rsiteMap[i][:-1]
 
-        self.rsiteMap = rsiteMap 
-        self.rfragMap = rfragMap         
+        self.rsites, self.rfragMids = self.getRsites(enzymeName)
 
-        rsiteIDs = [self.rsiteMap[chrom] + chrm * self.fragIDmult 
-                    for chrm in xrange(self.chromosomeCount)]        
-        self.rsiteIDs = numpy.concatenate(rsiteIDs)
+        self.rsiteIds = numpy.concatenate(
+            [self.rsites[chrm] + chrm * self.fragIDmult 
+             for chrm in xrange(self.chrmCount)])
 
-        rsiteChroms = [numpy.ones(len(self.rsiteMap[chrom]), int) * chrom 
-                       for chrm in xrange(self.chromosomeCount)]
-        self.rsiteChroms = numpy.concatenate(rsiteChroms)
+        self.rfragMidIds = numpy.concatenate(
+            [self.rfragMids[chrm] + chrm * self.fragIDmult 
+             for chrm in xrange(self.chrmCount)])
 
-        rfragIDs = [self.rfragMap[chrom] + chrom * self.fragIDmult 
-                    for chrom in xrange(self.chromosomeCount)]
-        self.rfragIDs = numpy.concatenate(rfragIDs)
+        self.rsiteChrms = numpy.concatenate(
+            [numpy.ones(len(self.rsites[chrm]), int) * chrm 
+             for chrm in xrange(self.chrmCount)])
 
-        assert (len(self.rsiteIDs) == len(self.rfragIDs))
+        assert (len(self.rsiteIds) == len(self.rfragMidIds))
         
     def getFragmentDistance(self,fragments1,fragments2,enzymeName):
         "returns distance between fragments in... fragments. (neighbors = 1, etc. )"
-        if not hasattr(self,"rsiteIDs"): 
+        if not hasattr(self,"rfragMidIds"): 
             self._calculateRsiteIDs(enzymeName)
 
-        frag1ind = numpy.searchsorted(self.rsiteIDs,fragments1)
-        frag2ind = numpy.searchsorted(self.rsiteIDs,fragments2)
+        frag1ind = numpy.searchsorted(self.rfragMids,fragments1)
+        frag2ind = numpy.searchsorted(self.rfragMids,fragments2)
         distance = numpy.abs(frag1ind - frag2ind)
 
         del frag1ind,frag2ind
@@ -286,8 +406,8 @@ class Genome():
     def getPairsLessThanDistance(self,fragments1,fragments2,cutoffDistance,enzymeName):
         "returns all possible pairs (fragment1,fragment2) with fragment distance less-or-equal than cutoff"
         if not hasattr(self,"rsiteIDs"): self._calculateRsiteIDs(enzymeName)
-        f1ID = numpy.searchsorted(self.rsiteIDs,fragments1) - 1
-        f2ID = numpy.searchsorted(self.rsiteIDs,fragments2) - 1    
+        f1ID = numpy.searchsorted(self.rfragMidIds,fragments1) - 1
+        f2ID = numpy.searchsorted(self.rfragMidIds,fragments2) - 1    
         fragment2Candidates = numpy.concatenate(
             [f1ID + i for i in (range(-cutoffDistance,0) + range(1,cutoffDistance+1))])        
         fragment1Candidates = numpy.concatenate(
