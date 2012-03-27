@@ -14,11 +14,11 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def test_init(self):
         self.assertEqual(
-            self.db.str2idx,
+            self.db.label2idx,
             {'1': 0, '2': 1, '3': 2, 'X': 3})
 
         self.assertEqual(
-            self.db.idx2str,
+            self.db.idx2label,
             {0: '1', 1: '2', 2: '3', 3: 'X'})
 
         self.assertTrue(numpy.all(numpy.equal(
