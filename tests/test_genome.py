@@ -8,9 +8,9 @@ import genome
 
 class TestSequenceFunctions(unittest.TestCase):
     def setUp(self):
-        self.db = genome.Genome('./data/', genomeName = None, gapfile = 'gap.txt',
-                                chr_file_template = 'chr%s.fa')
-        self.db.clear_cache()
+        self.db = genome.Genome('./data/', gapFile = 'gap.txt',
+                                chrmFileTemplate = 'chr%s.fa')
+        self.db.clearCache()
 
     def test_init(self):
         self.assertEqual(
