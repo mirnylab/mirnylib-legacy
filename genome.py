@@ -164,8 +164,8 @@ class Genome():
 
         def memoized_func(*args, **kwargs):
             return mem_func(
-                self.genomePath, self.gapFile, self.chrmFileTemplate,
-                func_name, *args, **kwargs)
+                self.genomePath, self.readChrms, self.gapFile,
+                self.chrmFileTemplate, func_name, *args, **kwargs)
 
         return memoized_func
 
