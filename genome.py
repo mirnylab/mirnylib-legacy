@@ -48,8 +48,12 @@ class Genome():
         FASTA files for sorted in ascending index order of respective
         chromosomes.
 
-    genomeFolder : str
+    genomePath : str
         The path to the folder with the genome.
+
+    name : str
+        The string identifier of the genome, the name of the last folder in
+        the path.
 
     label2idx : dict
         a dictionary for conversion between string chromosome labels and
@@ -144,15 +148,15 @@ class Genome():
     def _memoize(self, func_name):
         '''Local version of joblib memoization.
         The key difference is that _memoize() takes into account only the 
-        relevant attributes of a Genome object (folder, name, gapfile, 
-        chr_file_template) and ignores the rest.
+        relevant attributes of a Genome object (folder, name, gapFile, 
+        chrmFileTemplate) and ignores the rest.
 
         The drawback is that _memoize() doesn't check for the changes in the
         code of the function!'''
         if not hasattr(self, '_mymem'):
-            self._mymem = joblib.Memory(cachedir = self.genomeFolder)
+            self._mymem = joblib.Memory(cachedir = self.genomePath)
 
-        def run_func(genomeFolder, genomeName, gapfile, chr_file_template,
+        def run_func(genomePath, readChrms, gapFile, chrmFileTemplate,
                      func_name, *args, **kwargs):
             return getattr(self, func_name)(*args, **kwargs)
 
@@ -160,34 +164,49 @@ class Genome():
 
         def memoized_func(*args, **kwargs):
             return mem_func(
-                self.genomeFolder, self.type, self.gapfile, self.chr_file_template,
+                self.genomePath, self.gapFile, self.chrmFileTemplate,
                 func_name, *args, **kwargs)
 
         return memoized_func
 
-    def clear_cache(self):
+    def clearCache(self):
+        '''Delete the cached data in the genome folder.'''
         if hasattr(self, '_mymem'):
             self._mymem.clear()
 
-    def __init__(self, genomeFolder, genomeName = None, gapfile = None,
-                 chr_file_template = 'chr%s.fa'):
-        """Loads a genome and calculates certain genomic parameters"""        
+    def __init__(self, genomePath, gapFile = None, chrmFileTemplate = 'chr%s.fa',
+                 readChrms = ['#', 'X', 'Y', 'M']):
+        '''Load a FASTA genome and calculate its properties.
+       
+        Parameters
+        ----------
+
+        genomePath : str
+            The path to the folder with the FASTA files.
+
+        gapFile : str
+            The path to the gap file relative to genomePath.
+
+        chrmFileTemplate : str
+            The template of the FASTA file names.
+
+        readChrms : list of str
+            The list with the string labels of chromosomes to read from the 
+            genome folder. '#' stands for chromosomes with numerical labels 
+            (e.g. 1-22 for human).
+        '''
         # Set the main attributes of the class.
-        self.genomeFolder = genomeFolder                 
+        self.genomePath = os.path.abspath(genomePath)
+        self.readChrms = set(readChrms)
 
-        if genomeName == None: 
-            folderName = os.path.split(genomeFolder)[1]
-            self.type = folderName
-            print "genome name inferred from genome folder name : %s" % self.type
-        else: 
-            self.type = genomeName  
+        folderName = os.path.split(self.genomePath)[-1]
 
-        if gapfile == None:            
-            self.gapfile = os.path.join(self.genomeFolder, "%s.gap" % self.type )            
+        if gapFile == None:            
+            self.gapFile = os.path.join(self.genomePath, '%s.gap' % self.name)            
         else:
-            self.gapfile = gapfile
+            self.gapFile = gapFile
 
-        self.chr_file_template = chr_file_template
+        self.chrmFileTemplate = chrmFileTemplate
 
         # Scan the folder and obtain the list of chromosomes.
         self._scanGenomeFolder()
@@ -198,12 +217,12 @@ class Genome():
         self.fragIDmult = self.maxChrmLen + 1000   #to be used when calculating fragment IDs for HiC  
 
         # Parse a gap file and mark the centromere positions.
-        self._parseGapfile()  
+        self._parseGapFile()  
 
     def _scanGenomeFolder(self):
-        self.fastaNames = [os.path.join(self.genomeFolder, i)
+        self.fastaNames = [os.path.join(self.genomePath, i)
             for i in glob.glob(os.path.join(
-                self.genomeFolder, self.chr_file_template % ('*',)))]
+                self.genomePath, self.chrmFileTemplate % ('*',)))]
 
         if len(self.fastaNames) == 0: 
             raise('No Genome files found')
@@ -211,8 +230,10 @@ class Genome():
         # Read chromosome IDs.
         self.chrmLabels = []
         for i in self.fastaNames: 
-            chrm = re.search(self.chr_file_template % ('(.*)',), i).group(1)
-            self.chrmLabels.append(chrm)
+            chrm = re.search(self.chrmFileTemplate % ('(.*)',), i).group(1)
+            if ((chrm.isdigit() and '#' in self.readChrms)
+                or chrm in self.readChrms):
+                self.chrmLabels.append(chrm)
     
         # Convert IDs to indices:
         # A. Convert numerical IDs.
@@ -240,7 +261,7 @@ class Genome():
         self.chrmLabels = zip(*sorted(self.idx2label.items(),
                                       key=lambda x: x[0]))[1]
         self.fastaNames = [
-            os.path.join(self.genomeFolder, self.chr_file_template % i)
+            os.path.join(self.genomePath, self.chrmFileTemplate % i)
             for i in self.chrmLabels]
 
     def getChrmLen(self):
@@ -260,14 +281,11 @@ class Genome():
                                                  'fasta'))
         return self._seqs
 
-    def getSeq(self, chrmIdx, start, end):
-        return self.seqs[chrmIdx][start:end]
-
-    def _parseGapfile(self):
+    def _parseGapFile(self):
         """Parse a .gap file to determine centromere positions.
         """
         try: 
-            gapfile = open(os.path.join(self.genomeFolder, self.gapfile)
+            gapFile = open(os.path.join(self.genomePath, self.gapFile)
                            ).readlines()
         except IOError: 
             print "Gap file not found! \n Please provide a link to a gapfile or put a file genome_name.gap in a genome directory"
@@ -276,7 +294,7 @@ class Genome():
         self.cntrStarts = -1 * numpy.ones(self.chrmCount,int)
         self.cntrEnds = -1 * numpy.zeros(self.chrmCount,int)
 
-        for line in gapfile:
+        for line in gapFile:
             splitline = line.split()
             if splitline[7] == 'centromere':
                 chrm_str = splitline[1][3:]
@@ -314,14 +332,18 @@ class Genome():
 
         # Bin centromeres.
         self.cntrMidsBinCont = (self.chrmStartsBinCont
-                               + self.cntrMids / self.resolution)
+                                + self.cntrMids / self.resolution)
 
         # Bin GC content.
         self.GCBin = self.getGCBin(self.resolution)
+
+    def splitByChrms(self, inArray):
+        return [inArray[self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]]
+                for i in xrange(self.chrmCount)]
                     
     def getGC(self, chrmIdx, start, end):
         "Calculate the GC content of a region."
-        seq = self.getSeq(chrmIdx, start, end)
+        seq = self.seqs[chrmIdx][start:end]
         return Bio.SeqUtils.GC(seq.seq)
 
     def getGCBin(self, resolution):
