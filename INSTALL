@@ -1,0 +1,12 @@
+HOWTO make mirnylab available for import in Python:
+
+On Linux:
+    - execute 'install_linux.py'
+
+On Windows:
+    - Go to My Computer > Properties > Advanced System Settings >
+      Environment Variables. If PYTHONPATH exist, add the absolute path to
+      mirnylab folder after a semicolon. If PYTHONPATH doesn't exist, click
+      'New...' and create a variable 'PYTHONPATH' with the absolute path to
+      mirnylab as a value.
+
