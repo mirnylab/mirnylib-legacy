@@ -174,7 +174,7 @@ class Genome():
         if hasattr(self, '_mymem'):
             self._mymem.clear()
 
-    def __init__(self, genomePath, gapFile = None, chrmFileTemplate = 'chr%s.fa',
+    def __init__(self, genomePath, gapFile = 'gap.txt', chrmFileTemplate = 'chr%s.fa',
                  readChrms = ['#', 'X', 'Y', 'M']):
         '''Load a FASTA genome and calculate its properties.
        
@@ -201,10 +201,7 @@ class Genome():
 
         folderName = os.path.split(self.genomePath)[-1]
 
-        if gapFile == None:            
-            self.gapFile = os.path.join(self.genomePath, '%s.gap' % self.name)            
-        else:
-            self.gapFile = gapFile
+        self.gapFile = gapFile
 
         self.chrmFileTemplate = chrmFileTemplate
 
