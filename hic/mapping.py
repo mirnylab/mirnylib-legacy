@@ -285,41 +285,43 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
     side = str(side) 
 
     chrms = lib['chrms' + side]
-    rfrags = np.zeros(len(chrms), dtype=np.int64)
+    rfragIdxs = np.zeros(len(chrms), dtype=np.int64)
     rsites = np.zeros(len(chrms), dtype=np.int64)
     uprsites = np.zeros(len(chrms), dtype=np.int64)
     downrsites = np.zeros(len(chrms), dtype=np.int64)
 
     # If the fragment was not mapped.
-    rfrags[chrms == -1] = -1
+    rfragIdxs[chrms == -1] = -1
     rsites[chrms == -1] = -1
     uprsites[chrms == -1] = -1
     downrsites[chrms == -1] = -1
 
     cuts = lib['cuts' + side]
-    dirs = lib['dirs' + side]
+    strands = lib['strands' + side]
     for chrm_idx in xrange(genome.chrmCount):
-        all_rsites = genome.rsites[chrm_idx]
-        all_rsites.insert(0, 0)
+        all_rsites = np.r_[0, genome.rsites[chrm_idx]]
         idxs = (chrms == chrm_idx)
 
         # Find the indexes of the restriction fragment...
-        rfrags[idxs] = np.searchsorted(all_rsites, cuts[idxs]) - 1
-        uprsites[idxs] = all_rsites[rfrags[idxs]]
-        downrsites[idxs] = all_rsites[rfrags[idxs] + 1] 
-        rsites[idxs] = np.where(dirs[idxs], downrsites[idxs], uprsites[idxs])
+        rfragIdxs[idxs] = np.searchsorted(all_rsites, cuts[idxs]) - 1
+        uprsites[idxs] = all_rsites[rfragIdxs[idxs]]
+        downrsites[idxs] = all_rsites[rfragIdxs[idxs] + 1] 
+        rsites[idxs] = np.where(strands[idxs], downrsites[idxs], uprsites[idxs])
 
         too_close = (np.abs(rsites[idxs] - cuts[idxs]) <= min_frag_size)
         too_close_idxs = np.where(idxs)[0][too_close]
-        rfrags[too_close_idxs] += dirs[too_close_idxs] * 2 - 1
-        uprsites[too_close_idxs] = all_rsites[rfrags[too_close_idxs]]
-        downrsites[too_close_idxs] = all_rsites[rfrags[too_close_idxs] + 1]
+        rfragIdxs[too_close_idxs] += strands[too_close_idxs] * 2 - 1
+        uprsites[too_close_idxs] = all_rsites[rfragIdxs[too_close_idxs]]
+        downrsites[too_close_idxs] = all_rsites[rfragIdxs[too_close_idxs] + 1]
         rsites[too_close_idxs] = np.where(
-            dirs[too_close_idxs],
+            strands[too_close_idxs],
             downrsites[too_close_idxs], 
             uprsites[too_close_idxs])
-        
-    return rfrags, rsites, uprsites, downrsites
+
+    lib['rfragIdxs' + side] = rfragIdxs
+    lib['uprsites' + side] = uprsites
+    lib['downrsites' + side] = downrsites
+    lib['rsites' + side] = rsites
 
 def _parse_ss_sams(sam_wildcard, out_dict, 
                    max_seq_len = -1, reverse_complement=False):
@@ -376,7 +378,7 @@ def _parse_ss_sams(sam_wildcard, out_dict,
     _write_to_array.i = 0
     _for_each_unique_read(sam_wildcard,
         action=lambda read: _write_to_array(read, buf, not read.is_reverse))
-    out_dict['dirs'] = buf
+    out_dict['strands'] = buf
 
     # ...cut sites
     buf = np.zeros((sam_stats['num_reads'],), dtype=np.int64)

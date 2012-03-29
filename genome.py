@@ -408,13 +408,13 @@ class Genome():
 
         assert (len(self.rsiteIds) == len(self.rfragMidIds))
         
-    def getFragmentDistance(self,fragments1,fragments2,enzymeName):
+    def getFragmentDistance(self, fragments1, fragments2, enzymeName):
         "returns distance between fragments in... fragments. (neighbors = 1, etc. )"
         if not hasattr(self,"rfragMidIds"): 
-            self._calculateRsiteIDs(enzymeName)
+            self.setEnzyme(enzymeName)
 
-        frag1ind = numpy.searchsorted(self.rfragMids,fragments1)
-        frag2ind = numpy.searchsorted(self.rfragMids,fragments2)
+        frag1ind = numpy.searchsorted(self.rfragMids, fragments1)
+        frag2ind = numpy.searchsorted(self.rfragMids, fragments2)
         distance = numpy.abs(frag1ind - frag2ind)
 
         del frag1ind,frag2ind
