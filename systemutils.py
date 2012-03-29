@@ -1,11 +1,17 @@
+"""
+Some important utilities from Max. This includes: 
+
+Set exception hook to pdb
+Run in separate process
+fork-map
+fork-map-reduce
+fork-map-average
+"""
 import os, sys, cPickle, pdb 
 import traceback
 
 import ctypes 
 from copy import copy
-
-
-
 
 
 
