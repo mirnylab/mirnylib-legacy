@@ -11,9 +11,8 @@ These include:
 import matplotlib
 import matplotlib.pyplot as plt 
 
+import pylab
 import numpy 
-
-
 
 def cmap_map(function,cmap,mapRange = [0,1]):
     """ Applies function (which should operate on vectors of shape 3:
@@ -49,7 +48,6 @@ def cmap_map(function,cmap,mapRange = [0,1]):
         colorvector.sort()
         cdict[key] = colorvector
     return matplotlib.colors.LinearSegmentedColormap('colormap',cdict,1024)
-
 
 def showPolymerRasmol(x,y=None,z=None):
     """
@@ -122,11 +120,8 @@ def showPolymerRasmol(x,y=None,z=None):
         os.system("rasmol -xyz %s -script %s" % (towrite.name, rascript.name))
     else:     #if windows 
         os.system("C:/RasWin/raswin.exe -xyz %s -script %s" % (towrite.name, rascript.name))
-        
 
-
-
-def scatter3D(x,y,z,color):
+def scatter3D(x, y, z, color):
     """shows a scatterplot in 3D"""
         
     fig = plt.figure()
@@ -143,12 +138,11 @@ def scatter3D(x,y,z,color):
             for mycolor in colors:
                 mask = (color == mycolor)
                 ax.scatter(x[mask],y[mask],z[mask],c=plt.cm.get_cmap("jet")(mycolor))
+
     else: ax.scatter(x,y,z,c=color)
     plt.show()
                 
-                
 def removeAxes(mode = "normal",shift = 0, ax = None):
-    
     if ax == None: 
         ax = plt.gca()
     for loc, spine in ax.spines.iteritems():
@@ -174,9 +168,6 @@ def removeBorder(ax = None):
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     
-
-    
-
 def niceShow(mytype = None):
     if mytype == "log":
         plt.xscale("log")
@@ -188,7 +179,6 @@ def niceShow(mytype = None):
     removeAxes(shift = 0)
     plt.gcf().subplots_adjust(left=0.07, bottom=0.12, top=0.98, right=0.98)
     plt.show()
-
         
 def mat_img(a,cmap="hot_r",trunk = False, **kwargs):
     "shows an array using imshow with colorbar"
@@ -211,4 +201,181 @@ def mat_img(a,cmap="hot_r",trunk = False, **kwargs):
         plt.show()
     do_all()
     
-    #plt.close() 
+def plot_line(a, b, **kwargs):
+    """Plot a line y = a * x + b.
+    
+    Parameters
+    ----------
+    a, b : float
+        The slope and intercept of the line.
+    """
+    xlim = pylab.xlim()
+    ylim = pylab.ylim()
+    pylab.plot([xlim[0], xlim[1]], 
+               [a * xlim[0] + b, a * xlim[1] + b],
+               **kwargs) 
+
+def linear_regression(x, y, a=None, b=None):
+    """Calculate coefficients of a linear regression y = a * x + b.
+
+    Parameters
+    ----------
+    x, y : array_like of float
+    a : float, optional
+        If specified then the slope coefficient is fixed and equals a.
+    b : float, optional        
+        If specified then the free term is fixed and equals b.
+    
+    Returns
+    -------
+    out : 4-tuple of float
+        The structure is (a, b, r, stderr), where
+        a -- slope coefficient,
+        b -- free term,
+        r -- Peason correlation coefficient,
+        stderr -- standard deviation.
+    """
+
+    if (a!=None and b==None):
+        b = numpy.mean([y[i] - a * x[i] for i in range(len(x))])
+    elif (a!=None and b!= None):
+        pass
+    else:
+        a, b = numpy.polyfit(x, y, 1)
+
+    r = numpy.corrcoef(x, y)[0, 1]
+    stderr = numpy.std([y[i] - a * x[i] - b for i in range(len(x))])
+
+    return (a, b, r, stderr)
+
+def scatter_trend(x, y, **kwargs):
+    """Make a scatter plot with a linear regression.
+
+    Parameters
+    ----------
+    x, y : array_like of float
+    plot_trend : bool, optional
+        If True then plot a trendline. True by default.
+    plot_sigmas : bool, optional
+        If True then plot confidence intervals of the linear fit.
+        False by default.
+    title : str, optional
+        The title. Empty by default.
+    xlabel, ylabel : str, optional
+        The axes labels. Empty by default.
+    alpha : float, optional
+        Transparency of points. 1.0 by default
+    alpha_legend : float, optional
+        Legend box transparency. 1.0 by default
+    """
+    a, b, r, stderr = linear_regression(x, y)
+    pylab.title(kwargs.get('title', ''))
+    pylab.xlabel(kwargs.get('xlabel', ''))
+    pylab.ylabel(kwargs.get('ylabel', ''))
+    scat_plot = pylab.scatter(x, y,
+                              c=kwargs.get('c', 'b'),
+                              alpha=kwargs.get('alpha', 1.0))
+    scat_plot.set_label(
+        '$y\,=\,%.3fx\,+\,%.3f$, $R^2=\,%.3f$ \n$\sigma\,=\,%.3f$' % (
+            a, b, r*r, stderr))
+    legend = pylab.legend(loc='upper left')
+    legend_frame = legend.get_frame()
+    legend_frame.set_alpha(kwargs.get('alpha_legend', 1.0))
+    if kwargs.get('plot_trend', True):
+        pylab.plot([min(x), max(x)],
+                   [a*min(x)+b, a*max(x)+b])
+    if kwargs.get('plot_sigmas', False):
+        for i in [-3.0,-2.0,-1.0,1.0,2.0,3.0]:
+            pylab.plot([min(x), max(x)],
+                       [a*min(x)+b+i*stderr, a*max(x)+b+i*stderr],
+                       'r--')
+
+def plot_function_3d(x, y, function, **kwargs):
+    """Plot values of a function of two variables in 3D.
+
+    Parameters
+    ----------
+    x, y : array_like of float
+        The plotting range.
+    function : function
+        The function to plot.
+    plot_type : {'surface', 'wireframe', 'scatter', 'contour', 'contourf'}
+        The type of a plot, see
+        `scipy cookbook <http://www.scipy.org/Cookbook/Matplotlib/mplot3D>`_ 
+        for examples. The default value is 'surface'.
+    num_contours : int
+        The number of contours to plot, 50 by default.
+    xlabel, ylabel, zlabel : str, optional
+        The axes labels. Empty by default.
+    title : str, optional
+        The title. Empty by default.
+
+    See also
+    --------
+    More on 3D plotting in pylab:
+    http://www.scipy.org/Cookbook/Matplotlib/mplot3D
+
+    """
+    import mpl_toolkits.mplot3d.axes3d as pylab3d
+    ax = pylab3d.Axes3D(pylab.gcf())
+    X, Y = numpy.meshgrid(x, y)
+    Z = []
+    for y_value in y:
+        Z.append([])
+        for x_value in x:
+            Z[-1].append(function(x_value, y_value))
+    Z = numpy.array(Z)
+    plot_type = kwargs.get('plot_type', 'surface')
+    if plot_type == 'surface':
+        ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pylab.cm.jet)
+    elif plot_type == 'wireframe':
+        ax.plot_wireframe(X, Y, Z, cmap=pylab.cm.jet)
+    elif plot_type == 'scatter':
+        ax.scatter3D(numpy.ravel(X), numpy.ravel(Y), numpy.ravel(Z))
+    elif plot_type == 'contour':
+        num_contours = kwargs.get('num_contours', 50)
+        ax.contour3D(X, Y, Z, num_contours, cmap=pylab.cm.jet)
+    elif plot_type == 'contourf':
+        num_contours = kwargs.get('num_contours', 50)
+        ax.contourf3D(X, Y, Z, num_contours, cmap=pylab.cm.jet)
+    else:
+        raise PyteomicsError('Unknown plot type: %s' % (plot_type,))
+    ax.set_xlabel(kwargs.get('xlabel', ''))
+    ax.set_ylabel(kwargs.get('ylabel', ''))
+    ax.set_zlabel(kwargs.get('zlabel', ''))
+    ax.set_title(kwargs.get('title', ''))
+
+def plot_function_contour(x, y, function, **kwargs):
+    """Make a contour plot of a function of two variables.
+
+    Parameters
+    ----------
+    x, y : array_like of float
+        The positions of the nodes of a plotting grid.
+    function : function
+        The function to plot.
+    filling : bool
+        Fill contours if True (default).
+    num_contours : int
+        The number of contours to plot, 50 by default.
+    xlabel, ylabel : str, optional
+        The axes labels. Empty by default.
+    title : str, optional
+        The title. Empty by default.
+
+    """
+    X, Y = numpy.meshgrid(x, y)
+    Z = []
+    for y_value in y:
+        Z.append([])
+        for x_value in x:
+            Z[-1].append(function(x_value, y_value))
+    Z = numpy.array(Z)
+    num_contours = kwargs.get('num_contours', 50)
+    if kwargs.get('filling', True):
+        pylab.contourf(X, Y, Z, num_contours, cmap=pylab.cm.jet)
+    else:
+        pylab.contour(X, Y, Z, num_contours, cmap=pylab.cm.jet)
+    pylab.xlabel(kwargs.get('xlabel', ''))
+    pylab.ylabel(kwargs.get('ylabel', ''))
+    pylab.title(kwargs.get('title', ''))
