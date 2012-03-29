@@ -11,15 +11,31 @@ import collections
 import h5py
 
 class h5dict(collections.MutableMapping):
-    def __init__(self, path=None):
+    def __init__(self, path=None, mode='a'):
+        '''A persistent dictionary with data stored in an HDF5 file.
+
+        Parameters:
+        path : str
+            The path to an HDF5 file. If None, than create a temporary file
+            that will be deleted with the object.
+
+        mode : str
+            'r'  - Readonly, file must exist
+            'r+' - Read/write, file must exist
+            'w'  - Create file, truncate if exists
+            'w-' - Create file, fail if exists
+            'a'  - Read/write if exists, create otherwise (default)
+        '''
         if path is None:
             tmpfile = tempfile.NamedTemporaryFile(delete=False)
             tmppath = tmpfile.name
             tmpfile.close()
             self.path = tmppath
+            self.is_tmp = True
         else:
             self.path = path
-        self._h5file = h5py.File(self.path, 'w')
+            self.is_tmp = False
+        self._h5file = h5py.File(self.path, mode)
         self._types = {}
         self._dtypes = {}
 
@@ -30,7 +46,7 @@ class h5dict(collections.MutableMapping):
         return self._h5file.__iter__()
 
     def __len__(self):
-        return len(a)
+        return len(self.keys())
 
     def keys(self):
         return self._h5file.keys()
@@ -50,6 +66,7 @@ class h5dict(collections.MutableMapping):
         self._types.__delitem__(key)
         self._dtypes.__delitem__(key)
         self._h5file.__delitem__(key)
+        self._h5file.flush()
 
     def __setitem__(self, key, value):
         if key in self.keys():
@@ -63,6 +80,7 @@ class h5dict(collections.MutableMapping):
             self._h5file[key] = cPickle.dumps(value, protocol = -1)
             self._types[key] = type(value)
             self._dtypes[key] = None
+        self._h5file.flush()
 
     def value_type(self, key):
         return self._types[key]
@@ -72,4 +90,6 @@ class h5dict(collections.MutableMapping):
 
     def __del__(self):
         self._h5file.close()
-
+        if sel.is_tmp:
+            os.remove(self.path)
+            
