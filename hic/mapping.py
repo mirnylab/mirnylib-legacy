@@ -14,8 +14,8 @@ import numpy as np
 import Bio, Bio.SeqIO, Bio.Seq, Bio.Restriction
 import pysam
 
-import h5dict
-import genome
+from .. import h5dict
+from .. import genome
 
 ##TODO: write some autodetection of chromosome lengthes base on genome folder
 ##TODO: throw an exception if no chromosomes found in chromosome folder
@@ -297,8 +297,10 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
     downrsites[chrms == -1] = -1
 
     cuts = lib['cuts' + side]
+    dirs = lib['dirs' + side]
     for chrm_idx in xrange(genome.chrmCount):
         all_rsites = genome.rsites[chrm_idx]
+        all_rsites.insert(0, 0)
         idxs = (chrms == chrm_idx)
 
         # Find the indexes of the restriction fragment...
@@ -309,7 +311,7 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
 
         too_close = (np.abs(rsites[idxs] - cuts[idxs]) <= min_frag_size)
         too_close_idxs = np.where(idxs)[0][too_close]
-        rfrags[too_close_idxs] += lib['dirs'+side][too_close_idxs] * 2 - 1
+        rfrags[too_close_idxs] += dirs[too_close_idxs] * 2 - 1
         uprsites[too_close_idxs] = all_rsites[rfrags[too_close_idxs]]
         downrsites[too_close_idxs] = all_rsites[rfrags[too_close_idxs] + 1]
         rsites[too_close_idxs] = np.where(
