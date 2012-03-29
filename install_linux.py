@@ -4,9 +4,9 @@ import os, sys
 
 libpath = os.getcwd()
 if libpath.startswith(os.path.expanduser('~')):
-    libpath = os.path.join(*(['$HOME',] + libpath.split(os.sep)[2:-1]))
+    libpath = os.path.join(*(['$HOME',] + libpath.split(os.sep)[3:-1]))
 
-export_line = 'export PYTHONPATH = $PYTHONPATH:{0}'.format(libpath)
+export_line = 'export PYTHONPATH="$PYTHONPATH:{0}"'.format(libpath)
 
 profiles = [os.path.expanduser(i) 
             for i in ['~/.bash_profile', '~/.bashrc', '~/.profile']]
@@ -25,7 +25,7 @@ for profile_path in profiles:
     if os.path.isfile(profile_path):
         profile_file = open(profile_path, 'a')
         profile_file.writelines(
-            ['\nAdded by the mirnylab install script.\n',
+            ['\n# Added by the mirnylab install script.\n',
              export_line, 
              '\n'])
         print 'PYTHONPATH is added to {0}'.format(profile_path)
@@ -35,7 +35,7 @@ for profile_path in profiles:
 profile_path = profiles[0]
 profile_file = open(profile_path, 'w')
 profile_file.writelines(
-    ['\nAdded by the mirnylab install script.\n',
+    ['\# Added by the mirnylab install script.\n',
      export_line,
      '\n'])
 print 'PYTHONPATH is added to {0}'.format(profile_path)
