@@ -1,6 +1,13 @@
-import systemutils
-systemutils.setExceptionHook() 
-from copy import  deepcopy
+"""
+Some nice plotting utilities from Max
+These include:
+
+-scatter3D
+-showPolymerRasmol
+-removeAxes     -removes axes from the plot
+-removeBorder  - removes border from the plot
+-niceShow  - nicer "plt.show"
+"""
 import matplotlib
 import matplotlib.pyplot as plt 
 
@@ -184,6 +191,7 @@ def niceShow(mytype = None):
 
         
 def mat_img(a,cmap="hot_r",trunk = False, **kwargs):
+    "shows an array using imshow with colorbar"
     a = numpy.array(a,float)
     if trunk != False:
         if trunk == True:
@@ -204,84 +212,3 @@ def mat_img(a,cmap="hot_r",trunk = False, **kwargs):
     do_all()
     
     #plt.close() 
-
-
-
-def plot_occupation(*prop):
-    print prop
-    try:
-        prop[0][0][0]
-        labels = prop[1]
-        prop = prop[0]
-    except:
-        labels = [str(i) for i in range(len(prop))]
-        pass
-    
-    global savedplot
-    prop = list(prop)
-        
-    savedplot = deepcopy(prop)    
-    #steps = range(1,len(prop[0])+1)
-
-    for j,i in enumerate(prop):
-         
-       
-        plt.plot(range(len(i)),i,label=labels[j])
-    plt.legend(loc=0)
-    
-    plt.show()
-    
-
- 
- 
-    
-def pointplot(data,lines=1,labels=None,size=(5,5),fs=15,linewidth=None,markersize=None):
-    plt.figure(figsize=size)
-    fg = plt.subplot(1,1,1)
-    
-    if lines >2:        
-        plt.xscale("log")
-        plt.yscale("log")
-    
-    #if (numpy.min(numpy.array(data))<0) and loglog == True: 
-    #    loglog = False
-    #    print "loglog is set but data is below zero"
-
-    if labels == None:
-        labels = [str(i) for i in range(len(data))]
-    global savedpointplot
-    savedpointplot = deepcopy(data)
-    if linewidth == None: linewidth = [1 for i in xrange(len(data))]
-    if markersize == None: markersize = [3 for i in xrange(len(data))]
-    for j,i in enumerate(data):
-        
-                
-        
-        if lines%2==0:
-            shape = 'o'
-        else: shape = '-'
-        if len(i) > 2:
-            color = i[2]
-        else: color = ''
-        sstring = "%s%s"%(shape,color)
-        fg.plot(i[0],i[1],sstring,label=labels[j],linewidth=linewidth[j],markersize = markersize[j])
-        
-        
-        
-    #if loglog == True: 
-    #    plt.loglog(*pl)
-    #else: plt.plot(*pl)
-    plt.xlabel("Rg(N^{2/3})",fontsize=int(1.2*fs))
-    plt.ylabel("Log( knot pol)",fontsize=int(1.2*fs))
-    ax = plt.axes()
-    for xlabel_i in ax.get_xticklabels():
-        xlabel_i.set_fontsize(fs)
-    for xlabel_i in ax.get_yticklabels():
-        xlabel_i.set_fontsize(fs)
-            
-    
-    
-    #plt.grid()
-    plt.legend(loc=0,prop={"size":int(1.1*fs)})
-    plt.show()
-
