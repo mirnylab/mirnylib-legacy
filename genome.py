@@ -199,7 +199,7 @@ class Genome():
         self.genomePath = os.path.abspath(genomePath)
         self.readChrms = set(readChrms)
 
-        folderName = os.path.split(self.genomePath)[-1]
+        self.folderName = os.path.split(self.genomePath)[-1]
 
         self.gapFile = gapFile
 
