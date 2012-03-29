@@ -83,8 +83,7 @@ class h5dict(collections.MutableMapping):
         else:
             self._h5file.create_dataset(name=key,
                 data=cPickle.dumps(value, protocol = -1),
-                compression='lzf',
-                chunks=True)
+                compression='lzf')
             self._types[key] = type(value)
             self._dtypes[key] = None
         self._h5file.flush()
