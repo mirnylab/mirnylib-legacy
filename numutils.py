@@ -129,7 +129,7 @@ def zoomOut(x,shape):
             for j in xrange(d):
                 newx[i::d,j::d] = x/(1. * d**2)
         x = newx
-        M1,M2,N1,N2 = M1*d,M2*d,N1*d,N2*d   #array is bigger now
+        N1,N2 = N1*d,N2*d   #array is bigger now
     
     shift1 = N1/float(M1) + 0.000000001
     shift2 = N2/float(M2) + 0.000000001
