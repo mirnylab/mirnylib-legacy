@@ -69,7 +69,7 @@ class h5dict(collections.MutableMapping):
         self._h5file.flush()
 
     def __setitem__(self, key, value):
-        if not isinstance(key, str):
+        if not isinstance(key, str) and not isinstance(key, unicode):
             raise Exception('h5dict only accepts string keys')
         if key in self.keys():
             self.__delitem__(key)
@@ -92,6 +92,16 @@ class h5dict(collections.MutableMapping):
 
     def __del__(self):
         self._h5file.close()
-        if sel.is_tmp:
+        if self.is_tmp:
             os.remove(self.path)
+
+    def update(self, other=None, **kwargs):
+        if hasattr(other, 'keys'):
+            for i in other:
+                self[i] = other[i]
+        elif other:
+            for (k, v) in other:
+                self[k] = v
+        for i in kwargs:
+            self[i] = kwargs[i]
             
