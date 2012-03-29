@@ -69,6 +69,8 @@ class h5dict(collections.MutableMapping):
         self._h5file.flush()
 
     def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise Exception('h5dict only accepts string keys')
         if key in self.keys():
             self.__delitem__(key)
 
