@@ -75,11 +75,16 @@ class h5dict(collections.MutableMapping):
             self.__delitem__(key)
 
         if isinstance(value, np.ndarray):
-            self._h5file[key] = value
+            self._h5file.create_dataset(name=key, data=value, 
+                                        compression='lzf',
+                                        chunks=True)
             self._types[key] = type(value)
             self._dtypes[key] = value.dtype
         else:
-            self._h5file[key] = cPickle.dumps(value, protocol = -1)
+            self._h5file.create_dataset(name=key,
+                                        data=cPickle.dumps(value, protocol = -1)
+                                        compression='lzf',
+                                        chunks=True)
             self._types[key] = type(value)
             self._dtypes[key] = None
         self._h5file.flush()
