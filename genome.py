@@ -365,10 +365,10 @@ class Genome():
         return self.getRsites(enzymeName)
 
     def _getRsites(self, enzymeName):
-        """Returns: tuple(rsites, rfrags) 
+        '''Returns: tuple(rsites, rfrags) 
         Finds restriction sites and mids of rfrags for a given enzyme
-        Note that there is one extra rsite at beginning and end of chromosome
-        Note that there are more rsites than rfrags (by 1)"""
+        
+        '''
         
         #Memorized function
         enzymeSearchFunc = eval('Bio.Restriction.%s.search' % enzymeName)
@@ -380,10 +380,10 @@ class Genome():
                 len(self.seqs[i].seq)])
             rfragMids.append((rsites[i][:-1] + rsites[i][1:]) / 2)
 
-        # Remove the last trivial restriction site (the sequence end)
+        # Remove the first trivial restriction site (0)
         # to equalize the number of points in rsites and rfragMids.
         for i in xrange(len(rsites)):
-            rsites[i] = rsites[i][:-1]
+            rsites[i] = rsites[i][1:]
 
         return rsites, rfragMids
     
