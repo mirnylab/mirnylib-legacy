@@ -1,8 +1,9 @@
-import os, glob, tempfile, re
+import os, glob, re
 
 import numpy 
 
 import Bio.SeqIO, Bio.SeqUtils, Bio.Restriction
+Bio.Restriction  #To shut up Eclipse warning
 import joblib 
 
 import numutils
