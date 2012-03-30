@@ -124,6 +124,9 @@ class Genome():
     Attributes
     ----------
 
+    enzymeName : str
+        The restriction enzyme used to find the restriction sites.
+
     rsites : list of arrays of int
         The indices of the first base pairs of restriction fragments 
         in individual chromosomes.
@@ -387,10 +390,15 @@ class Genome():
             rsites[i] = rsites[i][1:]
 
         return rsites, rfragMids
+
+    def hasEnzyme(self):
+        return hasattr(self, enzymeName)
     
     def setEnzyme(self, enzymeName):
         """Calculates rsite/rfrag positions and IDs for a given enzyme name 
         and memoizes them"""
+
+        self.enzymeName = enzymeName
 
         self.rsites, self.rfragMids = self.getRsites(enzymeName)
 

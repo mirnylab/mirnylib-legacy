@@ -255,7 +255,7 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
                           min_seq_len = min_seq_len + len_step, 
                           len_step=len_step, **kwargs)
      
-def fill_rsites(lib, db_dir_path, enzyme_name, min_frag_size = None):
+def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
     '''Private: assign mapped reads to restriction fragments by 
     their 5' end position.
 
@@ -265,14 +265,32 @@ def fill_rsites(lib, db_dir_path, enzyme_name, min_frag_size = None):
     lib : dict
         A library of mapped Hi-C molecules. Modified by the function.
 
-    db_dir_path
+    genome_db : str or mirnylab.genome.genome
+        A path to a folder with genome sequences in FASTA format or
+        a mirnylab.genome.genome object.
+
+    enzyme_name : str
+        A name of the restriction enzyme. The full list of possible names
+        can be found in Bio.Restriction.AllEnzymes.
         
+    min_frag_size : int
+        The minimal distance between a cut site and a restriction site.
+        If the actual distance is less than minimal then the ultra-sonic
+        fragment is assigned to the next restriction fragment in the direction
+        of the read.
     '''
     if enzyme_name not in Bio.Restriction.AllEnzymes:
         raise Exception('Enzyme is not found in the library: %s' % (enzyme_name,))
 
-    genomeDb = genome.Genome(db_dir_path)
-    genomeDb.setEnzyme(enzyme_name)
+    if isinstance(genome_db, str):
+        genome_db = genome.Genome(genome_db)
+
+    if enzyme_name is None:
+        if not genome_db.hasEnzyme():
+            raise Exception('Set a restriction enzyme in the genome object or ' 
+                            'supply its name')
+    else:
+        genome_db.setEnzyme(enzyme_name)
 
     rsite_size = eval('len(Bio.Restriction.%s.site)' % enzyme_name)
     if min_frag_size is None:
@@ -280,8 +298,8 @@ def fill_rsites(lib, db_dir_path, enzyme_name, min_frag_size = None):
     else:
         _min_frag_size = min_frag_size
         
-    _find_rfrags_inplace(lib, genomeDb, _min_frag_size, 1)
-    _find_rfrags_inplace(lib, genomeDb, _min_frag_size, 2)
+    _find_rfrags_inplace(lib, genome_db, _min_frag_size, 1)
+    _find_rfrags_inplace(lib, genome_db, _min_frag_size, 2)
 
     return lib
 
