@@ -24,7 +24,7 @@ import genome
 ##TODO: fix #-to-ID correspondence for other species.
 
 def _detect_quality_coding_scheme(in_fastq, num_entries = 10000):
-    in_file = _gzopen(in_fastq)
+    in_file = open(in_fastq)
     max_ord = 0
     min_ord = 256
     i = 0
@@ -45,18 +45,19 @@ def _detect_quality_coding_scheme(in_fastq, num_entries = 10000):
 
     return min_ord, max_ord
 
-def _gzopen(path):
-    if path.endswith('.gz'):
-        return gzip.open(path)
-    else:
-        return open(path)
+## Bowtie doesn't read gzipped FASTQ files.
+#def _gzopen(path):
+#    if path.endswith('.gz'):
+#        return gzip.open(path)
+#    else:
+#        return open(path)
 
 def _line_count(path):
     '''Count the number of lines in a file. The function was posted by
     Mikola Kharechko on Stackoverflow.
     '''
 
-    f = _gzopen(path)                  
+    f = open(path)                  
     lines = 0
     buf_size = 1024 * 1024
     read_f = f.read # loop optimization
@@ -72,8 +73,8 @@ def _slice_file(in_path, out_path, first_line, last_line):
     '''Slice lines from a large file. 
     The line numbering is as in Python slicing notation.
     '''
-    f = _gzopen(in_path)                  
-    output = _gzopen(out_path, 'w')
+    f = open(in_path)                  
+    output = open(out_path, 'w')
     lines = 0
     buf_size = 1024 * 1024
     read_f = f.read # loop optimization
@@ -109,8 +110,8 @@ def filter_fastq(ids, in_fastq, out_fastq):
     Read entries from **in_fastq** and store in **out_fastq** only those
     the whose ID are in **ids**.
     '''
-    out_file = _gzopen(out_fastq, 'w')
-    in_file = _gzopen(in_fastq)
+    out_file = open(out_fastq, 'w')
+    in_file = open(in_fastq)
     while True:
         line = in_file.readline()
         if not line:
@@ -198,6 +199,10 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
         datasets and low-memory machines.
 
     '''
+    bowtie_path = os.path.abspath(os.path.expanduser(bowtie_path))
+    genome_path = os.path.abspath(os.path.expanduser(genome_path))
+    fastq_path = os.path.abspath(os.path.expanduser(fastq_path))
+    out_sam_path = os.path.abspath(os.path.expanduser(out_sam_path))
 
     seq_start = kwargs.get('seq_start', 0)
     seq_end = kwargs.get('seq_end', None)
@@ -218,7 +223,7 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
                               **kwargs)
         return 
 
-    raw_seq_len = len(Bio.SeqIO.parse(_gzopen(fastq_path), 'fastq').next().seq)
+    raw_seq_len = len(Bio.SeqIO.parse(open(fastq_path), 'fastq').next().seq)
     if (seq_start < 0 
         or seq_start > raw_seq_len 
         or (seq_end and seq_end > raw_seq_len)):

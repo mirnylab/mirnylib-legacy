@@ -3,8 +3,13 @@
 import os, sys
 
 libpath = os.getcwd()
+
+# Replace the home folder with $HOME.
 if libpath.startswith(os.path.expanduser('~')):
-    libpath = os.path.join(*(['$HOME',] + libpath.split(os.sep)[3:-1]))
+    libpath = os.path.join(*(['$HOME',] + libpath.split(os.sep)[3:]))
+
+# Add the parent folder, so the whole package is seen outside as 'mirnylab'.
+libpath = os.path.join(libpath.split(os.sep)[:-1])
 
 export_line = 'export PYTHONPATH="$PYTHONPATH:{0}"'.format(libpath)
 
