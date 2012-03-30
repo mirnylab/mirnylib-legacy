@@ -283,7 +283,7 @@ def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
     '''
    
     if isinstance(genome_db, str):
-        genome_db = minylab.genome.Genome(genome_db)        
+        genome_db = mirnylab.genome.Genome(genome_db)        
     assert isinstance(genome_db,mirnylab.genome.Genome)
 
     if enzyme_name is None:
