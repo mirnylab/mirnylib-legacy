@@ -7,15 +7,13 @@ import glob
 import gzip
 import subprocess
 import tempfile, atexit
-
 import numpy as np
-
 import  Bio.SeqIO, Bio.Seq, Bio.Restriction
 import pysam
 
-sys.path.append(os.path.split(os.getcwd())[0])
-import h5dict
-import genome
+
+import mirnylab.h5dict 
+import mirnylab.genome  
 
 ##TODO: write some autodetection of chromosome lengthes base on genome folder
 ##TODO: throw an exception if no chromosomes found in chromosome folder
@@ -285,8 +283,8 @@ def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
     '''
    
     if isinstance(genome_db, str):
-        genome_db = genome.Genome(genome_db)        
-    assert isinstance(genome_db,genome.Genome)
+        genome_db = minylab.genome.Genome(genome_db)        
+    assert isinstance(genome_db,mirnylab.genome.Genome)
 
     if enzyme_name is None:
         if not genome_db.hasEnzyme():
@@ -440,8 +438,8 @@ def parse_sam(sam_wildcard1, sam_wildcard2, out_dict,
               max_seq_len = -1, reverse_complement=False, keep_ids=False):
     # Parse the single-sided reads.
     ss_lib = {}
-    ss_lib[1] = h5dict.h5dict()
-    ss_lib[2] = h5dict.h5dict()
+    ss_lib[1] = mirnylab.h5dict.h5dict()
+    ss_lib[2] = mirnylab.h5dict.h5dict()
     _parse_ss_sams(sam_wildcard1, ss_lib[1], 
                    1 if not max_seq_len else max_seq_len, reverse_complement)
     _parse_ss_sams(sam_wildcard2, ss_lib[2],
