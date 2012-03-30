@@ -11,7 +11,7 @@ import collections
 import h5py
 
 class h5dict(collections.MutableMapping):
-    def __init__(self, path=None, mode='a'):
+    def __init__(self, path=None, mode='a', autoflush=True):
         '''A persistent dictionary with data stored in an HDF5 file.
 
         Parameters:
@@ -38,6 +38,7 @@ class h5dict(collections.MutableMapping):
         self._h5file = h5py.File(self.path, mode)
         self._types = {}
         self._dtypes = {}
+        self.autoflush = autoflush
 
     def __contains__(self, key):
         return self._h5file.__contains__(key)
@@ -66,7 +67,8 @@ class h5dict(collections.MutableMapping):
         self._types.__delitem__(key)
         self._dtypes.__delitem__(key)
         self._h5file.__delitem__(key)
-        self._h5file.flush()
+        if self.autoflush:
+            self._h5file.flush()
 
     def __setitem__(self, key, value):
         if not isinstance(key, str) and not isinstance(key, unicode):
@@ -85,7 +87,8 @@ class h5dict(collections.MutableMapping):
                 data=cPickle.dumps(value, protocol = -1))
             self._types[key] = type(value)
             self._dtypes[key] = None
-        self._h5file.flush()
+        if self.autoflush:
+            self._h5file.flush()
 
     def value_type(self, key):
         return self._types[key]
@@ -107,4 +110,6 @@ class h5dict(collections.MutableMapping):
                 self[k] = v
         for i in kwargs:
             self[i] = kwargs[i]
-            
+    
+    def flush(self):
+        self._h5file.flush()
