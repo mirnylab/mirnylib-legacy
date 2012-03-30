@@ -410,24 +410,26 @@ class Genome():
         
     def getFragmentDistance(self, fragments1, fragments2, enzymeName):
         "returns distance between fragments in... fragments. (neighbors = 1, etc. )"
-        if not hasattr(self,"rfragMidIds"): 
-            self.setEnzyme(enzymeName)
-
-        frag1ind = numpy.searchsorted(self.rfragMids, fragments1)
-        frag2ind = numpy.searchsorted(self.rfragMids, fragments2)
-        distance = numpy.abs(frag1ind - frag2ind)
-
-        del frag1ind,frag2ind
-        ch1 = fragments1 / self.fragIDmult
-        ch2 = fragments2 / self.fragIDmult
-        distance[ch1 != ch2] = 1000000
+        if not hasattr(self,"rfragMidIds"):
+            self.setEnzyme(enzymeName)        
+        frag1ind = numpy.searchsorted(self.rfragMidIds, fragments1)        
+        frag2ind = numpy.searchsorted(self.rfragMidIds, fragments2)        
+        distance = numpy.abs(frag1ind - frag2ind)        
+        del frag1ind,frag2ind        
+        ch1 = fragments1 / self.fragIDmult        
+        ch2 = fragments2 / self.fragIDmult        
+        distance[ch1 != ch2] = 1000000        
         return distance
     
     def getPairsLessThanDistance(self,fragments1,fragments2,cutoffDistance,enzymeName):
         "returns all possible pairs (fragment1,fragment2) with fragment distance less-or-equal than cutoff"
-        if not hasattr(self,"rsiteIDs"): self._calculateRsiteIDs(enzymeName)
-        f1ID = numpy.searchsorted(self.rfragMidIds,fragments1) - 1
-        f2ID = numpy.searchsorted(self.rfragMidIds,fragments2) - 1    
+        if not hasattr(self,"rfragMidIds"): self.setEnzyme(enzymeName)
+        f1ID = numpy.searchsorted(self.rfragMidIds,fragments1) 
+        f2ID = numpy.searchsorted(self.rfragMidIds,fragments2)
+
+        assert (fragments1[::100] - self.rfragMidIds[f1ID[::100]]).sum() == 0 
+        assert (fragments2[::100] - self.rfragMidIds[f2ID[::100]]).sum() == 0
+             
         fragment2Candidates = numpy.concatenate(
             [f1ID + i for i in (range(-cutoffDistance,0) + range(1,cutoffDistance+1))])        
         fragment1Candidates = numpy.concatenate(
@@ -436,6 +438,6 @@ class Genome():
         
         fragment2Real = fragment2Candidates[mask]
         fragment1Real = fragment1Candidates[mask]
-        return  (self.rfragIDs[fragment1Real],self.rfragIDs[fragment2Real])
+        return  (self.rfragMidIds[fragment1Real],self.rfragMidIds[fragment2Real])
         
         
