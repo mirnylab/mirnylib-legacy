@@ -2,7 +2,7 @@
 mapping - map raw Hi-C reads to a genome
 ========================================
 '''
-import os
+import os, sys
 import glob
 import gzip
 import re
@@ -14,8 +14,9 @@ import numpy as np
 import  Bio.SeqIO, Bio.Seq, Bio.Restriction
 import pysam
 
-from .. import h5dict
-from .. import genome
+sys.path.append(os.path.split(os.getcwd())[0])
+import h5dict
+import genome
 
 ##TODO: write some autodetection of chromosome lengthes base on genome folder
 ##TODO: throw an exception if no chromosomes found in chromosome folder
