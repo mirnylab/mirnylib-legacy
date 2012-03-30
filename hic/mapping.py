@@ -11,7 +11,7 @@ import tempfile, atexit
 
 import numpy as np
 
-import Bio, Bio.SeqIO, Bio.Seq, Bio.Restriction
+import  Bio.SeqIO, Bio.Seq, Bio.Restriction
 import pysam
 
 from .. import h5dict
@@ -85,16 +85,16 @@ def _slice_file(in_path, out_path, first_line, last_line):
 
         if scanning:
             if lines + eols_in_buf > first_line:
-               write_f('\n'.join(buf.split('\n')[
+                write_f('\n'.join(buf.split('\n')[
                    first_line - lines : min(last_line - lines, eols_in_buf)]))
-               scanning = False
+                scanning = False
 
         else:
-           if lines + eols_in_buf < last_line: 
-               write_f(buf)
-           else:
-               write_f('\n'.join(buf.split('\n')[:last_line - lines]))
-               break
+            if lines + eols_in_buf < last_line: 
+                write_f(buf)
+            else:
+                write_f('\n'.join(buf.split('\n')[:last_line - lines]))
+                break
 
         lines += eols_in_buf
         buf = read_f(buf_size)
