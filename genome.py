@@ -392,7 +392,7 @@ class Genome():
         return rsites, rfragMids
 
     def hasEnzyme(self):
-        return hasattr(self, enzymeName)
+        return hasattr(self, "enzymeName")
     
     def setEnzyme(self, enzymeName):
         """Calculates rsite/rfrag positions and IDs for a given enzyme name 

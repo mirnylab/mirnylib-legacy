@@ -5,7 +5,6 @@ mapping - map raw Hi-C reads to a genome
 import os, sys
 import glob
 import gzip
-import re
 import subprocess
 import tempfile, atexit
 
