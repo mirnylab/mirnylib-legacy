@@ -14,16 +14,18 @@ import ctypes
 from copy import copy
 
 
-
 def _exceptionHook(infoType, value, tb):
-    "sets exception hook to pdb"
-    
+    "sets exception hook to pdb"    
     traceback.print_exception(infoType, value, tb)
-    print
-    pdb.post_mortem(tb) 
+    print     
+    pdb.post_mortem(tb)     
 
 def setExceptionHook():
     sys.excepthook = _exceptionHook
+
+class transparentDict(dict):   #transparent dictionary, that returns the key 
+    def __missing__(self, key): return key
+
 
 def run_in_separate_process(func, *args, **kwds):
     pread, pwrite = os.pipe()
