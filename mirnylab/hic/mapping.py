@@ -148,6 +148,10 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
                       min_seq_len, len_step, **kwargs):
     '''Map raw HiC reads iteratively with bowtie2.
     http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml
+    Iterative mapping accounts for the modification of fragments' sequences
+    due to ligation.
+   
+    The algorithm of iterative correction:
 
     1. Truncate the sequences to the first N = **min_seq_len** base pairs,
        starting at the **seq_start** position.
@@ -208,19 +212,23 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
     max_reads_per_chunk = kwargs.get('max_reads_per_chunk', -1)
     bowtie_flags = kwargs.get('bowtie_flags', '')
 
-    # Remove the temporary directory at exit from the top function.
+    # Split input files if required and apply iterative mapping to each 
+    # segment separately.
     if max_reads_per_chunk > 0:
         num_lines = _line_count(fastq_path)
         kwargs['max_reads_per_chunk'] = -1
         for i in range(num_lines / 4 / max_reads_per_chunk + 1):
             fastq_chunk_path = fastq_path + '.%d' % i
-            _slice_file(fastq_path, fastq_chunk_path, 4 * i * max_reads_per_chunk, 
+            _slice_file(fastq_path,
+                        fastq_chunk_path, 
+                        4 * i * max_reads_per_chunk, 
                         4 * (i + 1) * max_reads_per_chunk)
             iterative_mapping(bowtie_path, genome_path, fastq_chunk_path, 
                               out_sam_path + '.%d' % i, min_seq_len, len_step,
                               **kwargs)
         return 
 
+    # Convert input relative arguments to the absolute length scale.
     raw_seq_len = len(Bio.SeqIO.parse(open(fastq_path), 'fastq').next().seq)
     if (seq_start < 0 
         or seq_start > raw_seq_len 
@@ -232,7 +240,6 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
 
     if min_seq_len <= local_seq_end - seq_start: 
         trim_5 = seq_start
-        #trim_3 = raw_seq_len - local_seq_end
         trim_3 = raw_seq_len - seq_start - min_seq_len
         bowtie_command = (
             ('time %s -x %s --very-sensitive '#--score-min L,-0.6,-0.2 '
@@ -244,10 +251,16 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
         print 'Map reads:', bowtie_command
         subprocess.call(bowtie_command, shell=True)
 
+        # Check if the next iteration is required.
+        if len_step <= 0:
+            return
+        if min_seq_len + len_step > local_seq_end - seq_start: 
+            return
+
+        # Recursively go to the next iteration.
         print ('Save unique aligments and send the '
                'non-unique ones to the next iteration')
 
-        #unmapped_fastq_path = fastq_path # Testing
         unmapped_fastq_path = os.path.join(
             tempfile.gettempdir(), fastq_path + '.%d' % min_seq_len)
         filter_unmapped_fastq(fastq_path, out_sam_path, unmapped_fastq_path)
@@ -259,8 +272,7 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
                           len_step=len_step, **kwargs)
      
 def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
-    '''Private: assign mapped reads to restriction fragments by 
-    their 5' end position.
+    '''Assign mapped reads to the restriction fragments.
 
     Parameters
     ----------
@@ -269,7 +281,7 @@ def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
         A library of mapped Hi-C molecules. Modified by the function.
 
     genome_db : str or mirnylab.genome.genome
-        A path to a folder with genome sequences in FASTA format or
+        A path to the folder with genome sequences in FASTA format or
         a mirnylab.genome.genome object.
 
     enzyme_name : str
