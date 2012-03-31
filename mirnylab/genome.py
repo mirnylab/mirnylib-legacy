@@ -215,7 +215,8 @@ class Genome():
         # Get the lengths of the chromosomes.
         self.chrmLens = self.getChrmLen()   
         self.maxChrmLen = max(self.chrmLens)  
-        self.fragIDmult = self.maxChrmLen + 1000   #to be used when calculating fragment IDs for HiC  
+        # FragIDmult is used in (chrm, frag) -> fragID conversion.
+        self.fragIDmult = self.maxChrmLen + 1000 
 
         # Parse a gap file and mark the centromere positions.
         self._parseGapFile()  
