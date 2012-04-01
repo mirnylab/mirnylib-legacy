@@ -294,32 +294,33 @@ def maskPCA(A,mask):
     return coeff
 
 
-def PCA(A):
+def PCA(A, numPCs = 6):
     """performs PCA analysis, and returns 6 best principal components
     result[0] is the first PC, etc"""    
     A = numpy.array(A,float)
     M = (A-numpy.mean(A.T,axis=1)).T 
     covM = numpy.dot(M,M.T)
-    [latent,coeff] =  scipy.sparse.linalg.eigsh(covM,6)
+    [latent,coeff] =  scipy.sparse.linalg.eigsh(covM,numPCs)
     print latent
     return numpy.transpose(coeff[:,::-1])
 
 
-def EIG(A):
+def EIG(A,numPCs = 3):
     """Performs mean-centered engenvector expansion
-    result[0] is the first PC, etc. 
+    result[0] is the first EV, etc.; 
+    by default returns 3 EV 
     """
     A = numpy.array(A,float)    
     M = (A - numpy.mean(A)) # subtract the mean (along columns)
     if (M -M.T).var() < numpy.var(M[::10,::10]) * 0.000001:
-        [latent,coeff] = scipy.sparse.linalg.eigsh(M,3)
-        print "herm"   #matrix is hermitian
+        [latent,coeff] = scipy.sparse.linalg.eigsh(M,numPCs)
+        print "mode autodetect: hermitian"   #matrix is hermitian
     else: 
-        [latent,coeff] = scipy.sparse.linalg.eigs(M,3)
-        print "norm"   #Matrix is normal
+        [latent,coeff] = scipy.sparse.linalg.eigs(M,numPCs)
+        print "mode autodetect : non-hermitian"   #Matrix is normal
     alatent = numpy.argsort(numpy.abs(latent)) 
-    print latent[:4]
-    coeff = coeff[:,alatent]
+    print "eigenvalues are:", latent[alatent]
+    coeff = coeff[:,alatent]     
     return numpy.transpose(coeff[:,::-1])
 
 
