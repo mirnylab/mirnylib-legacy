@@ -236,6 +236,34 @@ def random_in_sphere(r=1):
 randomInSphere = random_in_sphere
 randomOnSphere = random_on_sphere
 
+def openmpSum(in_array):
+    """
+    Performs fast sum of an array using openmm  
+    """
+    a = numpy.asarray(in_array)
+    b = numpy.array([1.])
+    N = int(numpy.prod(a.shape)) 
+    code = r"""     
+    int i=0; 
+    double sum = 0;     
+    omp_set_num_threads(4);
+    #pragma omp parallel for      \  
+      default(shared) private(i)  \
+      reduction(+:sum)                 
+        for (i=0; i<N; i++)
+              sum += a[i];
+    b[0] = sum;
+    """
+    
+    weave.inline(code, ['a','N','b'], 
+                     extra_compile_args=['-march=native  -O3  -fopenmp ' ],
+                     support_code = r"""
+    #include <stdio.h>
+    #include <omp.h>
+    #include <math.h>""",
+     libraries=['gomp'])
+    return b[0]
+
 
 
 #-----------------------------------
@@ -267,17 +295,20 @@ def maskPCA(A,mask):
 
 
 def PCA(A):
-    "performs PCA analysis, and returns 6 best principal components"
+    """performs PCA analysis, and returns 6 best principal components
+    result[0] is the first PC, etc"""    
     A = numpy.array(A,float)
     M = (A-numpy.mean(A.T,axis=1)).T 
     covM = numpy.dot(M,M.T)
     [latent,coeff] =  scipy.sparse.linalg.eigsh(covM,6)
     print latent
-    return coeff[:,::-1]
+    return numpy.transpose(coeff[:,::-1])
 
 
 def EIG(A):
-    "Performs mean-centered engenvector expansion"
+    """Performs mean-centered engenvector expansion
+    result[0] is the first PC, etc. 
+    """
     A = numpy.array(A,float)    
     M = (A - numpy.mean(A)) # subtract the mean (along columns)
     if (M -M.T).var() < numpy.var(M[::10,::10]) * 0.000001:
@@ -289,7 +320,9 @@ def EIG(A):
     alatent = numpy.argsort(numpy.abs(latent)) 
     print latent[:4]
     coeff = coeff[:,alatent]
-    return coeff[:,::-1]
+    return numpy.transpose(coeff[:,::-1])
+
+
 
 def project(data,vector):
     "project data on a single vector"
