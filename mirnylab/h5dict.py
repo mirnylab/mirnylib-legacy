@@ -11,6 +11,8 @@ import collections
 import h5py
 
 class h5dict(collections.MutableMapping):
+    self_key = '_self_key'
+
     def __init__(self, path=None, mode='a', autoflush=True):
         '''A persistent dictionary with data stored in an HDF5 file.
 
@@ -36,21 +38,40 @@ class h5dict(collections.MutableMapping):
             self.path = path
             self.is_tmp = False
         self._h5file = h5py.File(self.path, mode)
-        self._types = {}
-        self._dtypes = {}
+        self.__self_load__()
         self.autoflush = autoflush
 
+    def __self_dump__(self):
+        if self.self_key in self._h5file.keys():
+            self._h5file.__delitem__(self.self_key)
+
+        data = {'_types': self._types, '_dtypes': self._dtypes}
+        self._h5file.create_dataset(name=self.self_key,
+            data=cPickle.dumps(data, protocol = -1))
+
+    def __self_load__(self):
+        if self.self_key in self._h5file.keys():
+            data = cPickle.loads(self._h5file[self.self_key].value)
+            self._types = data['_types'] 
+            self._dtypes = data['_dtypes'] 
+        else:
+            self._types = {}
+            self._dtypes = {}
+
     def __contains__(self, key):
-        return self._h5file.__contains__(key)
+        if key == self.self_key:
+            return False
+        else:
+            return self._h5file.__contains__(key)
 
     def __iter__(self):
-        return self._h5file.__iter__()
+        return [i for i in self._h5file if i != self.self_key].__iter__()
 
     def __len__(self):
-        return len(self.keys())
+        return len(self.keys() - 1)
 
     def keys(self):
-        return self._h5file.keys()
+        return [i for i in self._h5file.keys() if i != self.self_key]
 
     def __getitem__(self, key):
         if key not in self.keys():
@@ -67,10 +88,14 @@ class h5dict(collections.MutableMapping):
         self._types.__delitem__(key)
         self._dtypes.__delitem__(key)
         self._h5file.__delitem__(key)
+        self.__self_dump_()
+
         if self.autoflush:
             self._h5file.flush()
 
     def __setitem__(self, key, value):
+        if key == self.self_key:
+            raise Exception("'%d' key is reserved by h5dict" % self.self_key)
         if not isinstance(key, str) and not isinstance(key, unicode):
             raise Exception('h5dict only accepts string keys')
         if key in self.keys():
@@ -87,6 +112,9 @@ class h5dict(collections.MutableMapping):
                 data=cPickle.dumps(value, protocol = -1))
             self._types[key] = type(value)
             self._dtypes[key] = None
+
+        self.__self_dump__()
+
         if self.autoflush:
             self._h5file.flush()
 
