@@ -267,17 +267,20 @@ def maskPCA(A,mask):
 
 
 def PCA(A):
-    "performs PCA analysis, and returns 6 best principal components"
+    """performs PCA analysis, and returns 6 best principal components
+    result[0] is the first PC, etc"""    
     A = numpy.array(A,float)
     M = (A-numpy.mean(A.T,axis=1)).T 
     covM = numpy.dot(M,M.T)
     [latent,coeff] =  scipy.sparse.linalg.eigsh(covM,6)
     print latent
-    return coeff[:,::-1]
+    return numpy.transpose(coeff[:,::-1])
 
 
 def EIG(A):
-    "Performs mean-centered engenvector expansion"
+    """Performs mean-centered engenvector expansion
+    result[0] is the first PC, etc. 
+    """
     A = numpy.array(A,float)    
     M = (A - numpy.mean(A)) # subtract the mean (along columns)
     if (M -M.T).var() < numpy.var(M[::10,::10]) * 0.000001:
@@ -289,7 +292,9 @@ def EIG(A):
     alatent = numpy.argsort(numpy.abs(latent)) 
     print latent[:4]
     coeff = coeff[:,alatent]
-    return coeff[:,::-1]
+    return numpy.transpose(coeff[:,::-1])
+
+
 
 def project(data,vector):
     "project data on a single vector"
