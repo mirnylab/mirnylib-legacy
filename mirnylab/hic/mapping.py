@@ -3,14 +3,15 @@ mapping - map raw Hi-C reads to a genome
 ========================================
 '''
 import os, sys
+import re
 import glob
 import gzip
 import subprocess
 import tempfile, atexit
-import numpy as np
-import  Bio.SeqIO, Bio.Seq, Bio.Restriction
-import pysam
 
+import numpy as np
+import Bio.SeqIO, Bio.Seq, Bio.Restriction
+import pysam
 
 import mirnylab.h5dict 
 import mirnylab.genome  
@@ -147,6 +148,10 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
                       min_seq_len, len_step, **kwargs):
     '''Map raw HiC reads iteratively with bowtie2.
     http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml
+    Iterative mapping accounts for the modification of fragments' sequences
+    due to ligation.
+   
+    The algorithm of iterative correction:
 
     1. Truncate the sequences to the first N = **min_seq_len** base pairs,
        starting at the **seq_start** position.
@@ -207,19 +212,23 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
     max_reads_per_chunk = kwargs.get('max_reads_per_chunk', -1)
     bowtie_flags = kwargs.get('bowtie_flags', '')
 
-    # Remove the temporary directory at exit from the top function.
+    # Split input files if required and apply iterative mapping to each 
+    # segment separately.
     if max_reads_per_chunk > 0:
         num_lines = _line_count(fastq_path)
         kwargs['max_reads_per_chunk'] = -1
         for i in range(num_lines / 4 / max_reads_per_chunk + 1):
             fastq_chunk_path = fastq_path + '.%d' % i
-            _slice_file(fastq_path, fastq_chunk_path, 4 * i * max_reads_per_chunk, 
+            _slice_file(fastq_path,
+                        fastq_chunk_path, 
+                        4 * i * max_reads_per_chunk, 
                         4 * (i + 1) * max_reads_per_chunk)
             iterative_mapping(bowtie_path, genome_path, fastq_chunk_path, 
                               out_sam_path + '.%d' % i, min_seq_len, len_step,
                               **kwargs)
         return 
 
+    # Convert input relative arguments to the absolute length scale.
     raw_seq_len = len(Bio.SeqIO.parse(open(fastq_path), 'fastq').next().seq)
     if (seq_start < 0 
         or seq_start > raw_seq_len 
@@ -231,7 +240,6 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
 
     if min_seq_len <= local_seq_end - seq_start: 
         trim_5 = seq_start
-        #trim_3 = raw_seq_len - local_seq_end
         trim_3 = raw_seq_len - seq_start - min_seq_len
         bowtie_command = (
             ('time %s -x %s --very-sensitive '#--score-min L,-0.6,-0.2 '
@@ -243,10 +251,16 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
         print 'Map reads:', bowtie_command
         subprocess.call(bowtie_command, shell=True)
 
+        # Check if the next iteration is required.
+        if len_step <= 0:
+            return
+        if min_seq_len + len_step > local_seq_end - seq_start: 
+            return
+
+        # Recursively go to the next iteration.
         print ('Save unique aligments and send the '
                'non-unique ones to the next iteration')
 
-        #unmapped_fastq_path = fastq_path # Testing
         unmapped_fastq_path = os.path.join(
             tempfile.gettempdir(), fastq_path + '.%d' % min_seq_len)
         filter_unmapped_fastq(fastq_path, out_sam_path, unmapped_fastq_path)
@@ -258,8 +272,7 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
                           len_step=len_step, **kwargs)
      
 def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
-    '''Private: assign mapped reads to restriction fragments by 
-    their 5' end position.
+    '''Assign mapped reads to the restriction fragments.
 
     Parameters
     ----------
@@ -268,7 +281,7 @@ def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
         A library of mapped Hi-C molecules. Modified by the function.
 
     genome_db : str or mirnylab.genome.genome
-        A path to a folder with genome sequences in FASTA format or
+        A path to the folder with genome sequences in FASTA format or
         a mirnylab.genome.genome object.
 
     enzyme_name : str
@@ -284,7 +297,7 @@ def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
    
     if isinstance(genome_db, str):
         genome_db = mirnylab.genome.Genome(genome_db)        
-    assert isinstance(genome_db,mirnylab.genome.Genome)
+    assert isinstance(genome_db, mirnylab.genome.Genome)
 
     if enzyme_name is None:
         if not genome_db.hasEnzyme():
@@ -352,13 +365,23 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
     lib['downrsites' + side] = downrsites
     lib['rsites' + side] = rsites
 
-def _parse_ss_sams(sam_wildcard, out_dict, 
+def _parse_ss_sams(sam_wildcard, out_dict, genome_db,
                    max_seq_len = -1, reverse_complement=False):
     """Parse SAM files with single-sided reads.
     """
-    def _for_each_unique_read(sam_wildcard, action):
+    def _for_each_unique_read(sam_wildcard, genome_db, action):
         for sam_path in glob.glob(sam_wildcard):
-            for read in pysam.Samfile(sam_path):
+            samfile = pysam.Samfile(sam_path)
+            
+            # Make Bowtie's chromosome tids -> genome_db indices dictionary.
+            tid2idx = {}
+            rname_re = genome_db.chrmFileTemplate.split('.')[0] % ('(.*)')
+            for i in xrange(len(samfile.lengths)):
+                chrm_rname = samfile.getrname(i)
+                chrm_label = re.search(rname_re, chrm_rname).group(1)
+                tid2idx[i] = genome_db.label2idx[chrm_label]
+            
+            for read in samfile:
                 # Skip non-mapped reads...
                 if read.is_unmapped:
                     continue
@@ -366,6 +389,9 @@ def _parse_ss_sams(sam_wildcard, out_dict,
                 for tag in read.tags:
                     if tag[0] == 'XS':
                         continue
+
+                # Convert Bowtie's chromosome tids to genome_db indices.
+                read.tid = tid2idx[read.tid]
                 # ...or those not belonging to the target chromosome. 
                 action(read) 
 
@@ -382,7 +408,7 @@ def _parse_ss_sams(sam_wildcard, out_dict,
     _count_stats.id_len = 0
     _count_stats.seq_len = 0
     _count_stats.num_reads = 0
-    _for_each_unique_read(sam_wildcard, action=_count_stats)
+    _for_each_unique_read(sam_wildcard, genome_db, _count_stats)
     sam_stats = {'id_len': _count_stats.id_len,
                  'seq_len':_count_stats.seq_len,
                  'num_reads':_count_stats.num_reads}
@@ -398,21 +424,21 @@ def _parse_ss_sams(sam_wildcard, out_dict,
     # ...chromosome ids
     buf = np.zeros((sam_stats['num_reads'],), dtype=np.int8)
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard,
+    _for_each_unique_read(sam_wildcard, genome_db,
         action=lambda read: _write_to_array(read, buf, read.tid))
     out_dict['chrms'] = buf
 
     # ...strands
     buf = np.zeros((sam_stats['num_reads'],), dtype=np.bool)
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard,
+    _for_each_unique_read(sam_wildcard, genome_db,
         action=lambda read: _write_to_array(read, buf, not read.is_reverse))
     out_dict['strands'] = buf
 
     # ...cut sites
     buf = np.zeros((sam_stats['num_reads'],), dtype=np.int64)
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard,
+    _for_each_unique_read(sam_wildcard, genome_db,
         action=
             lambda read: _write_to_array(read, buf, read.pos + (len(read.seq) if read.is_reverse else 0)))
     out_dict['cuts'] = buf
@@ -420,7 +446,7 @@ def _parse_ss_sams(sam_wildcard, out_dict,
     # ...sequences
     buf = np.zeros((sam_stats['num_reads'],), dtype='|S%d' % sam_stats['seq_len'])
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard,
+    _for_each_unique_read(sam_wildcard, genome_db,
         action=
             lambda read: _write_to_array(read, buf, Bio.Seq.reverse_complement(read.seq) if read.is_reverse and reverse_complement else read.seq))
     out_dict['seqs'] = buf
@@ -428,21 +454,57 @@ def _parse_ss_sams(sam_wildcard, out_dict,
     # and ids.
     buf = np.zeros((sam_stats['num_reads'],), dtype='|S%d' % sam_stats['id_len'])
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard,
+    _for_each_unique_read(sam_wildcard, genome_db,
         action=lambda read: _write_to_array(read, buf, read.qname))
     out_dict['ids'] = buf
 
     return out_dict
 
-def parse_sam(sam_wildcard1, sam_wildcard2, out_dict,
+def parse_sam(sam_wildcard1, sam_wildcard2, out_dict, genome_db,
               max_seq_len = -1, reverse_complement=False, keep_ids=False):
+    '''Parse SAM/BAM files with HiC reads.
+
+    Parameters
+    ----------
+
+    sam_wildcard1 : str
+        A wildcard pattern (e.g. reads1*.bam) matching SAM files containing
+        the first side of HiC reads.
+
+    sam_wildcard2 : str
+        A wildcard pattern (e.g. reads1*.bam) matching SAM files containing
+        the second side of HiC reads.
+
+    out_dict : dict-like
+        A dict-like structure to store the library of matched HiC reads.
+
+    genome_db : str or mirnylab.genome.genome
+        A path to a folder with FASTA files or a genome object. It is used
+        to convert Bowtie chromosome indices to internal indices.
+
+    max_seq_len : int
+        The maximal length of sequences stored in the library. The default
+        value is -1, i.e. the sequences are not truncated.
+
+    reverse_complement : bool
+        If True then the sequences of reads on the reversed strand will be
+        reverse complemented. False by default.
+
+    keep_ids : bool
+        If True then the IDs of reads are stored. False by default.
+    '''
+    
+    if isinstance(genome_db, str):
+        genome_db = mirnylab.genome.Genome(genome_db)        
+    assert isinstance(genome_db, mirnylab.genome.Genome)
+
     # Parse the single-sided reads.
     ss_lib = {}
     ss_lib[1] = mirnylab.h5dict.h5dict()
     ss_lib[2] = mirnylab.h5dict.h5dict()
-    _parse_ss_sams(sam_wildcard1, ss_lib[1], 
+    _parse_ss_sams(sam_wildcard1, ss_lib[1], genome_db,
                    1 if not max_seq_len else max_seq_len, reverse_complement)
-    _parse_ss_sams(sam_wildcard2, ss_lib[2],
+    _parse_ss_sams(sam_wildcard2, ss_lib[2], genome_db,
                    1 if not max_seq_len else max_seq_len, reverse_complement)
 
     # Determine the number of double-sided reads.
