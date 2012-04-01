@@ -88,7 +88,7 @@ class h5dict(collections.MutableMapping):
         self._types.__delitem__(key)
         self._dtypes.__delitem__(key)
         self._h5file.__delitem__(key)
-        self.__self_dump_()
+        self.__self_dump__()
 
         if self.autoflush:
             self._h5file.flush()
