@@ -1,7 +1,7 @@
 import os, glob, re
 
 import numpy 
-
+import warnings
 import Bio.SeqIO, Bio.SeqUtils, Bio.Restriction
 Bio.Restriction  #To shut up Eclipse warning
 import joblib 
@@ -416,6 +416,34 @@ class Genome():
              for chrm in xrange(self.chrmCount)])
 
         assert (len(self.rsiteIds) == len(self.rfragMidIds))
+        
+        
+    def checkReadConsistency(self,chromosomes,positions):
+        """
+        
+        """
+        chromSet = set(chromosomes)
+        if 0 not in chromSet: 
+            warnings.warn("Chromosome zero not found! Are you using zero-based chromosomes?",UserWarning)
+        if max(chromSet) >= self.chrmCount:
+            raise StandardError("Chromosome number %d exceeds expected chromosome count %d" % (max(chromSet), self.chrmCount))
+        if max(chromSet) < self.chrmCount - 1:
+            warnings.warn("More chromosomes in the genome (%d)  than we got (%d) ! Are you using proper genome?" % (self.chrmCount, max(chromSet) - 1))
+        maxpositions = self.chrmLens[chromosomes]
+        check = positions > maxpositions
+        if check.any():   #found positions that exceeds chromosme length
+            inds = numpy.nonzero(check)[0]
+            inds = inds[::len(inds)/10]
+            for i in inds: 
+                raise StandardError( "Position %d on chrm %d exceeds maximum positions %d" % (
+                        chromosomes[i],positions[i],self.chrmLens[chromosomes[i]]) ) 
+                
+            
+            
+            
+        
+        
+        
         
     def getFragmentDistance(self, fragments1, fragments2, enzymeName):
         "returns distance between fragments in... fragments. (neighbors = 1, etc. )"

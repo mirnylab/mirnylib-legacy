@@ -236,6 +236,34 @@ def random_in_sphere(r=1):
 randomInSphere = random_in_sphere
 randomOnSphere = random_on_sphere
 
+def openmpSum(in_array):
+    """
+    Performs fast sum of an array using openmm  
+    """
+    a = numpy.asarray(in_array)
+    b = numpy.array([1.])
+    N = int(numpy.prod(a.shape)) 
+    code = r"""     
+    int i=0; 
+    double sum = 0;     
+    omp_set_num_threads(4);
+    #pragma omp parallel for      \  
+      default(shared) private(i)  \
+      reduction(+:sum)                 
+        for (i=0; i<N; i++)
+              sum += a[i];
+    b[0] = sum;
+    """
+    
+    weave.inline(code, ['a','N','b'], 
+                     extra_compile_args=['-march=native  -O3  -fopenmp ' ],
+                     support_code = r"""
+    #include <stdio.h>
+    #include <omp.h>
+    #include <math.h>""",
+     libraries=['gomp'])
+    return b[0]
+
 
 
 #-----------------------------------
