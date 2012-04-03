@@ -221,6 +221,22 @@ class Genome():
         # Parse a gap file and mark the centromere positions.
         self._parseGapFile()  
 
+    def _extractChrmLabel(self, string):
+        # First assume a whole filename as input (e.g. 'chr01.fa')
+        regexp = self.chrmFileTemplate % ('(.*)')
+        search_results = re.search(regexp, string)
+        # If not, assume that only the name is supplied as input (e.g. 'chr01')
+        if search_results is None:
+            regexp = self.chrmFileTemplate.split('.')[0] % ('(.*)')
+            search_results = re.search(regexp, string)
+        chrm_label = search_results.group(1)
+
+        # Remove leading zeroes.
+        if chrm_label.isdigit():
+            chrm_label = str(int(chrm_label))
+
+        return chrm_label
+
     def _scanGenomeFolder(self):
         self.fastaNames = [os.path.join(self.genomePath, i)
             for i in glob.glob(os.path.join(
@@ -232,7 +248,7 @@ class Genome():
         # Read chromosome IDs.
         self.chrmLabels = []
         for i in self.fastaNames: 
-            chrm = re.search(self.chrmFileTemplate % ('(.*)',), i).group(1)
+            chrm = self._extractChrmLabel(i)
             if ((chrm.isdigit() and '#' in self.readChrms)
                 or chrm in self.readChrms):
                 self.chrmLabels.append(chrm)
@@ -262,9 +278,8 @@ class Genome():
         # Sort fastaNames and self.chrmLabels according to the indices:
         self.chrmLabels = zip(*sorted(self.idx2label.items(),
                                       key=lambda x: x[0]))[1]
-        self.fastaNames = [
-            os.path.join(self.genomePath, self.chrmFileTemplate % i)
-            for i in self.chrmLabels]
+        self.fastaNames.sort(
+            key = lambda path: self.label2idx[self._extractChrmLabel(path)])
 
     def getChrmLen(self):
         # At the first call redirects itself to a memoized private function.

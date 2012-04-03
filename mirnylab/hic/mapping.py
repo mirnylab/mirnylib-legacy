@@ -375,10 +375,9 @@ def _parse_ss_sams(sam_wildcard, out_dict, genome_db,
             
             # Make Bowtie's chromosome tids -> genome_db indices dictionary.
             tid2idx = {}
-            rname_re = genome_db.chrmFileTemplate.split('.')[0] % ('(.*)')
             for i in xrange(len(samfile.lengths)):
                 chrm_rname = samfile.getrname(i)
-                chrm_label = re.search(rname_re, chrm_rname).group(1)
+                chrm_label = genome_db._extractChrmLabel(chrm_rname)
                 tid2idx[i] = genome_db.label2idx[chrm_label]
             
             for read in samfile:
