@@ -4,9 +4,7 @@ import os, sys
 
 libpath = os.getcwd()
 if libpath.startswith(os.path.expanduser('~')):
-    libpath = os.path.join(*(['$HOME',] + libpath.split(os.sep)[3:-1]))
-    
-else: libpath = os.path.split(os.getcwd())[0]
+    libpath = os.path.join(*(['$HOME',] + libpath.split(os.sep)[3:]))
 
 export_line = 'export PYTHONPATH="$PYTHONPATH:{0}"'.format(libpath)
 
