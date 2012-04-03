@@ -247,11 +247,14 @@ class Genome():
 
         # Read chromosome IDs.
         self.chrmLabels = []
+        filteredFastaNames = []
         for i in self.fastaNames: 
             chrm = self._extractChrmLabel(i)
             if ((chrm.isdigit() and '#' in self.readChrms)
                 or chrm in self.readChrms):
                 self.chrmLabels.append(chrm)
+                filteredFastaNames.append(i)
+        self.fastaNames = filteredFastaNames
     
         # Convert IDs to indices:
         # A. Convert numerical IDs.
