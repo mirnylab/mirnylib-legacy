@@ -102,7 +102,7 @@ def _slice_file(in_path, out_path, first_line, last_line):
     output.write('\n')
     output.close()
 
-def filter_fastq(ids, in_fastq, out_fastq):
+def _filter_fastq(ids, in_fastq, out_fastq):
     '''Filter FASTQ sequences by their IDs.
 
     Read entries from **in_fastq** and store in **out_fastq** only those
@@ -126,7 +126,7 @@ def filter_fastq(ids, in_fastq, out_fastq):
         if read_id in ids:
             out_file.writelines(fastq_entry)
 
-def filter_unmapped_fastq(in_fastq, in_sam, nonunique_fastq):
+def _filter_unmapped_fastq(in_fastq, in_sam, nonunique_fastq):
     '''Read raw sequences from **in_fastq** and alignments from 
     **in_sam** and save the non-uniquely aligned and unmapped sequences
     to **unique_sam**.
@@ -142,9 +142,9 @@ def filter_unmapped_fastq(in_fastq, in_sam, nonunique_fastq):
         if 'XS' in tags_dict or read.is_unmapped:
             nonunique_ids.add(read_id)
 
-    filter_fastq(nonunique_ids, in_fastq, nonunique_fastq)
+    _filter_fastq(nonunique_ids, in_fastq, nonunique_fastq)
 
-def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
+def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
                       min_seq_len, len_step, **kwargs):
     '''Map raw HiC reads iteratively with bowtie2.
     http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml
@@ -263,7 +263,7 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
 
         unmapped_fastq_path = os.path.join(
             tempfile.gettempdir(), fastq_path + '.%d' % min_seq_len)
-        filter_unmapped_fastq(fastq_path, out_sam_path, unmapped_fastq_path)
+        _filter_unmapped_fastq(fastq_path, out_sam_path, unmapped_fastq_path)
         atexit.register(lambda: os.remove(unmapped_fastq_path))
 
         iterative_mapping(bowtie_path, genome_path, unmapped_fastq_path, 
@@ -272,13 +272,13 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
                           len_step=len_step, **kwargs)
      
 def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
-    '''Assign mapped reads to the restriction fragments.
+    '''Assign the mapped reads to the restriction fragments.
 
     Parameters
     ----------
 
     lib : dict
-        A library of mapped Hi-C molecules. Modified by the function.
+        A library of mapped Hi-C molecules. Gets modified by the function.
 
     genome_db : str or mirnylab.genome.genome
         A path to the folder with genome sequences in FASTA format or
@@ -467,12 +467,12 @@ def parse_sam(sam_wildcard1, sam_wildcard2, out_dict, genome_db,
     ----------
 
     sam_wildcard1 : str
-        A wildcard pattern (e.g. reads1*.bam) matching SAM files containing
-        the first side of HiC reads.
+        A wildcard pattern (e.g. 'reads1.bam*') matching SAM files with
+        the mapped sequences of the first side of Hi-C molecules.
 
     sam_wildcard2 : str
-        A wildcard pattern (e.g. reads1*.bam) matching SAM files containing
-        the second side of HiC reads.
+        A wildcard pattern (e.g. 'reads2.bam*') matching SAM files with  
+        the mapped sequences of the second side of Hi-C molecules.
 
     out_dict : dict-like
         A dict-like structure to store the library of matched HiC reads.
@@ -482,8 +482,9 @@ def parse_sam(sam_wildcard1, sam_wildcard2, out_dict, genome_db,
         to convert Bowtie chromosome indices to internal indices.
 
     max_seq_len : int
-        The maximal length of sequences stored in the library. The default
-        value is -1, i.e. the sequences are not truncated.
+        The length the sequences are truncated to before saving 
+        into the library. The default value is -1, i.e. the sequences are 
+        not truncated.
 
     reverse_complement : bool
         If True then the sequences of reads on the reversed strand will be
