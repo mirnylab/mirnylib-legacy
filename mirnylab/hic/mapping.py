@@ -246,7 +246,7 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
              '-q %s -5 %s -3 %s -p %s %s > %s') % (
                 bowtie_path, genome_path, fastq_path, 
                 str(trim_5), str(trim_3), str(nthreads), bowtie_flags,
-                out_sam_path))
+                out_sam_path + '.' + str(min_seq_len)))
 
         print 'Map reads:', bowtie_command
         subprocess.call(bowtie_command, shell=True)
@@ -267,7 +267,7 @@ def iterative_mapping(bowtie_path, genome_path, fastq_path, out_sam_path,
         atexit.register(lambda: os.remove(unmapped_fastq_path))
 
         iterative_mapping(bowtie_path, genome_path, unmapped_fastq_path, 
-                          out_sam_path + '.%d' % min_seq_len,
+                          out_sam_path,
                           min_seq_len = min_seq_len + len_step, 
                           len_step=len_step, **kwargs)
      
