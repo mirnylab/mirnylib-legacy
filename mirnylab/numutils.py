@@ -183,7 +183,7 @@ smartZoomOut = zoomOut  #backwards compatibility
 def coarsegrain(array,size,extendEdge = False):
     "coarsegrains array by summing values in sizeXsize squares; truncates the unused squares"
     
-    array = numpy.asarray(array, dtype = generalizedDtype(array.dytpe) )
+    array = numpy.asarray(array, dtype = generalizedDtype(array.dtype) )
     
     
     if extendEdge == False:  
