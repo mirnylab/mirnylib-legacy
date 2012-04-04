@@ -209,8 +209,7 @@ def plot_line(a, b, **kwargs):
     a, b : float
         The slope and intercept of the line.
     """
-    xlim = pylab.xlim()
-    ylim = pylab.ylim()
+    xlim = pylab.xlim()    
     pylab.plot([xlim[0], xlim[1]], 
                [a * xlim[0] + b, a * xlim[1] + b],
                **kwargs) 
@@ -327,19 +326,19 @@ def plot_function_3d(x, y, function, **kwargs):
     Z = numpy.array(Z)
     plot_type = kwargs.get('plot_type', 'surface')
     if plot_type == 'surface':
-        ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pylab.cm.jet)
+        ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pylab.cm.get_cmap("jet")) 
     elif plot_type == 'wireframe':
-        ax.plot_wireframe(X, Y, Z, cmap=pylab.cm.jet)
+        ax.plot_wireframe(X, Y, Z, cmap=pylab.cm.get_cmap("jet"))
     elif plot_type == 'scatter':
         ax.scatter3D(numpy.ravel(X), numpy.ravel(Y), numpy.ravel(Z))
     elif plot_type == 'contour':
         num_contours = kwargs.get('num_contours', 50)
-        ax.contour3D(X, Y, Z, num_contours, cmap=pylab.cm.jet)
+        ax.contour3D(X, Y, Z, num_contours, cmap=pylab.cm.get_cmap("jet"))
     elif plot_type == 'contourf':
         num_contours = kwargs.get('num_contours', 50)
-        ax.contourf3D(X, Y, Z, num_contours, cmap=pylab.cm.jet)
+        ax.contourf3D(X, Y, Z, num_contours, cmap=pylab.cm.get_cmap("jet"))
     else:
-        raise PyteomicsError('Unknown plot type: %s' % (plot_type,))
+        raise StandardError('Unknown plot type: %s' % (plot_type,))
     ax.set_xlabel(kwargs.get('xlabel', ''))
     ax.set_ylabel(kwargs.get('ylabel', ''))
     ax.set_zlabel(kwargs.get('zlabel', ''))
@@ -373,9 +372,9 @@ def plot_function_contour(x, y, function, **kwargs):
     Z = numpy.array(Z)
     num_contours = kwargs.get('num_contours', 50)
     if kwargs.get('filling', True):
-        pylab.contourf(X, Y, Z, num_contours, cmap=pylab.cm.jet)
+        pylab.contourf(X, Y, Z, num_contours, cmap=pylab.cm.get_cmap("jet"))
     else:
-        pylab.contour(X, Y, Z, num_contours, cmap=pylab.cm.jet)
+        pylab.contour(X, Y, Z, num_contours, cmap=pylab.cm.get_cmap("jet"))
     pylab.xlabel(kwargs.get('xlabel', ''))
     pylab.ylabel(kwargs.get('ylabel', ''))
     pylab.title(kwargs.get('title', ''))

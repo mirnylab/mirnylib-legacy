@@ -4,9 +4,33 @@ import  scipy.weave,scipy.sparse.linalg
 from scipy import weave 
 import scipy.linalg
 from math import cos,log,sin,sqrt
+from mirnylab.systemutils import fmap 
 #-------------------------
 "Mathematical utilities first" 
 #-------------------------
+
+def generalizedDtype(dtype):
+    """"returns generalized dtype of an object
+    upscales precision to the system-specific precision (int16 -> int; int32 -> int) 
+    Accepts all dtype-compatible objects.
+    Upscales bool to int.   
+     
+    Bool -> int
+    int -> int
+    float -> float
+    complex -> complex     
+    
+    """
+    if type(dtype) == type:
+        dtype = numpy.dtype(dtype)    
+    if issubclass( type(dtype) , numpy.ndarray):
+        dtype  = dtype.dtype         
+    if numpy.issubdtype(dtype,numpy.bool) == True: return numpy.int
+    if numpy.issubdtype(dtype,numpy.int) == True: return numpy.int
+    if numpy.issubdtype(dtype,numpy.float) == True: return numpy.float
+    if numpy.issubdtype(dtype,numpy.complex) == True: return numpy.complex
+    raise ValueError("Data  type not known")        
+    
 
 def rank(x):
     "Returns rank of an array"
@@ -70,7 +94,7 @@ def arraySumByArray(array,filterarray,meanarray):
     exist = values[allinds] == filterarray
     N = len(allinds)
     args,exist,N #Eclipse warning removal 
-    ret = numpy.zeros(len(allinds),meanarray.dtype)    
+    ret = numpy.zeros(len(allinds),float)    
     code = """
     #line 50 "binary_search.py"
     using namespace std;
@@ -123,17 +147,17 @@ def zoomOut(x,shape):
     if (N1 < M1) or (N2 < M2):
         d1 = M1/N1 + 1
         d2 = M2/N2 + 1
-        d = max(d1,d2)
-        newx = numpy.zeros((d*N1,d*N2))        
-        for i in xrange(d):
-            for j in xrange(d):
-                newx[i::d,j::d] = x/(1. * d**2)
+        
+        newx = numpy.zeros((d1*N1,d2*N2))        
+        for i in xrange(d1):
+            for j in xrange(d2):
+                newx[i::d1,j::d2] = x/(1. * d1*d2)
         x = newx
-        N1,N2 = N1*d,N2*d   #array is bigger now
+        N1,N2 = N1*d1,N2*d2   #array is bigger now
     
     shift1 = N1/float(M1) + 0.000000001
     shift2 = N2/float(M2) + 0.000000001
-    x = numpy.array(x,numpy.double,order = "C")
+    x = numpy.asarray(x,dtype = float)
     tempres = numpy.zeros((M1,N2),float)    
     for i in xrange(N1):
         beg = (i/shift1)
@@ -156,22 +180,45 @@ def zoomOut(x,shape):
 
 smartZoomOut = zoomOut  #backwards compatibility
 
-def coarsegrain(array,size):
-    "coarsegrains array by summing values in sizeXsize squares; truncates the last square"
-    if len(array.shape) == 2:
-        N = len(array) - len(array) % size 
-        array = array[:N,:N]
-        a = numpy.zeros((N/size,N/size),float)
-        for i in xrange(size):
-            for j in xrange(size):
-                a += array[i::size,j::size]
-        return a
-    if len(array.shape) == 1:
-        array = array[:(len(array) / size) * size]
-        narray = numpy.zeros(len(array)/size,float)
-        for i in xrange(size):
-            narray += array[i::size]
-        return narray
+def coarsegrain(array,size,extendEdge = False):
+    "coarsegrains array by summing values in sizeXsize squares; truncates the unused squares"
+    
+    array = numpy.asarray(array, dtype = generalizedDtype(array.dytpe) )
+    
+    
+    if extendEdge == False:  
+        if len(array.shape) == 2:
+            N = len(array) - len(array) % size 
+            array = array[:N,:N]
+            a = numpy.zeros((N/size,N/size),float)
+            for i in xrange(size):
+                for j in xrange(size):
+                    a += array[i::size,j::size]
+            return a
+        if len(array.shape) == 1:
+            array = array[:(len(array) / size) * size]
+            narray = numpy.zeros(len(array)/size,float)
+            for i in xrange(size):
+                narray += array[i::size]
+            return narray
+    else: 
+        N = len(array) 
+        if len(array.shape) == 2:
+            resultSize = numpy.ceil(float(N) / size )            
+            a = numpy.zeros((resultSize,resultSize),float)
+            for i in xrange(size):
+                for j in xrange(size):
+                    add = array[i::size,j::size] 
+                    a[:add.shape[0],:add.shape[1]] += add 
+            return a
+        if len(array.shape) == 1:
+            resultSize = numpy.ceil(float(N) / size )            
+            a = numpy.zeros((resultSize),float)
+            for i in xrange(size):                
+                add = array[i::size] 
+                a[:len(add)] += add
+            return a 
+                
 
 def corr2d(x):
     "FFT-based 2D correlation"
@@ -242,7 +289,8 @@ def openmpSum(in_array):
     """
     a = numpy.asarray(in_array)
     b = numpy.array([1.])
-    N = int(numpy.prod(a.shape)) 
+    N = int(numpy.prod(a.shape))
+    N  #Eclipse warning remover 
     code = r"""     
     int i=0; 
     double sum = 0;     
@@ -264,6 +312,11 @@ def openmpSum(in_array):
      libraries=['gomp'])
     return b[0]
 
+
+
+        
+          
+         
 
 
 #-----------------------------------
