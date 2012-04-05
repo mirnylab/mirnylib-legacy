@@ -241,12 +241,13 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
     if min_seq_len <= local_seq_end - seq_start: 
         trim_5 = seq_start
         trim_3 = raw_seq_len - seq_start - min_seq_len
+        local_out_sam = out_sam_path + '.' + str(min_seq_len)
         bowtie_command = (
             ('time %s -x %s --very-sensitive '#--score-min L,-0.6,-0.2 '
              '-q %s -5 %s -3 %s -p %s %s > %s') % (
                 bowtie_path, bowtie_index_path, fastq_path, 
                 str(trim_5), str(trim_3), str(nthreads), bowtie_flags,
-                out_sam_path + '.' + str(min_seq_len)))
+                local_out_sam))
 
         print 'Map reads:', bowtie_command
         subprocess.call(bowtie_command, shell=True)
@@ -263,7 +264,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
 
         unmapped_fastq_path = os.path.join(
             tempfile.gettempdir(), fastq_path + '.%d' % min_seq_len)
-        _filter_unmapped_fastq(fastq_path, out_sam_path, unmapped_fastq_path)
+        _filter_unmapped_fastq(fastq_path, local_out_sam, unmapped_fastq_path)
         atexit.register(lambda: os.remove(unmapped_fastq_path))
 
         iterative_mapping(bowtie_path, bowtie_index_path, unmapped_fastq_path, 
