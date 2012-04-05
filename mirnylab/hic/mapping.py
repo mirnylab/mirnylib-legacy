@@ -169,7 +169,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
     bowtie_path : str
         The path to the bowtie2 executable.
 
-    genome_path : str
+    bowtie_index_path : str
         The path to the bowtie2 genome index. Since the index consists of 
         several files with the different suffices (e.g., hg18.1.bt2, 
         hg18.2.bt.2), provide only the common part (hg18).
@@ -202,7 +202,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
 
     '''
     bowtie_path = os.path.abspath(os.path.expanduser(bowtie_path))
-    genome_path = os.path.abspath(os.path.expanduser(genome_path))
+    bowtie_index_path = os.path.abspath(os.path.expanduser(bowtie_index_path))
     fastq_path = os.path.abspath(os.path.expanduser(fastq_path))
     out_sam_path = os.path.abspath(os.path.expanduser(out_sam_path))
 
@@ -223,7 +223,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
                         fastq_chunk_path, 
                         4 * i * max_reads_per_chunk, 
                         4 * (i + 1) * max_reads_per_chunk)
-            iterative_mapping(bowtie_path, genome_path, fastq_chunk_path, 
+            iterative_mapping(bowtie_path, bowtie_index_path, fastq_chunk_path, 
                               out_sam_path + '.%d' % i, min_seq_len, len_step,
                               **kwargs)
         return 
@@ -244,7 +244,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         bowtie_command = (
             ('time %s -x %s --very-sensitive '#--score-min L,-0.6,-0.2 '
              '-q %s -5 %s -3 %s -p %s %s > %s') % (
-                bowtie_path, genome_path, fastq_path, 
+                bowtie_path, bowtie_index_path, fastq_path, 
                 str(trim_5), str(trim_3), str(nthreads), bowtie_flags,
                 out_sam_path + '.' + str(min_seq_len)))
 
@@ -266,7 +266,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         _filter_unmapped_fastq(fastq_path, out_sam_path, unmapped_fastq_path)
         atexit.register(lambda: os.remove(unmapped_fastq_path))
 
-        iterative_mapping(bowtie_path, genome_path, unmapped_fastq_path, 
+        iterative_mapping(bowtie_path, bowtie_index_path, unmapped_fastq_path, 
                           out_sam_path,
                           min_seq_len = min_seq_len + len_step, 
                           len_step=len_step, **kwargs)
