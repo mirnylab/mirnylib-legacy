@@ -10,7 +10,7 @@ mapping.iterative_mapping(
     min_seq_len=25,
     len_step=5,
     nthreads=8,
-    bowtie_flags='--score-min L,-0.6,-0.2')
+    bowtie_flags='--very-sensitive --score-min L,-0.6,-0.2')
 
 mapping.iterative_mapping(
     bowtie_path='~/bin/bowtie2/bowtie2',
@@ -20,14 +20,14 @@ mapping.iterative_mapping(
     min_seq_len=25,
     len_step=5,
     nthreads=8,
-    bowtie_flags='--score-min L,-0.6,-0.2')
+    bowtie_flags='--very-sensitive --score-min L,-0.6,-0.2')
 
 # B. Parse the mapped sequences into a Python data structure.
 lib = h5dict('../hic/hic_lib.hdf5')
 
 mapping.parse_sam(
-    sam_wildcard1='~/data/hic/1.bam*',
-    sam_wildcard2='~/data/hic/2.bam*',
+    sam_basename1='~/data/hic/1.sam',
+    sam_basename2='~/data/hic/2.sam',
     out_dict=lib,
     genome_db='../data/hg19')
 
