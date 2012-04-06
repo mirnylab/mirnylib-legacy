@@ -526,14 +526,18 @@ class Genome():
         bool skip = false;     
         int pos;
         int step;
-        char line[60];
+        char line[50];
         char chromNum[10];
         const char * filename = myfilename.c_str();    
         FILE *myfile; 
+        
         myfile = fopen(filename,"r");
-        int breakflag = 0;          
-        while (fgets(line, 60, myfile) != NULL)    
-        {           
+        
+        int breakflag = 0;
+                
+        while (fgets(line, 50, myfile) != NULL)    
+        {
+        
           if (line[0] == 'f')
               {
               for (int j = 0;j<strlen(line);j++)
