@@ -5,7 +5,7 @@ import warnings
 import Bio.SeqIO, Bio.SeqUtils, Bio.Restriction
 Bio.Restriction  #To shut up Eclipse warning
 import joblib 
-
+from scipy import  weave 
 import numutils
 
 class Genome():
@@ -457,11 +457,6 @@ class Genome():
                         chromosomes[i],positions[i],self.chrmLens[chromosomes[i]]) ) 
                 
             
-            
-            
-        
-        
-        
         
     def getFragmentDistance(self, fragments1, fragments2, enzymeName):
         "returns distance between fragments in... fragments. (neighbors = 1, etc. )"
@@ -494,5 +489,94 @@ class Genome():
         fragment2Real = fragment2Candidates[mask]
         fragment1Real = fragment1Candidates[mask]
         return  (self.rfragMidIds[fragment1Real],self.rfragMidIds[fragment2Real])
+
+
+
+    def _parseFixedStepWigAtKbResolution(self,filename):
+        myfilename = filename 
+        M = self.maxChrmLen
+        Mkb = int(M/1000 + 1)        
+        chromCount = self.chrmCount
+        data = numpy.zeros(Mkb * self.chrmCount,float)         
+        if "X" in self.chrmLabels: 
+            useX = True 
+            Xnum = self.label2idx["X"]+1   #wig uses zero-based counting
+        else:
+            useX = False
+            Xnum = 0 
         
+        if "Y" in self.chrmLabels: 
+            useY = True 
+            Ynum = self.label2idx["Y"] + 1
+        else:
+            useY = False
+            Ynum = 0 
+
+        if "M" in self.chrmLabels: 
+            useM = True 
+            Mnum = self.label2idx["M"] + 1 
+        else:
+            useM = False
+            Mnum = 0          
+        chromCount, useX ,useY, useM, Ynum,Xnum,Mnum,myfilename
+        code = r"""
+        #line 14 "binary_search.py"
+        using namespace std;
+        int chrom=1;
+        bool skip = false;     
+        int pos;
+        int step;
+        char line[60];
+        char chromNum[10];
+        const char * filename = myfilename.c_str();    
+        FILE *myfile; 
+        myfile = fopen(filename,"r");
+        int breakflag = 0;          
+        while (fgets(line, 60, myfile) != NULL)    
+        {           
+          if (line[0] == 'f')
+              {
+              for (int j = 0;j<strlen(line);j++)
+              {
+              }
+              if (breakflag == 1) break;                    
+              sscanf(line,"fixedStep chrom=chr%s start=%d step=%d",&chromNum,&pos,&step);
+              skip = false;
+              chrom = atoi(chromNum);
+              if (strcmp(chromNum ,"X") == 0) { chrom = Xnum; if (useX == false) skip = true;}
+              if (strcmp(chromNum ,"Y") == 0) { chrom = Ynum; if (useY == false) skip = true;}
+              if (strcmp(chromNum ,"M") == 0) { chrom = Mnum; if (useM == false) skip = true;}
+              if ((chrom == 0) || (chrom > chromCount)) skip = true;               
+              if (skip == true) printf("Skipping chromosome %s\n", chromNum);
+                        
+              cout << "working on chromosome  " << chrom << endl;              
+              continue; 
+              }
+            if (skip == false)
+            {
+              double t; 
+              sscanf(line,"%lf",&t);                     
+              data[Mkb * (chrom - 1) + pos / 1000] += t;
+              pos+= step;
+            }       
+        }
+        """
+        support = """
+        #include <math.h>
+        #include <iostream>
+        #include <fstream>      
+        """
+        weave.inline(code, ['myfilename',"data" ,"chromCount","useX","useY","useM","Xnum","Ynum","Mnum","Mkb"], extra_compile_args=['-march=native -malign-double'],support_code =support )
         
+        datas = [data[i*Mkb:(i+1)*Mkb] for i in xrange(self.chrmCount)]
+        for chrom,track in enumerate(datas): 
+            if track[self.chrmLens[chrom]/1000 + 1:].sum() != 0: raise StandardError("Genome mismatch: entrees in wig file after chromosome end!")
+        datas = [numpy.array(i[:self.chrmLens[chrom]/1000 + 1]) for chrom,i in enumerate(datas)]
+        return datas  
+
+    def parseFixedStepWigAtKbResolution(self, filename):
+        # At the first call the function rewrites itself with a memoized 
+        # private function.
+        self.parseFixedStepWigAtKbResolution = self._memoize('_parseFixedStepWigAtKbResolution')
+        return self.parseFixedStepWigAtKbResolution(filename)
+
