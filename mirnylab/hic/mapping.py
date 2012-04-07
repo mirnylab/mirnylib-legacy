@@ -193,7 +193,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         The number of Bowtie2 threads. Default is 8
 
     bowtie_flags : str, optional
-        Extra command-line flags for Bowtie2.
+        Extra command-line flags for Bowtie2. Default is ''.
 
     max_reads_per_chunk : int, optional
         If positive then split input into several chunks with 
@@ -243,7 +243,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         trim_3 = raw_seq_len - seq_start - min_seq_len
         local_out_sam = out_sam_path + '.' + str(min_seq_len)
         bowtie_command = (
-            ('time %s -x %s --very-sensitive '#--score-min L,-0.6,-0.2 '
+            ('time %s -x %s '#--very-sensitive --score-min L,-0.6,-0.2 '
              '-q %s -5 %s -3 %s -p %s %s > %s') % (
                 bowtie_path, bowtie_index_path, fastq_path, 
                 str(trim_5), str(trim_3), str(nthreads), bowtie_flags,
@@ -366,12 +366,12 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
     lib['downrsites' + side] = downrsites
     lib['rsites' + side] = rsites
 
-def _parse_ss_sams(sam_wildcard, out_dict, genome_db,
+def _parse_ss_sams(sam_basename, out_dict, genome_db,
                    max_seq_len = -1, reverse_complement=False):
     """Parse SAM files with single-sided reads.
     """
     def _for_each_unique_read(sam_wildcard, genome_db, action):
-        for sam_path in glob.glob(sam_wildcard):
+        for sam_path in glob.glob(sam_basename + '.*'):
             samfile = pysam.Samfile(sam_path)
             
             # Make Bowtie's chromosome tids -> genome_db indices dictionary.
@@ -460,19 +460,19 @@ def _parse_ss_sams(sam_wildcard, out_dict, genome_db,
 
     return out_dict
 
-def parse_sam(sam_wildcard1, sam_wildcard2, out_dict, genome_db,
+def parse_sam(sam_basename1, sam_basename2, out_dict, genome_db,
               max_seq_len = -1, reverse_complement=False, keep_ids=False):
     '''Parse SAM/BAM files with HiC reads.
 
     Parameters
     ----------
 
-    sam_wildcard1 : str
-        A wildcard pattern (e.g. 'reads1.bam*') matching SAM files with
+    sam_basename1 : str
+        A wildcard pattern (e.g. 'reads1.sam*') matching SAM files with
         the mapped sequences of the first side of Hi-C molecules.
 
-    sam_wildcard2 : str
-        A wildcard pattern (e.g. 'reads2.bam*') matching SAM files with  
+    sam_basename2 : str
+        A wildcard pattern (e.g. 'reads2.sam*') matching SAM files with  
         the mapped sequences of the second side of Hi-C molecules.
 
     out_dict : dict-like
@@ -503,9 +503,9 @@ def parse_sam(sam_wildcard1, sam_wildcard2, out_dict, genome_db,
     ss_lib = {}
     ss_lib[1] = mirnylab.h5dict.h5dict()
     ss_lib[2] = mirnylab.h5dict.h5dict()
-    _parse_ss_sams(sam_wildcard1, ss_lib[1], genome_db,
+    _parse_ss_sams(sam_basename1, ss_lib[1], genome_db,
                    1 if not max_seq_len else max_seq_len, reverse_complement)
-    _parse_ss_sams(sam_wildcard2, ss_lib[2], genome_db,
+    _parse_ss_sams(sam_basename2, ss_lib[2], genome_db,
                    1 if not max_seq_len else max_seq_len, reverse_complement)
 
     # Determine the number of double-sided reads.
