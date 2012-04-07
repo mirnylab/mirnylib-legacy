@@ -1,6 +1,6 @@
 import numpy
 na = numpy.array 
-import  scipy.weave,scipy.sparse.linalg  
+import  scipy.weave,scipy.sparse.linalg, scipy.stats 
 from scipy import weave 
 import scipy.linalg
 from math import cos,log,sin,sqrt
@@ -40,7 +40,11 @@ def rank(x):
 def trunk(x,low=0.005,high = 0.005):
     "Truncates top 'low' fraction and top 'high' fraction of an array "    
     lowValue, highValue = numpy.percentile(x,[low*100.,(1-high)*100.])     
-    return numpy.clip(x,a_min = lowValue, a_max = highValue)    
+    return numpy.clip(x,a_min = lowValue, a_max = highValue)
+
+def partialCorrelation(x,y,z,corr = lambda x,y:scipy.stats.spearmanr(x,y)[0] ):
+    xy,xz,yz = corr(x,y),corr(x,z),corr(y,z)
+    return (xy - xz*yz) / (sqrt(1 - xz**2) * sqrt(1 - yz**2))
     
 def arraySearch(array,tosearch):
     "returns location of tosearch in array; -->> assumes that elements exist!!! <--- " 

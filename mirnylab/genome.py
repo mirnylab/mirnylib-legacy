@@ -8,7 +8,7 @@ import joblib
 from scipy import  weave 
 import numutils
 
-class Genome():
+class Genome(object):
     '''A Genome object contains the cached properties of a genome.
 
     Glossary
@@ -160,7 +160,7 @@ class Genome():
         if not hasattr(self, '_mymem'):
             self._mymem = joblib.Memory(cachedir = self.genomePath)
 
-        def run_func(genomePath, readChrms, gapFile, chrmFileTemplate,
+        def run_func(readChrms, gapFile, chrmFileTemplate,
                      func_name, *args, **kwargs):
             return getattr(self, func_name)(*args, **kwargs)
 
@@ -168,7 +168,7 @@ class Genome():
 
         def memoized_func(*args, **kwargs):
             return mem_func(
-                self.genomePath, self.readChrms, self.gapFile,
+                self.readChrms, self.gapFile,
                 self.chrmFileTemplate, func_name, *args, **kwargs)
 
         return memoized_func
@@ -490,9 +490,8 @@ class Genome():
         fragment1Real = fragment1Candidates[mask]
         return  (self.rfragMidIds[fragment1Real],self.rfragMidIds[fragment2Real])
 
-
-
     def _parseFixedStepWigAtKbResolution(self,filename):
+        "Internal method for parsing fixedStep wig file and averaging it over every kb"
         myfilename = filename 
         M = self.maxChrmLen
         Mkb = int(M/1000 + 1)        
@@ -579,8 +578,67 @@ class Genome():
         return datas  
 
     def parseFixedStepWigAtKbResolution(self, filename):
+        "Returns averages of a fixedStepWigFile for all chromosomes"
         # At the first call the function rewrites itself with a memoized 
         # private function.
         self.parseFixedStepWigAtKbResolution = self._memoize('_parseFixedStepWigAtKbResolution')
         return self.parseFixedStepWigAtKbResolution(filename)
+    
+    def _parseBigWigFile(self,filename,lowCountCutoff = 50,resolution = 1000, divideByValidCounts = False):
+        import bx.bbi.bbi_file
+        from bx.bbi.bigwig_file import BigWigFile
+        """
+        Internal method for parsing bigWig files 
+        """
+        data = []        
+        if type(filename) == str: bwFile = BigWigFile( open(filename) )
+        else: bwFile = BigWigFile(filename)
+        print "parsingBigWigFile",
+        for i in xrange(self.chrmCount):
+            chrId = "chr%s" % self.idx2label[i]
+            print chrId,
+            end = numpy.ceil(self.chrmLens[i] / float(resolution)) * resolution                         
+            summary = bwFile.summarize(chrId,0,end,end/resolution)
+            if summary == None: 
+                raise StandardError("Chromosome %s is absent in bigWig file!" % chrId)
+            assert isinstance(summary,bx.bbi.bbi_file.SummarizedData)
+            values = summary.sum_data
+            counts = summary.valid_count
+            if divideByValidCounts == True: values = values / counts
+             
+            values[counts < lowCountCutoff] = 0
+            data.append(values)
+        return data 
+            
+    def parseBigWigFile(self,filename,lowCountCutoff = 50,resolution = 1000,divideByValidCounts = False ): 
+        """
+        Parses bigWig file using bxPython build-in method "summary". 
+        Does it by averaging values over "resolution" long windows.
+        
+        If window has less than lowCountCutoff valid valies, it is discarded
+        
+        Parameters
+        ----------
+        
+        filename : str or file object
+            Incoming bigWig file
+        lowCountCutoff : int, < resolution
+            Ignore bins with less than cutoff valid bases
+        resolution : int
+            Find average signal over these bins
+        divideByValidCounts : bool
+            Divide total sum by total coverage of the kb bin. 
+            
+        Retruns
+        -------
+        List of numpy.arrays with average values for each chromosomes
+        Length of each array is ceil(chromLens / resolution)
+        """ 
+          
+        
+        
+        # At the first call the function rewrites itself with a memoized 
+        # private function.
+        self.parseBigWigFile = self._memoize('_parseBigWigFile')
+        return self.parseBigWigFile(filename,lowCountCutoff,resolution,divideByValidCounts = False)
 
