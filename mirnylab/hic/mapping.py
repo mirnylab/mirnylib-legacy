@@ -370,7 +370,7 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
                    max_seq_len = -1, reverse_complement=False):
     """Parse SAM files with single-sided reads.
     """
-    def _for_each_unique_read(sam_wildcard, genome_db, action):
+    def _for_each_unique_read(sam_basename, genome_db, action):
         for sam_path in glob.glob(sam_basename + '.*'):
             samfile = pysam.Samfile(sam_path)
             
@@ -408,7 +408,7 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
     _count_stats.id_len = 0
     _count_stats.seq_len = 0
     _count_stats.num_reads = 0
-    _for_each_unique_read(sam_wildcard, genome_db, _count_stats)
+    _for_each_unique_read(sam_basename, genome_db, _count_stats)
     sam_stats = {'id_len': _count_stats.id_len,
                  'seq_len':_count_stats.seq_len,
                  'num_reads':_count_stats.num_reads}
@@ -424,21 +424,21 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
     # ...chromosome ids
     buf = np.zeros((sam_stats['num_reads'],), dtype=np.int8)
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard, genome_db,
+    _for_each_unique_read(sam_basename, genome_db,
         action=lambda read: _write_to_array(read, buf, read.tid))
     out_dict['chrms'] = buf
 
     # ...strands
     buf = np.zeros((sam_stats['num_reads'],), dtype=np.bool)
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard, genome_db,
+    _for_each_unique_read(sam_basename, genome_db,
         action=lambda read: _write_to_array(read, buf, not read.is_reverse))
     out_dict['strands'] = buf
 
     # ...cut sites
     buf = np.zeros((sam_stats['num_reads'],), dtype=np.int64)
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard, genome_db,
+    _for_each_unique_read(sam_basename, genome_db,
         action=
             lambda read: _write_to_array(read, buf, read.pos + (len(read.seq) if read.is_reverse else 0)))
     out_dict['cuts'] = buf
@@ -446,7 +446,7 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
     # ...sequences
     buf = np.zeros((sam_stats['num_reads'],), dtype='|S%d' % sam_stats['seq_len'])
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard, genome_db,
+    _for_each_unique_read(sam_basename, genome_db,
         action=
             lambda read: _write_to_array(read, buf, Bio.Seq.reverse_complement(read.seq) if read.is_reverse and reverse_complement else read.seq))
     out_dict['seqs'] = buf
@@ -454,7 +454,7 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
     # and ids.
     buf = np.zeros((sam_stats['num_reads'],), dtype='|S%d' % sam_stats['id_len'])
     _write_to_array.i = 0
-    _for_each_unique_read(sam_wildcard, genome_db,
+    _for_each_unique_read(sam_basename, genome_db,
         action=lambda read: _write_to_array(read, buf, read.qname))
     out_dict['ids'] = buf
 

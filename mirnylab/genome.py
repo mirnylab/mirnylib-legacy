@@ -494,7 +494,7 @@ class Genome(object):
         "Internal method for parsing fixedStep wig file and averaging it over every kb"
         myfilename = filename 
         M = self.maxChrmLen
-        Mkb = int(M/1000 + 1)        
+        Mkb = int(M/2000 + 1)        
         chromCount = self.chrmCount
         data = numpy.zeros(Mkb * self.chrmCount,float)         
         if "X" in self.chrmLabels: 
@@ -559,7 +559,7 @@ class Genome(object):
             {
               double t; 
               sscanf(line,"%lf",&t);                     
-              data[Mkb * (chrom - 1) + pos / 1000] += t;
+              data[Mkb * (chrom - 1) + pos / 2000] += t;
               pos+= step;
             }       
         }
@@ -573,8 +573,8 @@ class Genome(object):
         
         datas = [data[i*Mkb:(i+1)*Mkb] for i in xrange(self.chrmCount)]
         for chrom,track in enumerate(datas): 
-            if track[self.chrmLens[chrom]/1000 + 1:].sum() != 0: raise StandardError("Genome mismatch: entrees in wig file after chromosome end!")
-        datas = [numpy.array(i[:self.chrmLens[chrom]/1000 + 1]) for chrom,i in enumerate(datas)]
+            if track[self.chrmLens[chrom]/2000 + 1:].sum() != 0: raise StandardError("Genome mismatch: entrees in wig file after chromosome end!")
+        datas = [numpy.array(i[:self.chrmLens[chrom]/2000 + 1]) for chrom,i in enumerate(datas)]
         return datas  
 
     def parseFixedStepWigAtKbResolution(self, filename):
@@ -584,7 +584,7 @@ class Genome(object):
         self.parseFixedStepWigAtKbResolution = self._memoize('_parseFixedStepWigAtKbResolution')
         return self.parseFixedStepWigAtKbResolution(filename)
     
-    def _parseBigWigFile(self,filename,lowCountCutoff = 50,resolution = 1000, divideByValidCounts = False):
+    def _parseBigWigFile(self,filename,lowCountCutoff = 50,resolution = 2000, divideByValidCounts = False):
         import bx.bbi.bbi_file
         from bx.bbi.bigwig_file import BigWigFile
         """
@@ -604,13 +604,14 @@ class Genome(object):
             assert isinstance(summary,bx.bbi.bbi_file.SummarizedData)
             values = summary.sum_data
             counts = summary.valid_count
-            if divideByValidCounts == True: values = values / counts
-             
-            values[counts < lowCountCutoff] = 0
-            data.append(values)
+            if divideByValidCounts == True: 
+                values = values/counts
+                values[counts==0] = 0
+            data.append(values)                
+            
         return data 
             
-    def parseBigWigFile(self,filename,lowCountCutoff = 50,resolution = 1000,divideByValidCounts = False ): 
+    def parseBigWigFile(self,filename,lowCountCutoff = 50,resolution = 2000,divideByValidCounts = False ): 
         """
         Parses bigWig file using bxPython build-in method "summary". 
         Does it by averaging values over "resolution" long windows.
@@ -627,7 +628,7 @@ class Genome(object):
         resolution : int
             Find average signal over these bins
         divideByValidCounts : bool
-            Divide total sum by total coverage of the kb bin. 
+            Divide  total coverage of the kb bin. 
             
         Retruns
         -------
