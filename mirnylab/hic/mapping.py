@@ -468,12 +468,12 @@ def parse_sam(sam_basename1, sam_basename2, out_dict, genome_db,
     ----------
 
     sam_basename1 : str
-        A wildcard pattern (e.g. 'reads1.sam*') matching SAM files with
-        the mapped sequences of the first side of Hi-C molecules.
+        A basename of SAM files with the mapped sequences of the first 
+        side of Hi-C molecules.
 
     sam_basename2 : str
-        A wildcard pattern (e.g. 'reads2.sam*') matching SAM files with  
-        the mapped sequences of the second side of Hi-C molecules.
+        A basename of SAM files with the mapped sequences of the second
+        side of Hi-C molecules.
 
     out_dict : dict-like
         A dict-like structure to store the library of matched HiC reads.

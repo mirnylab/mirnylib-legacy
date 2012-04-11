@@ -243,7 +243,7 @@ class Genome(object):
                 self.genomePath, self.chrmFileTemplate % ('*',)))]
 
         if len(self.fastaNames) == 0: 
-            raise('No Genome files found')
+            raise Exception('No Genome files found')
 
         # Read chromosome IDs.
         self.chrmLabels = []
