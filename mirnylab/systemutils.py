@@ -9,7 +9,7 @@ fork-map-average
 """
 import os, sys, cPickle, pdb 
 import traceback
-
+import warnings
 import ctypes 
 from copy import copy
 
@@ -54,6 +54,21 @@ def run_in_separate_process(func, *args, **kwds):
                 cPickle.dump((2,exc), f, cPickle.HIGHEST_PROTOCOL)
         os._exit(0)
 
+
+def deprecate(newFunction, oldFunctionName = None):
+    """If you rename your function, you can use this to issue deprecation warning for the old name
+    Juse use   newFunction = deprecate(oldFunction)"""    
+    try: 
+        newName = newFunction.__name__
+    except: newName = "_UndeterminedName_"
+    if oldFunctionName == None:
+        oldFunctionName = "_UnspecifiedName_"                
+    def oldFunction(*args,**kwargs):                        
+        warnings.warn("Function %s was renamed to %s" % (oldFunctionName, newName))
+        return newFunction(*args,**kwargs)
+    return oldFunction
+    
+        
 
 def _nprocessors():
     try:
