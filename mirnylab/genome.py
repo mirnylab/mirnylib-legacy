@@ -490,13 +490,16 @@ class Genome(object):
         fragment1Real = fragment1Candidates[mask]
         return  (self.rfragMidIds[fragment1Real],self.rfragMidIds[fragment2Real])
 
-    def _parseFixedStepWigAtKbResolution(self,filename):
+    def _parseFixedStepWigAtKbResolution(self,filename,resolution):
         "Internal method for parsing fixedStep wig file and averaging it over every kb"
-        myfilename = filename 
+        myfilename = filename
+        if os.path.exists(filename) == False:
+            raise StandardError("File not found!") 
         M = self.maxChrmLen
-        Mkb = int(M/2000 + 1)        
+        Mkb = int(M/resolution + 1)        
         chromCount = self.chrmCount
-        data = numpy.zeros(Mkb * self.chrmCount,float)         
+        data = numpy.zeros(Mkb * self.chrmCount,float)
+        resolution = int(resolution)          
         if "X" in self.chrmLabels: 
             useX = True 
             Xnum = self.label2idx["X"]+1   #wig uses zero-based counting
@@ -559,7 +562,7 @@ class Genome(object):
             {
               double t; 
               sscanf(line,"%lf",&t);                     
-              data[Mkb * (chrom - 1) + pos / 2000] += t;
+              data[Mkb * (chrom - 1) + pos / resolution] += t;
               pos+= step;
             }       
         }
@@ -569,24 +572,25 @@ class Genome(object):
         #include <iostream>
         #include <fstream>      
         """
-        weave.inline(code, ['myfilename',"data" ,"chromCount","useX","useY","useM","Xnum","Ynum","Mnum","Mkb"], extra_compile_args=['-march=native -malign-double'],support_code =support )
+        weave.inline(code, ['myfilename',"data" ,"chromCount","useX","useY","useM","Xnum","Ynum","Mnum","Mkb","resolution"], extra_compile_args=['-march=native -malign-double'],support_code =support )
         
         datas = [data[i*Mkb:(i+1)*Mkb] for i in xrange(self.chrmCount)]
         for chrom,track in enumerate(datas): 
-            if track[self.chrmLens[chrom]/2000 + 1:].sum() != 0: raise StandardError("Genome mismatch: entrees in wig file after chromosome end!")
-        datas = [numpy.array(i[:self.chrmLens[chrom]/2000 + 1]) for chrom,i in enumerate(datas)]
+            if track[self.chrmLens[chrom]/resolution + 1:].sum() != 0: raise StandardError("Genome mismatch: entrees in wig file after chromosome end!")
+        datas = [numpy.array(i[:self.chrmLens[chrom]/resolution + 1]) for chrom,i in enumerate(datas)]
         return datas  
 
-    def parseFixedStepWigAtKbResolution(self, filename):
+    def parseFixedStepWigAtKbResolution(self, filename,resolution=5000):
         "Returns averages of a fixedStepWigFile for all chromosomes"
         # At the first call the function rewrites itself with a memoized 
         # private function.
         self.parseFixedStepWigAtKbResolution = self._memoize('_parseFixedStepWigAtKbResolution')
-        return self.parseFixedStepWigAtKbResolution(filename)
+        return self.parseFixedStepWigAtKbResolution(filename,resolution = resolution)
     
-    def _parseBigWigFile(self,filename,lowCountCutoff = 50,resolution = 2000, divideByValidCounts = False):
-        import bx.bbi.bbi_file
+    def _parseBigWigFile(self,filename,lowCountCutoff=200,resolution=5000, divideByValidCounts=False):        
+        import bx.bbi.bigwig_file         
         from bx.bbi.bigwig_file import BigWigFile
+        
         """
         Internal method for parsing bigWig files 
         """
@@ -594,24 +598,33 @@ class Genome(object):
         if type(filename) == str: bwFile = BigWigFile( open(filename) )
         else: bwFile = BigWigFile(filename)
         print "parsingBigWigFile",
+        
+        assert isinstance(bwFile,bx.bbi.bigwig_file.BigWigFile)
+                 
         for i in xrange(self.chrmCount):
             chrId = "chr%s" % self.idx2label[i]
             print chrId,
-            end = numpy.ceil(self.chrmLens[i] / float(resolution)) * resolution                         
-            summary = bwFile.summarize(chrId,0,end,end/resolution)
-            if summary == None: 
-                raise StandardError("Chromosome %s is absent in bigWig file!" % chrId)
-            assert isinstance(summary,bx.bbi.bbi_file.SummarizedData)
-            values = summary.sum_data
-            counts = summary.valid_count
-            if divideByValidCounts == True: 
-                values = values/counts
-                values[counts==0] = 0
-            data.append(values)                
+            totalCount = int(numpy.ceil(self.chrmLens[i] / float(resolution)))
+            values = numpy.zeros(totalCount,float)
+            step = 500
+            for i in xrange(totalCount/step):
+                beg = step*i
+                end = min(step*(i+1),totalCount*resolution) 
+                summary = bwFile.summarize(chrId,beg*resolution,end*resolution,end-beg)
+                if summary == None:
+                    continue                      
+                stepValues = summary.sum_data
+                stepCounts = summary.valid_count
+                if divideByValidCounts == True: 
+                    stepValues = stepValues/stepCounts
+                    stepCounts[stepCounts==0] = 0
+                values[beg:end] = stepValues                
+            if values.sum() == 0: raise  StandardError("Chromosome %s is absent in bigWig file!" % chrId)
+            data.append(values) 
             
         return data 
             
-    def parseBigWigFile(self,filename,lowCountCutoff = 50,resolution = 2000,divideByValidCounts = False ): 
+    def parseBigWigFile(self,filename,lowCountCutoff = 200,resolution = 5000,divideByValidCounts = False ): 
         """
         Parses bigWig file using bxPython build-in method "summary". 
         Does it by averaging values over "resolution" long windows.
@@ -641,5 +654,5 @@ class Genome(object):
         # At the first call the function rewrites itself with a memoized 
         # private function.
         self.parseBigWigFile = self._memoize('_parseBigWigFile')
-        return self.parseBigWigFile(filename,lowCountCutoff,resolution,divideByValidCounts = False)
+        return self.parseBigWigFile(filename,lowCountCutoff,resolution,divideByValidCounts)
 

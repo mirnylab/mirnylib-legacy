@@ -1,13 +1,16 @@
 import numpy
+import warnings
+import mirnylab.systemutils
 na = numpy.array 
 import  scipy.weave,scipy.sparse.linalg, scipy.stats 
 from scipy import weave 
 import scipy.linalg
-from math import cos,log,sin,sqrt
-from mirnylab.systemutils import fmap 
+from math import cos,log,sin,sqrt 
 #-------------------------
 "Mathematical utilities first" 
 #-------------------------
+
+"Numpy-related (programming) utilities"
 
 def generalizedDtype(dtype):
     """"returns generalized dtype of an object
@@ -29,22 +32,152 @@ def generalizedDtype(dtype):
     if numpy.issubdtype(dtype,numpy.int) == True: return numpy.int
     if numpy.issubdtype(dtype,numpy.float) == True: return numpy.float
     if numpy.issubdtype(dtype,numpy.complex) == True: return numpy.complex
-    raise ValueError("Data  type not known")        
+    raise ValueError("Data  type not known")
+
+def isInteger(inputData):
+    return numpy.mod(inputData,1) < 0.00001
+
+def openmpSum(in_array):
+    """
+    Performs fast sum of an array using openmm  
+    """
+    a = numpy.asarray(in_array)
+    b = numpy.array([1.])
+    N = int(numpy.prod(a.shape))
+    N  #Eclipse warning remover 
+    code = r"""     
+    int i=0; 
+    double sum = 0;     
+    omp_set_num_threads(4);
+    #pragma omp parallel for      \  
+      default(shared) private(i)  \
+      reduction(+:sum)                 
+        for (i=0; i<N; i++)
+              sum += a[i];
+    b[0] = sum;
+    """
     
+    weave.inline(code, ['a','N','b'], 
+                     extra_compile_args=['-march=native  -O3  -fopenmp ' ],
+                     support_code = r"""
+    #include <stdio.h>
+    #include <omp.h>
+    #include <math.h>""",
+     libraries=['gomp'])
+    return b[0]
+
+    
+"Manipulation with numpy arrays"
 
 def rank(x):
     "Returns rank of an array"
     tmp = numpy.argsort(x)
     return na(numpy.arange(len(x)),float)[tmp.argsort()]
 
-def trunk(x,low=0.005,high = 0.005):
+def trunc(x,low=0.005,high = 0.005):
     "Truncates top 'low' fraction and top 'high' fraction of an array "    
     lowValue, highValue = numpy.percentile(x,[low*100.,(1-high)*100.])     
     return numpy.clip(x,a_min = lowValue, a_max = highValue)
 
+trunk = mirnylab.systemutils.deprecate(trunc,"trunk")
+
+def trimZeros(x):
+    "trims leading and trailing zeros of a 1D/2D array"
+    if len(x.shape) == 1:
+        nz = numpy.nonzero(x)[0]
+        return x[nz.min():nz.max()+1]         
+    ax1 = numpy.nonzero(numpy.sum(x,axis = 0))[0]    
+    ax2 = numpy.nonzero(numpy.sum(x,axis = 1))[0]
+    return x[ax1.min():ax1.max()+1, ax2.min() : ax2.max()+1 ]
+    
+def zoomOut(x,shape):
+    "rescales an array preserving the structure and total sum"
+    M1 = shape[0]
+    M2 = shape[1]
+    N1 = x.shape[0]
+    N2 = x.shape[1]
+    if (N1 < M1) or (N2 < M2):
+        d1 = M1/N1 + 1
+        d2 = M2/N2 + 1
+        
+        newx = numpy.zeros((d1*N1,d2*N2))        
+        for i in xrange(d1):
+            for j in xrange(d2):
+                newx[i::d1,j::d2] = x/(1. * d1*d2)
+        x = newx
+        N1,N2 = N1*d1,N2*d2   #array is bigger now
+    
+    shift1 = N1/float(M1) + 0.000000001
+    shift2 = N2/float(M2) + 0.000000001
+    x = numpy.asarray(x,dtype = float)
+    tempres = numpy.zeros((M1,N2),float)    
+    for i in xrange(N1):
+        beg = (i/shift1)
+        end = ((i+1)/shift1)
+        if int(beg) == int(end): 
+            tempres[beg,:] += x[i,:]
+        else:
+            tempres[beg,:] += x[i,:] * (int(end) - beg) / (end - beg)
+            tempres[beg+1,:] += x[i,:] * (end - int(end)) / (end - beg)
+    res = numpy.zeros((M1,M2),float)
+    for i in xrange(N2):
+        beg = (i/shift2)
+        end = ((i+1)/shift2)
+        if int(beg) == int(end): 
+            res[:,beg] += tempres[:,i]
+        else:
+            res[:,beg] += tempres[:,i] * (int(end) - beg) / (end - beg)
+            res[:,beg+1] += tempres[:,i] * (end - int(end)) / (end - beg)
+    return res
+
+
+smartZoomOut = mirnylab.systemutils.deprecate(zoomOut,"smartZoomOut")  #backwards compatibility
+
+def coarsegrain(array,size,extendEdge = False):
+    "coarsegrains array by summing values in sizeXsize squares; truncates the unused squares"
+    array = numpy.asarray(array, dtype = generalizedDtype(array.dtype) )
+    
+    
+    if extendEdge == False:  
+        if len(array.shape) == 2:
+            N = len(array) - len(array) % size 
+            array = array[:N,:N]
+            a = numpy.zeros((N/size,N/size),float)
+            for i in xrange(size):
+                for j in xrange(size):
+                    a += array[i::size,j::size]
+            return a
+        if len(array.shape) == 1:
+            array = array[:(len(array) / size) * size]
+            narray = numpy.zeros(len(array)/size,float)
+            for i in xrange(size):
+                narray += array[i::size]
+            return narray
+    else: 
+        N = len(array) 
+        if len(array.shape) == 2:
+            resultSize = numpy.ceil(float(N) / size )            
+            a = numpy.zeros((resultSize,resultSize),float)
+            for i in xrange(size):
+                for j in xrange(size):
+                    add = array[i::size,j::size] 
+                    a[:add.shape[0],:add.shape[1]] += add 
+            return a
+        if len(array.shape) == 1:
+            resultSize = numpy.ceil(float(N) / size )            
+            a = numpy.zeros((resultSize),float)
+            for i in xrange(size):                
+                add = array[i::size] 
+                a[:len(add)] += add
+            return a 
+
+
+
 def partialCorrelation(x,y,z,corr = lambda x,y:scipy.stats.spearmanr(x,y)[0] ):
     xy,xz,yz = corr(x,y),corr(x,z),corr(y,z)
     return (xy - xz*yz) / (sqrt(1 - xz**2) * sqrt(1 - yz**2))
+
+"Array indexing-related utilities, written in numpy/c++"
     
 def arraySearch(array,tosearch):
     "returns location of tosearch in array; -->> assumes that elements exist!!! <--- " 
@@ -133,95 +266,6 @@ def sumByArray(array,filterarray, dtype = None):
     return c
 
 
-def trimZeros(x):
-    "trims leading and trailing zeros of a 1D/2D array"
-    if len(x.shape) == 1:
-        nz = numpy.nonzero(x)[0]
-        return x[nz.min():nz.max()+1]         
-    ax1 = numpy.nonzero(numpy.sum(x,axis = 0))[0]    
-    ax2 = numpy.nonzero(numpy.sum(x,axis = 1))[0]
-    return x[ax1.min():ax1.max()+1, ax2.min() : ax2.max()+1 ]
-    
-def zoomOut(x,shape):
-    "rescales an array preserving the structure and total sum"
-    M1 = shape[0]
-    M2 = shape[1]
-    N1 = x.shape[0]
-    N2 = x.shape[1]
-    if (N1 < M1) or (N2 < M2):
-        d1 = M1/N1 + 1
-        d2 = M2/N2 + 1
-        
-        newx = numpy.zeros((d1*N1,d2*N2))        
-        for i in xrange(d1):
-            for j in xrange(d2):
-                newx[i::d1,j::d2] = x/(1. * d1*d2)
-        x = newx
-        N1,N2 = N1*d1,N2*d2   #array is bigger now
-    
-    shift1 = N1/float(M1) + 0.000000001
-    shift2 = N2/float(M2) + 0.000000001
-    x = numpy.asarray(x,dtype = float)
-    tempres = numpy.zeros((M1,N2),float)    
-    for i in xrange(N1):
-        beg = (i/shift1)
-        end = ((i+1)/shift1)
-        if int(beg) == int(end): 
-            tempres[beg,:] += x[i,:]
-        else:
-            tempres[beg,:] += x[i,:] * (int(end) - beg) / (end - beg)
-            tempres[beg+1,:] += x[i,:] * (end - int(end)) / (end - beg)
-    res = numpy.zeros((M1,M2),float)
-    for i in xrange(N2):
-        beg = (i/shift2)
-        end = ((i+1)/shift2)
-        if int(beg) == int(end): 
-            res[:,beg] += tempres[:,i]
-        else:
-            res[:,beg] += tempres[:,i] * (int(end) - beg) / (end - beg)
-            res[:,beg+1] += tempres[:,i] * (end - int(end)) / (end - beg)
-    return res
-
-smartZoomOut = zoomOut  #backwards compatibility
-
-def coarsegrain(array,size,extendEdge = False):
-    "coarsegrains array by summing values in sizeXsize squares; truncates the unused squares"
-    
-    array = numpy.asarray(array, dtype = generalizedDtype(array.dtype) )
-    
-    
-    if extendEdge == False:  
-        if len(array.shape) == 2:
-            N = len(array) - len(array) % size 
-            array = array[:N,:N]
-            a = numpy.zeros((N/size,N/size),float)
-            for i in xrange(size):
-                for j in xrange(size):
-                    a += array[i::size,j::size]
-            return a
-        if len(array.shape) == 1:
-            array = array[:(len(array) / size) * size]
-            narray = numpy.zeros(len(array)/size,float)
-            for i in xrange(size):
-                narray += array[i::size]
-            return narray
-    else: 
-        N = len(array) 
-        if len(array.shape) == 2:
-            resultSize = numpy.ceil(float(N) / size )            
-            a = numpy.zeros((resultSize,resultSize),float)
-            for i in xrange(size):
-                for j in xrange(size):
-                    add = array[i::size,j::size] 
-                    a[:add.shape[0],:add.shape[1]] += add 
-            return a
-        if len(array.shape) == 1:
-            resultSize = numpy.ceil(float(N) / size )            
-            a = numpy.zeros((resultSize),float)
-            for i in xrange(size):                
-                add = array[i::size] 
-                a[:len(add)] += add
-            return a 
                 
 
 def corr2d(x):
@@ -287,34 +331,6 @@ def random_in_sphere(r=1):
 randomInSphere = random_in_sphere
 randomOnSphere = random_on_sphere
 
-def openmpSum(in_array):
-    """
-    Performs fast sum of an array using openmm  
-    """
-    a = numpy.asarray(in_array)
-    b = numpy.array([1.])
-    N = int(numpy.prod(a.shape))
-    N  #Eclipse warning remover 
-    code = r"""     
-    int i=0; 
-    double sum = 0;     
-    omp_set_num_threads(4);
-    #pragma omp parallel for      \  
-      default(shared) private(i)  \
-      reduction(+:sum)                 
-        for (i=0; i<N; i++)
-              sum += a[i];
-    b[0] = sum;
-    """
-    
-    weave.inline(code, ['a','N','b'], 
-                     extra_compile_args=['-march=native  -O3  -fopenmp ' ],
-                     support_code = r"""
-    #include <stdio.h>
-    #include <omp.h>
-    #include <math.h>""",
-     libraries=['gomp'])
-    return b[0]
 
 
 
