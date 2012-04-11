@@ -67,40 +67,24 @@ def _line_count(path):
 
     return lines
 
-def _slice_file(in_path, out_path, first_line, last_line):
+def _chunk_file(in_path, out_basename, max_num_lines):
     '''Slice lines from a large file. 
     The line numbering is as in Python slicing notation.
     '''
-    f = open(in_path)                  
-    output = open(out_path, 'w')
-    lines = 0
-    buf_size = 1024 * 1024
-    read_f = f.read # loop optimization
-    write_f = output.write # loop optimization
-    scanning = True
+    numlines = _line_count(in_path)
+    if num_lines <= max_num_lines:
+        return [in_path,]
+    
+    out_paths = []
 
-    buf = read_f(buf_size)
-    while buf:
-        eols_in_buf = buf.count('\n')
+    for i, line in enumerate(open(in_path)):
+        if i // max_num_lines == 0:
+            out_path = out_basename + '.%d' % (i / max_num_lines + 1)
+            out_paths.append(out_path)
+            out_file = file(out_path, 'w')
+        out_file.write(line)
 
-        if scanning:
-            if lines + eols_in_buf > first_line:
-                write_f('\n'.join(buf.split('\n')[
-                   first_line - lines : min(last_line - lines, eols_in_buf)]))
-                scanning = False
-
-        else:
-            if lines + eols_in_buf < last_line: 
-                write_f(buf)
-            else:
-                write_f('\n'.join(buf.split('\n')[:last_line - lines]))
-                break
-
-        lines += eols_in_buf
-        buf = read_f(buf_size)
-
-    output.write('\n')
-    output.close()
+    return out_paths
 
 def _filter_fastq(ids, in_fastq, out_fastq):
     '''Filter FASTQ sequences by their IDs.
@@ -215,17 +199,15 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
     # Split input files if required and apply iterative mapping to each 
     # segment separately.
     if max_reads_per_chunk > 0:
-        num_lines = _line_count(fastq_path)
         kwargs['max_reads_per_chunk'] = -1
-        for i in range(num_lines / 4 / max_reads_per_chunk + 1):
-            fastq_chunk_path = fastq_path + '.%d' % i
-            _slice_file(fastq_path,
-                        fastq_chunk_path, 
-                        4 * i * max_reads_per_chunk, 
-                        4 * (i + 1) * max_reads_per_chunk)
-            iterative_mapping(bowtie_path, bowtie_index_path, fastq_chunk_path, 
-                              out_sam_path + '.%d' % i, min_seq_len, len_step,
-                              **kwargs)
+        for i, fastq_chunk_path in enumerate(
+            _chunk_file(fastq_path, max_reads_per_chunk * 4)):
+
+            iterative_mapping(
+                bowtie_path, bowtie_index_path, fastq_chunk_path, 
+                out_sam_path + '.%d' % (i+1), min_seq_len, len_step,
+                **kwargs)
+            os.remove(fastq_chunk_path)
         return 
 
     # Convert input relative arguments to the absolute length scale.
