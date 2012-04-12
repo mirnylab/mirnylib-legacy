@@ -507,6 +507,9 @@ def parse_sam(sam_basename1, sam_basename2, out_dict, genome_db,
     # Determine the number of double-sided reads.
     all_ids = np.unique(np.concatenate((ss_lib[1]['ids'], ss_lib[2]['ids'])))
     tot_num_reads = all_ids.shape[0]
+    if tot_num_reads == 0:
+        warnings.warn(
+            'The SAM files %s and %s do not contain unique double sided reads')
 
     # Pair single-sided reads and write into the output.
     for i in [1,2]:
