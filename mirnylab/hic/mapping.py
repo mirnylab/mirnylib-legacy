@@ -184,6 +184,10 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         `max_reads_per_chunk` each and map them separately. Use for large 
         datasets and low-memory machines.
 
+    temp_dir : str, optional
+        The path to the temporary folder. If not specified, this path is
+        supplied by the OS.
+
     '''
     bowtie_path = os.path.abspath(os.path.expanduser(bowtie_path))
     bowtie_index_path = os.path.abspath(os.path.expanduser(bowtie_index_path))
@@ -195,13 +199,15 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
     nthreads = kwargs.get('nthreads', 4)
     max_reads_per_chunk = kwargs.get('max_reads_per_chunk', -1)
     bowtie_flags = kwargs.get('bowtie_flags', '')
+    temp_dir = kwargs.get('temp_dir', tempfile.gettempdir())
 
     # Split input files if required and apply iterative mapping to each 
     # segment separately.
     if max_reads_per_chunk > 0:
         kwargs['max_reads_per_chunk'] = -1
         for i, fastq_chunk_path in enumerate(
-            _chunk_file(fastq_path, max_reads_per_chunk * 4)):
+            _chunk_file(fastq_path, temp_dir+os.path.split(fastq_path)[1],
+                        max_reads_per_chunk * 4)):
 
             iterative_mapping(
                 bowtie_path, bowtie_index_path, fastq_chunk_path, 
@@ -245,14 +251,15 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
                'non-unique ones to the next iteration')
 
         unmapped_fastq_path = os.path.join(
-            tempfile.gettempdir(), fastq_path + '.%d' % min_seq_len)
+            temp_dir, os.path.split(fastq_path)[1] + '.%d' % min_seq_len)
         _filter_unmapped_fastq(fastq_path, local_out_sam, unmapped_fastq_path)
-        atexit.register(lambda: os.remove(unmapped_fastq_path))
 
         iterative_mapping(bowtie_path, bowtie_index_path, unmapped_fastq_path, 
                           out_sam_path,
                           min_seq_len = min_seq_len + len_step, 
                           len_step=len_step, **kwargs)
+
+        os.remove(unmapped_fastq_path)
      
 def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
     '''Assign the mapped reads to the restriction fragments.
