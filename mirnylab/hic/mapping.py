@@ -8,7 +8,7 @@ import glob
 import gzip
 import subprocess
 import tempfile, atexit
-import warnings
+import logging
 
 import numpy as np
 import Bio.SeqIO, Bio.Seq, Bio.Restriction
@@ -237,13 +237,13 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         trim_3 = raw_seq_len - seq_start - min_seq_len
         local_out_sam = out_sam_path + '.' + str(min_seq_len)
         bowtie_command = (
-            ('time %s -x %s '#--very-sensitive --score-min L,-0.6,-0.2 '
+            ('%s -x %s '#--very-sensitive --score-min L,-0.6,-0.2 '
              '-q %s -5 %s -3 %s -p %s %s > %s') % (
                 bowtie_path, bowtie_index_path, fastq_path, 
                 str(trim_5), str(trim_3), str(nthreads), bowtie_flags,
                 local_out_sam))
 
-        print 'Map reads:', bowtie_command
+        logging.info('Mapping command: %s' % bowtie_command)
         subprocess.call(bowtie_command, shell=True)
 
         # Check if the next iteration is required.
@@ -253,8 +253,8 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
             return
 
         # Recursively go to the next iteration.
-        print ('Save unique aligments and send the '
-               'non-unique ones to the next iteration')
+        logging.info('Save unique aligments and send the '
+                     'non-unique ones to the next iteration')
 
         unmapped_fastq_path = os.path.join(
             temp_dir, os.path.split(fastq_path)[1] + '.%d' % min_seq_len)
@@ -295,6 +295,9 @@ def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
         genome_db = mirnylab.genome.Genome(genome_db)        
     assert isinstance(genome_db, mirnylab.genome.Genome)
 
+    if len(lib['chrms1']) == 0:
+        return lib
+
     if enzyme_name is None:
         if not genome_db.hasEnzyme():
             raise Exception('Set a restriction enzyme in the genome object or ' 
@@ -303,7 +306,6 @@ def fill_rsites(lib, genome_db, enzyme_name=None, min_frag_size = None):
         if enzyme_name not in Bio.Restriction.AllEnzymes:
             raise Exception('Enzyme is not found in the library: %s' % (enzyme_name,))
         genome_db.setEnzyme(enzyme_name)
-        
 
     rsite_size = eval('len(Bio.Restriction.%s.site)' % genome_db.enzymeName)
     if min_frag_size is None:
@@ -391,7 +393,6 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
                     # ...or those not belonging to the target chromosome. 
                     action(read) 
 
-    print('Counting stats...')
     # Calculate reads statistics.
     def _count_stats(read):
         # In Python, function is an object and can have an attribute.
@@ -503,8 +504,12 @@ def parse_sam(sam_basename1, sam_basename2, out_dict, genome_db,
     ss_lib = {}
     ss_lib[1] = mirnylab.h5dict.h5dict()
     ss_lib[2] = mirnylab.h5dict.h5dict()
+
+    logging.info('Parse the first side of the reads from %d' % sam_basename1)
     _parse_ss_sams(sam_basename1, ss_lib[1], genome_db,
                    1 if not max_seq_len else max_seq_len, reverse_complement)
+
+    logging.info('Parse the second side of the reads from %d' % sam_basename2)
     _parse_ss_sams(sam_basename2, ss_lib[2], genome_db,
                    1 if not max_seq_len else max_seq_len, reverse_complement)
 
@@ -512,8 +517,9 @@ def parse_sam(sam_basename1, sam_basename2, out_dict, genome_db,
     all_ids = np.unique(np.concatenate((ss_lib[1]['ids'], ss_lib[2]['ids'])))
     tot_num_reads = all_ids.shape[0]
     if tot_num_reads == 0:
-        warnings.warn(
-            'The SAM files %s and %s do not contain unique double sided reads')
+        logging.warning(
+            'The SAM files %s and %s do not contain unique double sided reads' %
+            (sam_basename1, sam_basename2))
 
     # Pair single-sided reads and write into the output.
     for i in [1,2]:
