@@ -407,8 +407,10 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
     if max_seq_len > 0:
         sam_stats['seq_len'] = min(max_seq_len, sam_stats['seq_len'])
 
-    print sam_stats
-    print('Done!')
+    if sam_stats['num_reads'] ==0:
+        out_dict.update(
+            {'chrms':[], 'strands':[], 'cuts':[], 'seqs':[], 'ids':[]})
+        return out_dict
 
     # Read and save each type of data separately.
     def _write_to_array(read, array, value):
@@ -510,6 +512,11 @@ def parse_sam(sam_basename1, sam_basename2, out_dict, genome_db,
     for i in [1,2]:
         sorting = np.searchsorted(all_ids, ss_lib[i]['ids'])
         for key in ss_lib[i].keys():
+            # Create empty arrays if input is empty.
+            if tot_num_reads == 0:
+                out_dict[key + str(i)] = []
+                continue
+
             # Don't save ids and seqs if not requested.
             if key=='ids' and not keep_ids:
                 continue
