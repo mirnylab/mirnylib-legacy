@@ -206,16 +206,19 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
     # segment separately.
     if max_reads_per_chunk > 0:
         kwargs['max_reads_per_chunk'] = -1
-        for i, fastq_chunk_path in enumerate(
-            _chunk_file(fastq_path,
-                        os.path.join(temp_dir, os.path.split(fastq_path)[1]),
-                        max_reads_per_chunk * 4)):
-
+        chunked_files = _chunk_file(
+            fastq_path,
+            os.path.join(temp_dir, os.path.split(fastq_path)[1]),
+            max_reads_per_chunk * 4)
+        for i, fastq_chunk_path in enumerate(chunked_files):
             iterative_mapping(
                 bowtie_path, bowtie_index_path, fastq_chunk_path, 
                 out_sam_path + '.%d' % (i+1), min_seq_len, len_step,
                 **kwargs)
-            os.remove(fastq_chunk_path)
+
+            # Delete chunks only if the file was really chunked.
+            if len(chunked_files) > 1:
+                os.remove(fastq_chunk_path)
         return 
 
     # Convert input relative arguments to the absolute length scale.
