@@ -376,15 +376,16 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
                 # Skip non-mapped reads...
                 if read.is_unmapped:
                     continue
+
                 # ...non-uniquely aligned...
                 for tag in read.tags:
                     if tag[0] == 'XS':
-                        continue
-
-                # Convert Bowtie's chromosome tids to genome_db indices.
-                read.tid = tid2idx[read.tid]
-                # ...or those not belonging to the target chromosome. 
-                action(read) 
+                        break
+                else:
+                    # Convert Bowtie's chromosome tids to genome_db indices.
+                    read.tid = tid2idx[read.tid]
+                    # ...or those not belonging to the target chromosome. 
+                    action(read) 
 
     print('Counting stats...')
     # Calculate reads statistics.
@@ -405,6 +406,8 @@ def _parse_ss_sams(sam_basename, out_dict, genome_db,
                  'num_reads':_count_stats.num_reads}
     if max_seq_len > 0:
         sam_stats['seq_len'] = min(max_seq_len, sam_stats['seq_len'])
+
+    print sam_stats
     print('Done!')
 
     # Read and save each type of data separately.
