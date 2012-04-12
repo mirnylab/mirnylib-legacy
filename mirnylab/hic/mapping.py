@@ -71,7 +71,7 @@ def _chunk_file(in_path, out_basename, max_num_lines):
     '''Slice lines from a large file. 
     The line numbering is as in Python slicing notation.
     '''
-    numlines = _line_count(in_path)
+    num_lines = _line_count(in_path)
     if num_lines <= max_num_lines:
         return [in_path,]
     
@@ -208,7 +208,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         kwargs['max_reads_per_chunk'] = -1
         for i, fastq_chunk_path in enumerate(
             _chunk_file(fastq_path,
-                        os.path.join(temp_dir + os.path.split(fastq_path)[1]),
+                        os.path.join(temp_dir, os.path.split(fastq_path)[1]),
                         max_reads_per_chunk * 4)):
 
             iterative_mapping(
