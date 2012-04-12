@@ -8,6 +8,7 @@ import glob
 import gzip
 import subprocess
 import tempfile, atexit
+import warnings
 
 import numpy as np
 import Bio.SeqIO, Bio.Seq, Bio.Restriction
