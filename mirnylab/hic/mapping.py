@@ -207,7 +207,8 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
     if max_reads_per_chunk > 0:
         kwargs['max_reads_per_chunk'] = -1
         for i, fastq_chunk_path in enumerate(
-            _chunk_file(fastq_path, temp_dir+os.path.split(fastq_path)[1],
+            _chunk_file(fastq_path,
+                        os.path.join(temp_dir + os.path.split(fastq_path)[1]),
                         max_reads_per_chunk * 4)):
 
             iterative_mapping(
