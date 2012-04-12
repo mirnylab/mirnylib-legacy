@@ -199,7 +199,8 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
     nthreads = kwargs.get('nthreads', 4)
     max_reads_per_chunk = kwargs.get('max_reads_per_chunk', -1)
     bowtie_flags = kwargs.get('bowtie_flags', '')
-    temp_dir = kwargs.get('temp_dir', tempfile.gettempdir())
+    temp_dir = os.path.abspath(os.path.expanduser(
+        kwargs.get('temp_dir', tempfile.gettempdir())))
 
     # Split input files if required and apply iterative mapping to each 
     # segment separately.
