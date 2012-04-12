@@ -505,11 +505,11 @@ def parse_sam(sam_basename1, sam_basename2, out_dict, genome_db,
     ss_lib[1] = mirnylab.h5dict.h5dict()
     ss_lib[2] = mirnylab.h5dict.h5dict()
 
-    logging.info('Parse the first side of the reads from %d' % sam_basename1)
+    logging.info('Parse the first side of the reads from %s' % sam_basename1)
     _parse_ss_sams(sam_basename1, ss_lib[1], genome_db,
                    1 if not max_seq_len else max_seq_len, reverse_complement)
 
-    logging.info('Parse the second side of the reads from %d' % sam_basename2)
+    logging.info('Parse the second side of the reads from %s' % sam_basename2)
     _parse_ss_sams(sam_basename2, ss_lib[2], genome_db,
                    1 if not max_seq_len else max_seq_len, reverse_complement)
 
