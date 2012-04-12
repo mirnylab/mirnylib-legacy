@@ -78,8 +78,8 @@ def _chunk_file(in_path, out_basename, max_num_lines):
     out_paths = []
 
     for i, line in enumerate(open(in_path)):
-        if i // max_num_lines == 0:
-            out_path = out_basename + '.%d' % (i / max_num_lines + 1)
+        if i % max_num_lines == 0:
+            out_path = out_basename + '.%d' % (i // max_num_lines + 1)
             out_paths.append(out_path)
             out_file = file(out_path, 'w')
         out_file.write(line)
