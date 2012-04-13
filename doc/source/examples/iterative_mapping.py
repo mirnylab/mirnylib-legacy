@@ -10,6 +10,8 @@ mapping.iterative_mapping(
     min_seq_len=25,
     len_step=5,
     nthreads=8,
+    max_reads_per_chunk = 10000000,  #optional, to split reads into smaller groups
+    temp_dir = "~/data/tmp",         #optional, keep temporary files here
     bowtie_flags='--very-sensitive --score-min L,-0.6,-0.2')
 
 mapping.iterative_mapping(
@@ -20,6 +22,8 @@ mapping.iterative_mapping(
     min_seq_len=25,
     len_step=5,
     nthreads=8,
+    max_reads_per_chunk = 10000000,   
+    temp_dir = "~/data/tmp",          
     bowtie_flags='--very-sensitive --score-min L,-0.6,-0.2')
 
 # B. Parse the mapped sequences into a Python data structure.

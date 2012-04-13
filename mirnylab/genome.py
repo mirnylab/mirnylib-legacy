@@ -598,7 +598,6 @@ class Genome(object):
         if type(filename) == str: bwFile = BigWigFile( open(filename) )
         else: bwFile = BigWigFile(filename)
         print "parsingBigWigFile",
-        
         assert isinstance(bwFile,bx.bbi.bigwig_file.BigWigFile)
                  
         for i in xrange(self.chrmCount):
