@@ -375,7 +375,7 @@ def PCA(A, numPCs = 6):
     covM = numpy.dot(M,M.T)
     [latent,coeff] =  scipy.sparse.linalg.eigsh(covM,numPCs)
     print latent
-    return numpy.transpose(coeff[:,::-1])
+    return (numpy.transpose(coeff[:,::-1]),latent[::-1])
 
 
 def EIG(A,numPCs = 3):
@@ -394,7 +394,7 @@ def EIG(A,numPCs = 3):
     alatent = numpy.argsort(numpy.abs(latent)) 
     print "eigenvalues are:", latent[alatent]
     coeff = coeff[:,alatent]     
-    return numpy.transpose(coeff[:,::-1])
+    return (numpy.transpose(coeff[:,::-1]),latent[alatent][::-1])
 
 
 

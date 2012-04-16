@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import pylab
 import numpy 
 
-def cmap_map(function,cmap,mapRange = [0,1]):
+def cmap_map(function = lambda x:x,cmap = plt.cm.get_cmap("jet"),mapRange = [0,1]):
     """ Applies function (which should operate on vectors of shape 3:
     [r, g, b], on colormap cmap. This routine will break any discontinuous     points in a colormap.
     
@@ -168,7 +168,7 @@ def removeBorder(ax = None):
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     
-def niceShow(mytype = None):
+def niceShow(mytype = None, subplotAdjust =[0.08,0.12,0.95,0.98]):
     if mytype == "log":
         plt.xscale("log")
         plt.yscale("log")
@@ -177,7 +177,7 @@ def niceShow(mytype = None):
     if legend != None:
         legend.draw_frame(False)
     removeAxes(shift = 0)
-    plt.gcf().subplots_adjust(left=0.07, bottom=0.12, top=0.98, right=0.98)
+    plt.gcf().subplots_adjust(*subplotAdjust)
     plt.show()
         
 def mat_img(a,cmap="hot_r",trunk = False, **kwargs):
