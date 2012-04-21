@@ -220,7 +220,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
             bash_reader = 'cat'
 
     output_is_bam = (out_sam_path.split('.')[-1].lower() == 'bam')
-    output_formatter = '| samtools -bS -' if output_is_bam else ''
+    output_formatter = '| samtools view -bS -' if output_is_bam else ''
 
     # Split input files if required and apply iterative mapping to each 
     # segment separately.
@@ -258,7 +258,7 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         bowtie_command = (
             ('{bash_reader} {fastq_path} | {bowtie_path} -x {bowtie_index_path} '
              '-q - -5 {trim_5:d} -3 {trim_3:d} -p {nthreads:d} {bowtie_flags} '
-             '{output_formatter} > {out_sam_path}').format(locals())
+             '{output_formatter} > {local_out_sam}').format(**locals()))
 
         logging.info('Mapping command: %s' % bowtie_command)
         subprocess.call(bowtie_command, shell=True)
