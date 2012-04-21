@@ -22,6 +22,8 @@ import mirnylab.genome
 
 ##TODO: fix #-to-ID correspondence for other species.
 
+logging.basicConfig(level=logging.NOTSET)
+
 def _detect_quality_coding_scheme(in_fastq, num_entries = 10000):
     in_file = open(in_fastq)
     max_ord = 0
@@ -160,10 +162,11 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         hg18.2.bt.2), provide only the common part (hg18).
         
     fastq_path : str
-        The path to the input FASTQ file.
+        The path to the input FASTQ or gzipped FASTQ file.
 
     out_sam_path : str
-        The path to the output SAM file.
+        The path to the output SAM file. If ends with .bam, then the output
+        is converted to BAM.
 
     min_seq_len : int
         The truncation length at the first iteration of mapping.
@@ -189,6 +192,11 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         The path to the temporary folder. If not specified, this path is
         supplied by the OS.
 
+    bash_reader : str, optional
+        A bash application to read the input onto the bash pipe. The default 
+        value is None, that is the app is autodetected by the extension (i.e.
+        cat for .fastq, gunzip for .gz).
+
     '''
     bowtie_path = os.path.abspath(os.path.expanduser(bowtie_path))
     bowtie_index_path = os.path.abspath(os.path.expanduser(bowtie_index_path))
@@ -202,6 +210,17 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
     bowtie_flags = kwargs.get('bowtie_flags', '')
     temp_dir = os.path.abspath(os.path.expanduser(
         kwargs.get('temp_dir', tempfile.gettempdir())))
+
+    bash_reader = kwargs.get('bash_reader', None)
+    if bash_reader is None:
+        extension = fastq_path.split('.')[-1].lower()
+        if extension == 'gz':
+            bash_reader = 'gunzip -c'
+        else:
+            bash_reader = 'cat'
+
+    output_is_bam = (out_sam_path.split('.')[-1].lower() == 'bam')
+    output_formatter = '| samtools -bS -' if output_is_bam else ''
 
     # Split input files if required and apply iterative mapping to each 
     # segment separately.
@@ -237,11 +256,9 @@ def iterative_mapping(bowtie_path, bowtie_index_path, fastq_path, out_sam_path,
         trim_3 = raw_seq_len - seq_start - min_seq_len
         local_out_sam = out_sam_path + '.' + str(min_seq_len)
         bowtie_command = (
-            ('%s -x %s '#--very-sensitive --score-min L,-0.6,-0.2 '
-             '-q %s -5 %s -3 %s -p %s %s > %s') % (
-                bowtie_path, bowtie_index_path, fastq_path, 
-                str(trim_5), str(trim_3), str(nthreads), bowtie_flags,
-                local_out_sam))
+            ('{bash_reader} {fastq_path} | {bowtie_path} -x {bowtie_index_path} '
+             '-q - -5 {trim_5:d} -3 {trim_3:d} -p {nthreads:d} {bowtie_flags} '
+             '{output_formatter} > {out_sam_path}').format(locals())
 
         logging.info('Mapping command: %s' % bowtie_command)
         subprocess.call(bowtie_command, shell=True)
