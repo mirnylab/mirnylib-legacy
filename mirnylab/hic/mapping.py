@@ -9,7 +9,7 @@ import gzip
 import subprocess
 import tempfile, atexit
 import logging
-
+import warnings
 import numpy as np
 import Bio.SeqIO, Bio.Seq, Bio.Restriction
 import pysam
@@ -339,12 +339,13 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
     '''Private: assign mapped reads to restriction fragments by 
     their 5' end position.
     '''
+    assert isinstance(genome,mirnylab.genome.Genome) #make Pydev happy
     side = str(side) 
 
     chrms = lib['chrms' + side]
     rfragIdxs = np.zeros(len(chrms), dtype=np.int64)
-    rsites = np.zeros(len(chrms), dtype=np.int64)
     uprsites = np.zeros(len(chrms), dtype=np.int64)
+    rsites = np.zeros(len(chrms), dtype=np.int64)
     downrsites = np.zeros(len(chrms), dtype=np.int64)
 
     # If the fragment was not mapped.
@@ -354,13 +355,24 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
     downrsites[chrms == -1] = -1
 
     cuts = lib['cuts' + side]
+        
+    badCuts = np.nonzero(cuts > genome.chrmLens[chrms])[0]  
+    if len(badCuts) > 10000: 
+        raise StandardError("Determined too many (%s) reads that map after "
+                            "the end of chromosome!" % len(badCuts))
+    if len(badCuts) > 0:
+        maxDev = np.max(cuts[badCuts] - genome.chrmLens[chrms[badCuts]])
+        warnings.warn("\nDetermined many (%s) reads that map after the end of chromosome!"
+                      "\n Maximum deviation is %s bp " % (len(badCuts),maxDev))        
+        cuts[badCuts] = genome.chrmLens[chrms[badCuts]]
+    
     strands = lib['strands' + side]
     for chrm_idx in xrange(genome.chrmCount):
         all_rsites = np.r_[0, genome.rsites[chrm_idx]]
         idxs = (chrms == chrm_idx)
 
         # Find the indexes of the restriction fragment...
-        rfragIdxs[idxs] = np.searchsorted(all_rsites, cuts[idxs]) - 1
+        rfragIdxs[idxs] = np.searchsorted(all_rsites[:-1], cuts[idxs]) - 1
         uprsites[idxs] = all_rsites[rfragIdxs[idxs]]
         downrsites[idxs] = all_rsites[rfragIdxs[idxs] + 1] 
         rsites[idxs] = np.where(strands[idxs], downrsites[idxs], uprsites[idxs])

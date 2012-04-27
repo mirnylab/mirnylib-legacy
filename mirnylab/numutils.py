@@ -27,12 +27,14 @@ def generalizedDtype(dtype):
     if type(dtype) == type:
         dtype = numpy.dtype(dtype)    
     if issubclass( type(dtype) , numpy.ndarray):
-        dtype  = dtype.dtype         
-    if numpy.issubdtype(dtype,numpy.bool) == True: return numpy.int
-    if numpy.issubdtype(dtype,numpy.int) == True: return numpy.int
-    if numpy.issubdtype(dtype,numpy.float) == True: return numpy.float
+        dtype  = dtype.dtype                     
     if numpy.issubdtype(dtype,numpy.complex) == True: return numpy.complex
+    if numpy.issubdtype(dtype,numpy.float) == True: return numpy.float
+    if numpy.issubdtype(dtype,numpy.int) == True: return numpy.int        
+    if numpy.issubdtype(dtype,numpy.bool) == True: return numpy.int
+    
     raise ValueError("Data  type not known")
+
 
 def isInteger(inputData):
     return numpy.mod(inputData,1) < 0.00001
