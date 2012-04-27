@@ -13,7 +13,7 @@ import h5py
 class h5dict(collections.MutableMapping):
     self_key = '_self_key'
 
-    def __init__(self, path=None, mode='a', autoflush=True):
+    def __init__(self, path=None, mode='a', autoflush=True, in_memory=False):
         '''A persistent dictionary with data stored in an HDF5 file.
 
         Parameters:
@@ -27,19 +27,35 @@ class h5dict(collections.MutableMapping):
             'w'  - Create file, truncate if exists
             'w-' - Create file, fail if exists
             'a'  - Read/write if exists, create otherwise (default)
+
+        in_memory : bool
+            if True, than the object is stored in the memory and not saved 
+            to the disk.
         '''
-        if path is None:
-            tmpfile = tempfile.NamedTemporaryFile(delete=False)
+        if in_memory:
+            tmpfile = tempfile.NamedTemporaryFile()
             tmppath = tmpfile.name
             tmpfile.close()
-            self.path = tmppath
-            self.is_tmp = True
+            self.path=tmppath
+            self._h5file = h5py.File(tmppath, driver='core', 
+                                     backing_store=False)
+            self.__self_load__()
+            self.autoflush = False
+            self.is_tmp = False # In-memory h5dict doesn't have any tmp files.
+
         else:
-            self.path = path
-            self.is_tmp = False
-        self._h5file = h5py.File(self.path, mode)
-        self.__self_load__()
-        self.autoflush = autoflush
+            if path is None:
+                tmpfile = tempfile.NamedTemporaryFile(delete=False)
+                tmppath = tmpfile.name
+                tmpfile.close()
+                self.path = tmppath
+                self.is_tmp = True
+            else:
+                self.path = path
+                self.is_tmp = False
+            self._h5file = h5py.File(self.path, mode)
+            self.__self_load__()
+            self.autoflush = autoflush
 
     def __self_dump__(self):
         if self.self_key in self._h5file.keys():
@@ -101,7 +117,7 @@ class h5dict(collections.MutableMapping):
         if key in self.keys():
             self.__delitem__(key)
 
-        if isinstance(value, np.ndarray):
+        if issubclass(value.__class__, np.ndarray):
             self._h5file.create_dataset(name=key, data=value, 
                 compression='lzf',
                 chunks=True)
