@@ -356,7 +356,7 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
 
     cuts = lib['cuts' + side]
         
-    badCuts = np.nonzero(cuts > genome.chrmLens[chrms])[0]  
+    badCuts = np.nonzero(cuts >= genome.chrmLens[chrms])[0]  
     if len(badCuts) > 10000: 
         raise StandardError("Determined too many (%s) reads that map after "
                             "the end of chromosome!" % len(badCuts))
@@ -364,7 +364,7 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
         maxDev = np.max(cuts[badCuts] - genome.chrmLens[chrms[badCuts]])
         warnings.warn("\nDetermined many (%s) reads that map after the end of chromosome!"
                       "\n Maximum deviation is %s bp " % (len(badCuts),maxDev))        
-        cuts[badCuts] = genome.chrmLens[chrms[badCuts]]
+        cuts[badCuts] = genome.chrmLens[chrms[badCuts]]-1
     
     strands = lib['strands' + side]
     for chrm_idx in xrange(genome.chrmCount):
@@ -372,7 +372,7 @@ def _find_rfrags_inplace(lib, genome, min_frag_size, side):
         idxs = (chrms == chrm_idx)
 
         # Find the indexes of the restriction fragment...
-        rfragIdxs[idxs] = np.searchsorted(all_rsites[:-1], cuts[idxs]) - 1
+        rfragIdxs[idxs] = np.searchsorted(all_rsites, cuts[idxs]) - 1
         uprsites[idxs] = all_rsites[rfragIdxs[idxs]]
         downrsites[idxs] = all_rsites[rfragIdxs[idxs] + 1] 
         rsites[idxs] = np.where(strands[idxs], downrsites[idxs], uprsites[idxs])
