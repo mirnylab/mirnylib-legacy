@@ -3,13 +3,11 @@
 import os, sys
 
 libpath = os.getcwd()
-if libpath.startswith(os.path.expanduser('~')):
-    libpath = os.path.join(*(['$HOME',] + libpath.split(os.sep)[3:]))
+libpath = os.path.normpath(libpath.replace(os.path.expanduser('~'), '$HOME/'))
 
 export_line = 'export PYTHONPATH="$PYTHONPATH:{0}"'.format(libpath)
 
-profiles = [os.path.expanduser(i) 
-            for i in ['~/.bash_profile', '~/.bashrc']]
+profiles = [os.path.expanduser(i) for i in ['~/.bash_profile', '~/.bashrc']]
 
 # Do nothing if the library is already exported.
 for profile_path in profiles:
