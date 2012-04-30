@@ -1,4 +1,4 @@
-from mirnylab.hic import mapping
+from hiclib import mapping
 from mirnylab.h5dict import h5dict
 
 # A. Map the reads iteratively.
@@ -30,8 +30,8 @@ mapping.iterative_mapping(
 lib = h5dict('../hic/hic_lib.hdf5')
 
 mapping.parse_sam(
-    sam_basename1='~/data/hic/1.sam',
-    sam_basename2='~/data/hic/2.sam',
+    sam_basename1='~/data/hic/1.bam',
+    sam_basename2='~/data/hic/2.bam',
     out_dict=lib,
     genome_db='../data/hg19')
 
