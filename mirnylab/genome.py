@@ -1,4 +1,4 @@
-import os, glob, re
+import os, glob, re, sys
 
 import numpy 
 import warnings
@@ -308,8 +308,8 @@ class Genome(object):
             gapFile = open(os.path.join(self.genomePath, self.gapFile)
                            ).readlines()
         except IOError: 
-            print "Gap file not found! \n Please provide a link to a gapfile or put a file genome_name.gap in a genome directory"
-            exit() 
+            print "Gap file not found! \n Please provide a link to a gapfile or put a file gap.txt in a genome directory"
+            return
 
         self.cntrStarts = -1 * numpy.ones(self.chrmCount,int)
         self.cntrEnds = -1 * numpy.zeros(self.chrmCount,int)
