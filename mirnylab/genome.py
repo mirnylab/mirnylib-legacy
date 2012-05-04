@@ -1,4 +1,4 @@
-import os, glob, re
+import os, glob, re, sys
 
 import numpy 
 import warnings
@@ -308,8 +308,8 @@ class Genome(object):
             gapFile = open(os.path.join(self.genomePath, self.gapFile)
                            ).readlines()
         except IOError: 
-            print "Gap file not found! \n Please provide a link to a gapfile or put a file genome_name.gap in a genome directory"
-            exit() 
+            print "Gap file not found! \n Please provide a link to a gapfile or put a file gap.txt in a genome directory"
+            return
 
         self.cntrStarts = -1 * numpy.ones(self.chrmCount,int)
         self.cntrEnds = -1 * numpy.zeros(self.chrmCount,int)
@@ -356,6 +356,7 @@ class Genome(object):
 
         # Bin GC content.
         self.GCBin = self.getGCBin(self.resolution)
+        self.unmappedBasesBin = self.getUnmappedBasesBin(self.resolution)
 
     def splitByChrms(self, inArray):
         return [inArray[self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]]
@@ -381,6 +382,23 @@ class Genome(object):
                 GCBin[chrm][j] = self.getGC(
                     chrm, j * int(resolution), (j + 1) * int(resolution))
         return GCBin
+
+    def getUnmappedBasesBin(self, resolution):
+        # At the first call the function rewrites itself with a memoized 
+        # private function.
+        self.getUnmappedBasesBin = self._memoize('_getUnmappedBasesBin')
+        return self.getUnmappedBasesBin(resolution)
+
+    def _getUnmappedBasesBin(self, resolution):
+        unmappedBasesBin = []
+        for chrm in xrange(self.chrmCount):
+            chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
+            unmappedBasesBin.append(numpy.ones(chrmSizeBin, dtype=numpy.int))
+            for j in xrange(chrmSizeBin):
+                chunk = self.seqs[chrm][
+                    j * int(resolution):(j + 1) * int(resolution)].seq
+                unmappedBasesBin[chrm][j] = chunk.count('N')
+        return unmappedBasesBin
 
     def getRsites(self, enzymeName):
         # At the first call redirects itself to a memoized private function.
