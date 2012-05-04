@@ -83,6 +83,41 @@ def trunc(x,low=0.005,high = 0.005):
 
 trunk = mirnylab.systemutils.deprecate(trunc,"trunk")
 
+def uniqueIndex(data):
+    """Returns a binary index of unique elements in an array data.
+    This method is very memory efficient, much more than numpy.unique! 
+    It grabs only 9 extra bytes per record :) 
+    """ 
+    
+    
+    args = numpy.argsort(data)
+    index = numpy.zeros(len(data),bool)
+    myr = range(0,len(data),len(data)/50+1) + [len(data)]
+    for i in xrange(len(myr)-1):
+        start = myr[i]
+        end = myr[i+1]
+        dataslice = data[args[start:end]]        
+        ind = dataslice[:-1] != dataslice[1:]
+        index[args[start:end-1]] = ind 
+        if end != len(data):
+            if data[args[end-1]] != data[args[end]]:
+                index[args[end-1]] = True
+        else: 
+            index[args[end-1]] = True
+     
+    return index
+
+
+    
+ 
+         
+        
+        
+    
+     
+     
+        
+
 def trimZeros(x):
     "trims leading and trailing zeros of a 1D/2D array"
     if len(x.shape) == 1:
@@ -253,8 +288,8 @@ def arraySumByArray(array,filterarray,meanarray):
     return ret
 
 
-def sumByArray(array,filterarray, dtype = None):
-    "faster [sum(array == i) for i in filterarray]"            
+def _sumByArray(array,filterarray, dtype = "int64"):
+    "actual implementation of sumByArray"            
     arsort = numpy.sort(array)    
     diffs = numpy.r_[0,numpy.nonzero(numpy.diff(arsort) > 0.5)[0]+1,len(arsort)]
     if dtype != None: diffs = numpy.array(diffs, dtype = dtype)
@@ -268,6 +303,19 @@ def sumByArray(array,filterarray, dtype = None):
     return c
 
 
+def sumByArray(array,filterarray,dtype = "int64"):
+    """faster [sum(array == i) for i in filterarray]
+    Current method is a wrapper that optimizes this method for speed and memory efficiency.
+    """
+    if (len(array) / len(filterarray) > 2) and (len(array) > 10000):
+        M = len(array)/len(filterarray) + 1        
+        bins = range(0,len(array),len(filterarray) * M) + [len(array)]
+        toreturn = numpy.zeros(len(filterarray),array.dtype)
+        for i in xrange(len(bins)- 1):
+            toreturn += _sumByArray(array[bins[i]:bins[i+1]], filterarray, dtype)
+        return toreturn
+    else:
+        return _sumByArray(array, filterarray, dtype)
                 
 
 def corr2d(x):
