@@ -326,10 +326,16 @@ def corr2d(x):
 
 def logbins(a, b, pace, N_in=0):
     "create log-spaced bins"
+    a = int(a)
+    b = int(b) 
     beg = log(a)
     end = log(b - 1)
     pace = log(pace)
     N = int((end - beg) / pace)
+     
+    if N > 0.8 * (b-a): 
+        return numpy.arange(a,b+1)
+    
     if N_in != 0: N = N_in  
     pace = (end - beg) / N
     mas = numpy.arange(beg, end + 0.000000001, pace)
@@ -340,6 +346,7 @@ def logbins(a, b, pace, N_in=0):
         if ret[i + 1] <= ret[i]:
             ret[i + 1: - 1] += 1
     return [int(i) for i in ret]
+
 
 
 def rescale(data):
@@ -613,7 +620,9 @@ def correctBias(y):
     s = numpy.sum(x,axis = 1)
     s /= numpy.mean(s[s!=0])    
     s[s==0] = 1     
-    return x / (s[None,:] * s[:,None]),s 
+    return x / (s[None,:] * s[:,None]),s
+
+ 
 
 def ultracorrectBiasReturn(x,M=20):
     "performs iterative correction and returns bias"
@@ -636,4 +645,50 @@ def create_regions(a):
     a1 = numpy.nonzero(a[1:] * (1-a[:-1]))[0]
     a2 = numpy.nonzero(a[:-1] * (1-a[1:]))[0]    
     return numpy.transpose(numpy.array([a1,a2]))
+    
+def observedOverExpected(matrix):
+    "Calculates observedOverExpected of any contact map"
+    data = numpy.asarray(matrix, dtype = float, order = "C")
+    N = data.shape[0]
+    bins = logbins(1,N,1.2)
+    bins = [(0,1)] + [(bins[i],bins[i+1]) for i in xrange(len(bins)-1)]
+    bins = numpy.array(bins,order = "C")
+    M = len(bins)
+    M #Eclipse warning remover
+    code = r"""
+    #line 50 "binary_search.py"
+    using namespace std;
+    for (int bin = 0; bin < M; bin++)
+    {
+        int start = bins[2 * bin];
+        int end = bins[2 * bin + 1];
+        
+        double ss = 0 ;
+        int count   = 0 ;  
+        for (int offset = start; offset < end; offset ++)
+        {
+            for (int j = 0; j < N - offset; j++)
+            {
+                ss += data[(offset + j) * N + j];
+                count += 1;                            
+            }
+        }
+        double meanss = ss / count;
+        printf("%lf\n",meanss); 
+        for (int offset = start; offset < end; offset ++)
+        {
+            for (int j = 0; j < N - offset; j++)
+            {
+                data[(offset + j) * N + j] /= meanss;                                             
+                if (offset > 0) {data[(offset + j)  + j*N] /= meanss;}
+            }
+        }
+    }
+    
+    """
+    support = """
+    #include <math.h>  
+    """
+    weave.inline(code, ['data', 'bins' , 'N' ,'M'], extra_compile_args=['-march=native -malign-double -O3'],support_code =support )
+    return data
     
