@@ -1,6 +1,6 @@
 import numpy
 import warnings
-import mirnylab.systemutils
+import mirnylib.systemutils
 na = numpy.array 
 import  scipy.weave,scipy.sparse.linalg, scipy.stats 
 from scipy import weave 
@@ -81,7 +81,7 @@ def trunc(x,low=0.005,high = 0.005):
     lowValue, highValue = numpy.percentile(x,[low*100.,(1-high)*100.])     
     return numpy.clip(x,a_min = lowValue, a_max = highValue)
 
-trunk = mirnylab.systemutils.deprecate(trunc,"trunk")
+trunk = mirnylib.systemutils.deprecate(trunc,"trunk")
 
 def uniqueIndex(data):
     """Returns a binary index of unique elements in an array data.
@@ -168,7 +168,7 @@ def zoomOut(x,shape):
     return res
 
 
-smartZoomOut = mirnylab.systemutils.deprecate(zoomOut,"smartZoomOut")  #backwards compatibility
+smartZoomOut = mirnylib.systemutils.deprecate(zoomOut,"smartZoomOut")  #backwards compatibility
 
 def coarsegrain(array,size,extendEdge = False):
     "coarsegrains array by summing values in sizeXsize squares; truncates the unused squares"
