@@ -243,7 +243,7 @@ class Genome(object):
                 self.genomePath, self.chrmFileTemplate % ('*',)))]
 
         if len(self.fastaNames) == 0: 
-            raise Exception('No Genome files found')
+            raise Exception('No Genome files found at %s' % self.genomePath)
 
         # Read chromosome IDs.
         self.chrmLabels = []
@@ -357,6 +357,13 @@ class Genome(object):
         # Bin GC content.
         self.GCBin = self.getGCBin(self.resolution)
         self.unmappedBasesBin = self.getUnmappedBasesBin(self.resolution)
+        self.binSizesBp = []
+        for i in xrange(self.chrmCount):
+            chromLen = self.chrmLens[i]
+            cur = [self.resolution for _ in xrange(chromLen/self.resolution)]
+            cur.append(chromLen % self.resolution)
+            self.binSizesBp.append(numpy.array(cur))
+        self.mappedBasesBin = [i[0] - i[1] for i in zip(self.binSizesBp,self.unmappedBasesBin)]
 
     def splitByChrms(self, inArray):
         return [inArray[self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]]
