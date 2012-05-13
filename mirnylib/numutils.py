@@ -679,8 +679,11 @@ def observedOverExpected(matrix):
         {
             for (int j = 0; j < N - offset; j++)
             {
-                data[(offset + j) * N + j] /= meanss;                                             
-                if (offset > 0) {data[(offset + j)  + j*N] /= meanss;}
+                if (meanss !=  0)
+                {
+                    data[(offset + j) * N + j] /= meanss;                                                             
+                    if (offset > 0) {data[(offset + j)  + j*N] /= meanss;}
+                }
             }
         }
     }
