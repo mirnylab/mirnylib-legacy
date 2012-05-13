@@ -289,6 +289,34 @@ def scatter_trend(x, y, **kwargs):
                        [a*min(x)+b+i*stderr, a*max(x)+b+i*stderr],
                        'r--')
 
+def plot_matrix_3d(matrix, **kwargs):
+    import mpl_toolkits.mplot3d.axes3d as pylab3d
+    ax = pylab3d.Axes3D(pylab.gcf())
+    x = numpy.arange(matrix.shape[0])
+    y = numpy.arange(matrix.shape[1])
+    X, Y = numpy.meshgrid(x, y)
+
+    plot_type = kwargs.get('plot_type', 'surface')
+    if plot_type == 'surface':
+        ax.plot_surface(X, Y, matrix, rstride=1, cstride=1, cmap=pylab.cm.get_cmap("jet")) 
+    elif plot_type == 'wireframe':
+        ax.plot_wireframe(X, Y, matrix, cmap=pylab.cm.get_cmap("jet"))
+    elif plot_type == 'scatter':
+        ax.scatter3D(numpy.ravel(X), numpy.ravel(Y), numpy.ravel(Z))
+    elif plot_type == 'contour':
+        num_contours = kwargs.get('num_contours', 50)
+        ax.contour3D(X, Y, matrix, num_contours, cmap=pylab.cm.get_cmap("jet"))
+    elif plot_type == 'contourf':
+        num_contours = kwargs.get('num_contours', 50)
+        ax.contourf3D(X, Y, matrix, num_contours, cmap=pylab.cm.get_cmap("jet"))
+    else:
+        raise StandardError('Unknown plot type: %s' % (plot_type,))
+
+    ax.set_xlabel(kwargs.get('xlabel', ''))
+    ax.set_ylabel(kwargs.get('ylabel', ''))
+    ax.set_zlabel(kwargs.get('zlabel', ''))
+    ax.set_title(kwargs.get('title', ''))
+
 def plot_function_3d(x, y, function, **kwargs):
     """Plot values of a function of two variables in 3D.
 
@@ -315,34 +343,12 @@ def plot_function_3d(x, y, function, **kwargs):
     http://www.scipy.org/Cookbook/Matplotlib/mplot3D
 
     """
-    import mpl_toolkits.mplot3d.axes3d as pylab3d
-    ax = pylab3d.Axes3D(pylab.gcf())
-    X, Y = numpy.meshgrid(x, y)
-    Z = []
     for y_value in y:
         Z.append([])
         for x_value in x:
             Z[-1].append(function(x_value, y_value))
     Z = numpy.array(Z)
-    plot_type = kwargs.get('plot_type', 'surface')
-    if plot_type == 'surface':
-        ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=pylab.cm.get_cmap("jet")) 
-    elif plot_type == 'wireframe':
-        ax.plot_wireframe(X, Y, Z, cmap=pylab.cm.get_cmap("jet"))
-    elif plot_type == 'scatter':
-        ax.scatter3D(numpy.ravel(X), numpy.ravel(Y), numpy.ravel(Z))
-    elif plot_type == 'contour':
-        num_contours = kwargs.get('num_contours', 50)
-        ax.contour3D(X, Y, Z, num_contours, cmap=pylab.cm.get_cmap("jet"))
-    elif plot_type == 'contourf':
-        num_contours = kwargs.get('num_contours', 50)
-        ax.contourf3D(X, Y, Z, num_contours, cmap=pylab.cm.get_cmap("jet"))
-    else:
-        raise StandardError('Unknown plot type: %s' % (plot_type,))
-    ax.set_xlabel(kwargs.get('xlabel', ''))
-    ax.set_ylabel(kwargs.get('ylabel', ''))
-    ax.set_zlabel(kwargs.get('zlabel', ''))
-    ax.set_title(kwargs.get('title', ''))
+    plot_matrix_3d(X, Y, Z, **kwargs)
 
 def plot_function_contour(x, y, function, **kwargs):
     """Make a contour plot of a function of two variables.
