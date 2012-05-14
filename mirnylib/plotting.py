@@ -292,8 +292,8 @@ def scatter_trend(x, y, **kwargs):
 def plot_matrix_3d(matrix, **kwargs):
     import mpl_toolkits.mplot3d.axes3d as pylab3d
     ax = pylab3d.Axes3D(pylab.gcf())
-    x = numpy.arange(matrix.shape[0])
-    y = numpy.arange(matrix.shape[1])
+    x = kwargs.get('x', numpy.arange(matrix.shape[1]))
+    y = kwargs.get('y', numpy.arange(matrix.shape[0]))
     X, Y = numpy.meshgrid(x, y)
 
     plot_type = kwargs.get('plot_type', 'surface')
@@ -302,7 +302,7 @@ def plot_matrix_3d(matrix, **kwargs):
     elif plot_type == 'wireframe':
         ax.plot_wireframe(X, Y, matrix, cmap=pylab.cm.get_cmap("jet"))
     elif plot_type == 'scatter':
-        ax.scatter3D(numpy.ravel(X), numpy.ravel(Y), numpy.ravel(Z))
+        ax.scatter3D(numpy.ravel(X), numpy.ravel(Y), numpy.ravel(matrix))
     elif plot_type == 'contour':
         num_contours = kwargs.get('num_contours', 50)
         ax.contour3D(X, Y, matrix, num_contours, cmap=pylab.cm.get_cmap("jet"))
@@ -348,7 +348,7 @@ def plot_function_3d(x, y, function, **kwargs):
         for x_value in x:
             Z[-1].append(function(x_value, y_value))
     Z = numpy.array(Z)
-    plot_matrix_3d(X, Y, Z, **kwargs)
+    plot_matrix_3d(Z, x=X, y=Y, **kwargs)
 
 def plot_function_contour(x, y, function, **kwargs):
     """Make a contour plot of a function of two variables.
