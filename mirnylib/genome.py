@@ -150,6 +150,7 @@ import Bio.SeqIO, Bio.SeqUtils, Bio.Restriction
 Bio.Restriction  #To shut up Eclipse warning
 import joblib 
 from scipy import  weave 
+import logging
 import numutils
 
 class Genome(object):
@@ -310,12 +311,15 @@ class Genome(object):
     def _parseGapFile(self):
         """Parse a .gap file to determine centromere positions.
         """
-        try: 
-            gapFile = open(os.path.join(self.genomePath, self.gapFile)
-                           ).readlines()
-        except IOError: 
-            print "Gap file not found! \n Please provide a link to a gapfile or put a file gap.txt in a genome directory"
+        gapPath = os.path.join(self.genomePath, self.gapFile)
+        if not os.path.isfile(gapPath):
+            logging.warning(
+                'Gap file not found!\n'
+                'Please provide a link to a gapfile or '
+                'put a file gap.txt in a genome directory')
             return
+
+        gapFile = open(gapPath).readlines()
 
         self.cntrStarts = -1 * numpy.ones(self.chrmCount,int)
         self.cntrEnds = -1 * numpy.zeros(self.chrmCount,int)
@@ -333,6 +337,30 @@ class Genome(object):
         lowarms = numpy.array(self.cntrStarts)
         higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
         self.maxChrmArm = max(lowarms.max(), higharms.max())
+
+    def createGapFile(self, centromere_positions):
+        """Create a gap file with the centromere positions.
+
+        Parameters
+        ----------
+       
+        centromere_positions : dict of (int, int)
+            A dictionary with centromere positions. The keys are the chromosome
+            string labels and the values are (centromereStart, centromereEnd).
+        """
+        gapPath = os.path.join(self.genomePath, self.gapFile)
+        if os.path.isfile(gapPath):
+            raise Exception('The gap file {0} already exists!'.format(gapPath))
+        gapFile = open(os.path.join(self.genomePath, self.gapFile), 'w')
+        for label, (i, j) in centromere_positions.iteritems():
+            centromereStart = min(i, j)
+            centromereEnd = max(i, j)
+            gapFile.write(
+                '0\t{0}\t{1}\t{2}\t0\tN\t0\tcentromere\tno\n'.format(
+                    label, centromereStart, centromereEnd))
+
+        gapFile.close()
+        self._parseGapFile()
             
     def setResolution(self, resolution):
         if (resolution == -1) and hasattr(self,"resolution"): 
