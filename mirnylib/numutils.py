@@ -1,6 +1,7 @@
 import numpy
 import warnings
 import mirnylib.systemutils
+import cProfile
 na = numpy.array 
 import  scipy.weave,scipy.sparse.linalg, scipy.stats 
 from scipy import weave 
@@ -226,11 +227,13 @@ def arraySearch(array,tosearch):
 def arrayInArray(array,filterarray):    
     """gives you boolean array of indices of elements in array that are contained in filterarray
     a faster version of  [(i in filterarray) for i in array]"""           #sorted array
-    array = numpy.asarray(array)  
+    array = numpy.asarray(array)    
+    filterarray = numpy.unique(filterarray)       
     mask = numpy.zeros(len(array),'bool')   
+    
     args = numpy.argsort(array)  
     arsort = array[args]
-    diffs = numpy.r_[0,numpy.nonzero(numpy.diff(arsort) > 0.5)[0]+1,len(arsort)]  #places where sorted values of an array are changing
+    diffs = numpy.r_[0,numpy.nonzero(numpy.diff(arsort) )[0]+1,len(arsort)]  #places where sorted values of an array are changing
     values = arsort[diffs[:-1]]  #values at that places
     allinds = numpy.searchsorted(values[:-1],filterarray)   
     exist = values[allinds] == filterarray                 #check that value in filterarray exists in array
@@ -252,6 +255,7 @@ def arrayInArray(array,filterarray):
                  extra_compile_args=['-march=native -malign-double -O3'],
                  support_code = r"#include <math.h>" )
     return mask
+
 
     
             
@@ -307,9 +311,10 @@ def sumByArray(array,filterarray,dtype = "int64"):
     """faster [sum(array == i) for i in filterarray]
     Current method is a wrapper that optimizes this method for speed and memory efficiency.
     """
-    if (len(array) / len(filterarray) > 2) and (len(array) > 10000):
-        M = len(array)/len(filterarray) + 1        
-        bins = range(0,len(array),len(filterarray) * M) + [len(array)]
+    if (len(array) / len(filterarray) > 2) and (len(array) > 20000000):
+        M = len(array)/len(filterarray) + 1
+        chunkSize = min(len(filterarray) * M,10000000)        
+        bins = range(0,len(array),chunkSize) + [len(array)]
         toreturn = numpy.zeros(len(filterarray),array.dtype)
         for i in xrange(len(bins)- 1):
             toreturn += _sumByArray(array[bins[i]:bins[i+1]], filterarray, dtype)
