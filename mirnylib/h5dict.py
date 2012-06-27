@@ -7,8 +7,11 @@ import numpy as np
 import cPickle
 import tempfile, os
 import collections
+import logging
 
 import h5py
+
+logging.basicConfig(level=logging.NOTSET)
 
 class h5dict(collections.MutableMapping):
     self_key = '_self_key'
@@ -157,3 +160,13 @@ class h5dict(collections.MutableMapping):
     
     def flush(self):
         self._h5file.flush()
+
+    def array_keys(self):
+        return [i for i in self._h5file.keys() 
+                if i != self.self_key and issubclass(self._types[i], np.ndarray)]
+
+    def get_dataset(self, key): 
+        if key not in self.array_keys():
+            logging.warning('The requested key {0} is not an array'.format(key))
+
+        return self._h5file[key]
