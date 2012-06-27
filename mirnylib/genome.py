@@ -415,11 +415,29 @@ class Genome(object):
     def splitByChrms(self, inArray):
         return [inArray[self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]]
                 for i in xrange(self.chrmCount)]
+
+    def getUnmappedBases(self, chrmIdx, start, end):
+        "Calculate the percentage of unmapped base pairs in a region."
+        seq = self.seqs[chrmIdx][start:end]
+        if len(seq.seq) == 0:
+            return 0.0
+        else:
+            return (100.0 * (seq.seq.count('N') + seq.seq.count('n'))
+                    / float(len(seq.seq)))
                     
     def getGC(self, chrmIdx, start, end):
-        "Calculate the GC content of a region."
+        """Calculate the GC content of the mapped part of a region. If there
+        are no mapped base pairs, return 50%.
+        """
         seq = self.seqs[chrmIdx][start:end]
-        return Bio.SeqUtils.GC(seq.seq)
+        overall_GC = Bio.SeqUtils.GC(seq.seq)
+        unmapped_content = self.getUnmappedBases(chrmIdx, start, end)
+
+        if unmapped_content == 100.0:
+            return 50.0
+        else:
+            corrected_GC = overall_GC * 100.0 / (100.0 - unmapped_content)
+            return corrected_GC
 
     def getGCBin(self, resolution):
         # At the first call the function rewrites itself with a memoized 
@@ -449,9 +467,8 @@ class Genome(object):
             chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
             unmappedBasesBin.append(numpy.ones(chrmSizeBin, dtype=numpy.int))
             for j in xrange(chrmSizeBin):
-                chunk = self.seqs[chrm][
-                    j * int(resolution):(j + 1) * int(resolution)].seq
-                unmappedBasesBin[chrm][j] = chunk.count('N')
+                unmappedBasesBin[chrm][j] = self.getUnmappedBases(
+                    chrm, j * int(resolution), (j + 1) * int(resolution))
         return unmappedBasesBin
 
     def getRsites(self, enzymeName):
@@ -462,7 +479,6 @@ class Genome(object):
     def _getRsites(self, enzymeName):
         '''Returns: tuple(rsites, rfrags) 
         Finds restriction sites and mids of rfrags for a given enzyme
-        
         '''
         
         #Memorized function
@@ -527,8 +543,6 @@ class Genome(object):
             for i in inds: 
                 raise StandardError( "Position %d on chrm %d exceeds maximum positions %d" % (
                         chromosomes[i],positions[i],self.chrmLens[chromosomes[i]]) ) 
-                
-            
         
     def getFragmentDistance(self, fragments1, fragments2, enzymeName):
         "returns distance between fragments in... fragments. (neighbors = 1, etc. )"
