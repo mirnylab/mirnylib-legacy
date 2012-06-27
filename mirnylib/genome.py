@@ -434,7 +434,7 @@ class Genome(object):
         unmapped_content = self.getUnmappedBases(chrmIdx, start, end)
 
         if unmapped_content == 100.0:
-            return 50.0
+            return -1.0
         else:
             corrected_GC = overall_GC * 100.0 / (100.0 - unmapped_content)
             return corrected_GC
