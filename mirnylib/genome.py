@@ -204,7 +204,8 @@ class Genome(object):
         readChrms : list of str
             The list with the string labels of chromosomes to read from the 
             genome folder. '#' stands for chromosomes with numerical labels 
-            (e.g. 1-22 for human).
+            (e.g. 1-22 for human). If readChrms is empty then read all 
+            chromosomes.
         '''
         # Set the main attributes of the class.
         self.genomePath = os.path.abspath(genomePath)
@@ -257,8 +258,12 @@ class Genome(object):
         filteredFastaNames = []
         for i in self.fastaNames: 
             chrm = self._extractChrmLabel(i)
-            if ((chrm.isdigit() and '#' in self.readChrms)
-                or chrm in self.readChrms):
+            if (not(self.readChrms)
+                or 
+                (chrm.isdigit() and '#' in self.readChrms) 
+                or 
+                chrm in self.readChrms):
+
                 self.chrmLabels.append(chrm)
                 filteredFastaNames.append(i)
         self.fastaNames = filteredFastaNames
