@@ -1,7 +1,5 @@
 import numpy
-import warnings
 import mirnylib.systemutils
-import cProfile
 na = numpy.array 
 import  scipy.weave,scipy.sparse.linalg, scipy.stats 
 from scipy import weave 
@@ -678,8 +676,7 @@ def observedOverExpected(matrix):
                 count += 1;                            
             }
         }
-        double meanss = ss / count;
-        printf("%lf\n",meanss); 
+        double meanss = ss / count;         
         for (int offset = start; offset < end; offset ++)
         {
             for (int j = 0; j < N - offset; j++)
