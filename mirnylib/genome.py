@@ -523,6 +523,36 @@ class Genome(object):
 
         assert (len(self.rsiteIds) == len(self.rfragMidIds))
         
+
+    def upgradeMatrix(self,oldGenome):
+        """Checks if old genome can be upgraded to new genome by truncation. 
+        If not, returns an array that can be used to upgrade chromosome positions. 
+        If upgrade not possible, raises an exception. 
+        
+        Paramters
+        ---------
+        old Genome : Genome, or label2idx dictionary
+            old genome from which upgrade is done
+            
+        Returns
+        -------
+        None : upgrade is possible by truncating chromosomes >= chromNum
+        upgradeIndex : ndarray  upgrade is possible by newChrom = upgradeMatrix[oldChrom]
+        
+        Raises an exception when upgrade is not possible  
+        """
+        
+        if isinstance(oldGenome,Genome):
+            oldGenome = oldGenome.idx2label
+        if True in [i not in oldGenome.values() for i in self.idx2label.values()]:
+            difference = [i for i in self.idx2label.values() if i not in oldGenome.values() ]
+            raise StandardError("Genome upgrade is not possible: ", difference, " are chromosomes that are missing in the old genome")
+        if False not in [oldGenome[i] == self.idx2label[i] for i in self.idx2label.keys()]:
+            return None         
+        oldLabelToIdx = dict([(oldGenome[i],i) for i in oldGenome.keys()])
+        convertingArray = numpy.zeros(len(oldGenome.keys()), dtype = int) - 1   
+        for i in self.idx2label.values(): convertingArray[oldLabelToIdx[i]] = self.label2idx[i]        
+        return convertingArray
         
     def checkReadConsistency(self,chromosomes,positions):
         """
