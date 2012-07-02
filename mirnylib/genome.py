@@ -1,5 +1,5 @@
 '''A Genome object contains the cached properties of a genome.
-
+ 
 Glossary
 --------
 
