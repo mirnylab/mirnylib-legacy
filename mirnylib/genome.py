@@ -1,5 +1,5 @@
 '''A Genome object contains the cached properties of a genome.
- 
+
 Glossary
 --------
 
@@ -147,7 +147,6 @@ import os, glob, re, sys
 import numpy 
 import warnings
 import Bio.SeqIO, Bio.SeqUtils, Bio.Restriction
-from mirnylib.systemutils import setExceptionHook
 Bio.Restriction  #To shut up Eclipse warning
 import joblib 
 from scipy import  weave 
@@ -205,7 +204,8 @@ class Genome(object):
         readChrms : list of str
             The list with the string labels of chromosomes to read from the 
             genome folder. '#' stands for chromosomes with numerical labels 
-            (e.g. 1-22 for human).
+            (e.g. 1-22 for human). If readChrms is empty then read all 
+            chromosomes.
         '''
         # Set the main attributes of the class.
         self.genomePath = os.path.abspath(genomePath)
@@ -258,8 +258,12 @@ class Genome(object):
         filteredFastaNames = []
         for i in self.fastaNames: 
             chrm = self._extractChrmLabel(i)
-            if ((chrm.isdigit() and '#' in self.readChrms)
-                or chrm in self.readChrms):
+            if (not(self.readChrms)
+                or 
+                (chrm.isdigit() and '#' in self.readChrms) 
+                or 
+                chrm in self.readChrms):
+
                 self.chrmLabels.append(chrm)
                 filteredFastaNames.append(i)
         self.fastaNames = filteredFastaNames
@@ -411,11 +415,29 @@ class Genome(object):
     def splitByChrms(self, inArray):
         return [inArray[self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]]
                 for i in xrange(self.chrmCount)]
+
+    def getUnmappedBases(self, chrmIdx, start, end):
+        "Calculate the percentage of unmapped base pairs in a region."
+        seq = self.seqs[chrmIdx][start:end]
+        if len(seq.seq) == 0:
+            return 0.0
+        else:
+            return (100.0 * (seq.seq.count('N') + seq.seq.count('n'))
+                    / float(len(seq.seq)))
                     
     def getGC(self, chrmIdx, start, end):
-        "Calculate the GC content of a region."
+        """Calculate the GC content of the mapped part of a region. If there
+        are no mapped base pairs, return 50%.
+        """
         seq = self.seqs[chrmIdx][start:end]
-        return Bio.SeqUtils.GC(seq.seq)
+        overall_GC = Bio.SeqUtils.GC(seq.seq)
+        unmapped_content = self.getUnmappedBases(chrmIdx, start, end)
+
+        if unmapped_content == 100.0:
+            return -1.0
+        else:
+            corrected_GC = overall_GC * 100.0 / (100.0 - unmapped_content)
+            return corrected_GC
 
     def getGCBin(self, resolution):
         # At the first call the function rewrites itself with a memoized 
@@ -445,9 +467,8 @@ class Genome(object):
             chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
             unmappedBasesBin.append(numpy.ones(chrmSizeBin, dtype=numpy.int))
             for j in xrange(chrmSizeBin):
-                chunk = self.seqs[chrm][
-                    j * int(resolution):(j + 1) * int(resolution)].seq
-                unmappedBasesBin[chrm][j] = chunk.count('N')
+                unmappedBasesBin[chrm][j] = self.getUnmappedBases(
+                    chrm, j * int(resolution), (j + 1) * int(resolution))
         return unmappedBasesBin
 
     def getRsites(self, enzymeName):
@@ -458,7 +479,6 @@ class Genome(object):
     def _getRsites(self, enzymeName):
         '''Returns: tuple(rsites, rfrags) 
         Finds restriction sites and mids of rfrags for a given enzyme
-        
         '''
         
         #Memorized function
@@ -506,7 +526,7 @@ class Genome(object):
         
     def checkReadConsistency(self,chromosomes,positions):
         """
-        Checks that a set of reads, defined by chromosomes and positions, is consistent with the current genome
+        
         """
         chromSet = set(chromosomes)
         if 0 not in chromSet: 
@@ -522,39 +542,7 @@ class Genome(object):
             inds = inds[::len(inds)/10]
             for i in inds: 
                 raise StandardError( "Position %d on chrm %d exceeds maximum positions %d" % (
-                        chromosomes[i],positions[i],self.chrmLens[chromosomes[i]]) )
-    
-    def upgradeMatrix(self,oldGenome):
-        """Checks if old genome can be upgraded to new genome by truncation. 
-        If not, returns an array that can be used to upgrade chromosome positions. 
-        If upgrade not possible, raises an exception. 
-        
-        Paramters
-        ---------
-        old Genome : Genome, or label2idx dictionary
-            old genome from which upgrade is done
-            
-        Returns
-        -------
-        None : upgrade is possible by truncating chromosomes >= chromNum
-        upgradeIndex : ndarray  upgrade is possible by newChrom = upgradeMatrix[oldChrom]
-        
-        Raises an exception when upgrade is not possible  
-        """
-        
-        if isinstance(oldGenome,Genome):
-            oldGenome = oldGenome.idx2label
-        if True in [i not in oldGenome.values() for i in self.idx2label.values()]:
-            difference = [i for i in self.idx2label.values() if i not in oldGenome.values() ]
-            raise StandardError("Genome upgrade is not possible: ", difference, " are chromosomes that are missing in the old genome")
-        if False not in [oldGenome[i] == self.idx2label[i] for i in self.idx2label.keys()]:
-            return None         
-        oldLabelToIdx = dict([(oldGenome[i],i) for i in oldGenome.keys()])
-        convertingArray = numpy.zeros(len(oldGenome.keys()), dtype = int) - 1   
-        for i in self.idx2label.values(): convertingArray[oldLabelToIdx[i]] = self.label2idx[i]        
-        return convertingArray
-                                
-            
+                        chromosomes[i],positions[i],self.chrmLens[chromosomes[i]]) ) 
         
     def getFragmentDistance(self, fragments1, fragments2, enzymeName):
         "returns distance between fragments in... fragments. (neighbors = 1, etc. )"
