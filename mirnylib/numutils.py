@@ -3,7 +3,6 @@ import warnings
 import mirnylib.systemutils
 import cProfile
 from mirnylib.systemutils import setExceptionHook
-from mirnylib.h5dict import h5dict
 na = numpy.array 
 import  scipy.weave,scipy.sparse.linalg, scipy.stats 
 from scipy import weave 
@@ -170,6 +169,7 @@ def externalMergeSort(inDataset, tempDataset,chunkSize = 300000000):
 
 def _testExternalSort():    
     a = numpy.random.random(150000000)
+    from mirnylib.h5dict import h5dict
     t = h5dict() 
     t["1"] = a
     t["2"] = a
