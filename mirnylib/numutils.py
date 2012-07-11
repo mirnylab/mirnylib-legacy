@@ -10,105 +10,11 @@ from scipy import weave
 import scipy.linalg
 from math import cos,log,sin,sqrt 
 import warnings
-#-------------------------
-"Mathematical utilities first" 
-#-------------------------
+#-----------------------------
+"Mathematical & programming utilities first" 
+#-----------------------------
 
 "Numpy-related (programming) utilities"
-
-
-def externalMergeSort(inDataset, tempDataset,chunkSize = 300000000):
-    """
-    An in-place merge sort to work with persistent numpy-type arrays, in particular, h5py datasets. 
-    
-    Accepts two persistent arrays: inDataset, an array to be sorted, and tempDataset - temporary working copy. 
-    Returns the result in inDataset. 
-    """
-    
-    if (len(inDataset) < 10000) or (len(inDataset) < chunkSize):
-        data = numpy.array(inDataset)
-        inDataset[:] = numpy.sort(data)
-        print "Sorted using default sort"
-        return  
-    elif chunkSize < 5 * sqrt(len(inDataset)):        
-        warnings.warn("Chunk size should be big enough... you provide %d , upscaled to %d" % (chunkSize,5 * int(sqrt(len(inDataset)))))
-        chunkSize = 5 * int(sqrt(len(inDataset)))        
-
-    N = len(inDataset) 
-    bins = range(0,N,chunkSize) + [N]
-    bins = zip(bins[:-1],bins[1:])   #"big chunks" of chunkSize each
-    print "Sorting using %d chunks" % (len(bins),) 
-    
-    #Initial pre-sorting inDataset - tempDataset
-    for start,stop in bins: 
-        chunk = inDataset[start:stop]
-        chunk.sort()
-        tempDataset[start:stop] = chunk
-            
-    #Determining smaller merge chunk sizes and positions
-    #each chunk is separated into chunkSize/numChunks smaller chunks
-    #Smaller chunks are called "merge chunks"
-    #Further they will be merged one by one   
-    M = len(bins) 
-    mergeChunkSize = chunkSize / M
-    chunkLocations = []
-    for start,stop in bins:
-        chunkBins = range(start,stop,mergeChunkSize) + [stop]  
-        chunkBins = zip(chunkBins[:-1],chunkBins[1:])
-        chunkLocations.append(chunkBins[::-1])   #first chunk is last, as we use pop() later
-    outputPosition = 0  #location in the output file, inDataset now 
-    
-    currentChunks = []   #a set of smaller merge-chunks for each big chunk. 
-    for chunk in chunkLocations:
-        start,end = chunk.pop()
-        currentChunks.append(tempDataset[start:end])
-    maxes = [i.max() for i in currentChunks]  #A set of maximum values of working chunks    
-    positions = [0 for _ in currentChunks]    #A set of current positions in working chunks
-
-    while True:        
-        chInd = numpy.argmin(maxes)  #An index of a chunk that has minimum maximum value right now
-          
-        #We can't merge beyound this value, we need to update this chunk before doing this
-                                  
-        limits = [numpy.searchsorted(chunk,maxes[chInd], side = "right") for chunk in currentChunks]
-        #Up to where can we merge each chunk now? Find it using searchsorted
-         
-        currentMerge  = numpy.concatenate([chunk[st:ed] for chunk,st,ed in zip(currentChunks,positions,limits)])
-        #Create a current array to merge
-         
-        positions = limits #we've merged up to here 
-        currentMerge.sort()  #Poor man's merge 
-        inDataset[outputPosition:outputPosition + len(currentMerge)] = currentMerge  #write sorted merge output here.
-        outputPosition += len(currentMerge)
-        
-        if len(chunkLocations[chInd]) > 0:  #If we still have merge-chunks in that chunk 
-            start,end = chunkLocations[chInd].pop() #pull out a new chunk
-            chunk = tempDataset[start:end] #update all the values
-            maxes[chInd] = chunk.max() 
-            currentChunks[chInd] = chunk
-            positions[chInd] = 0
-        else: #If we don't have any merge-chunks in this chunk 
-            currentChunks.pop(chInd)   #Remove all entrees about this chunk 
-            positions.pop(chInd)
-            chunkLocations.pop(chInd)
-            maxes.pop(chInd)
-        if len(currentChunks) == 0:   #If we don't have chunks
-            assert outputPosition == N   #happily exit
-            return
-    
-a = numpy.random.random(150000000)
-t = h5dict() 
-t["1"] = a
-t["2"] = a
-del a 
-print "starting sort"
-externalMergeSort(t.get_dataset("1"), t.get_dataset("2"),chunkSize = 30000000)
-print t.get_dataset("1")[::1000000]
-
-exit() 
-
-
-
 
 def generalizedDtype(dtype):
     """"returns generalized dtype of an object
@@ -180,6 +86,105 @@ def trunc(x,low=0.005,high = 0.005):
     return numpy.clip(x,a_min = lowValue, a_max = highValue)
 
 trunk = mirnylib.systemutils.deprecate(trunc,"trunk")
+
+def externalMergeSort(inDataset, tempDataset,chunkSize = 300000000):
+    """
+    An in-place merge sort to work with persistent numpy-type arrays, in particular, h5py datasets. 
+    
+    Accepts two persistent arrays: inDataset, an array to be sorted, and tempDataset - temporary working copy. 
+    Returns the result in inDataset. 
+    It is a two-pass algorithm, meaning that the entire dataset will be read and written twice to the HDD. Which is not that bad :) 
+    """
+    
+    if (len(inDataset) < 10000) or (len(inDataset) < chunkSize):
+        data = numpy.array(inDataset)
+        inDataset[:] = numpy.sort(data)
+        print "Sorted using default sort"
+        return  
+    elif chunkSize < 5 * sqrt(len(inDataset)):        
+        warnings.warn("Chunk size should be big enough... you provide %d , upscaled to %d" % (chunkSize,5 * int(sqrt(len(inDataset)))))
+        chunkSize = 5 * int(sqrt(len(inDataset)))        
+
+    N = len(inDataset) 
+    bins = range(0,N,chunkSize) + [N]
+    bins = zip(bins[:-1],bins[1:])   #"big chunks" of chunkSize each
+    print "Sorting using %d chunks" % (len(bins),) 
+    
+    #Initial pre-sorting inDataset - tempDataset
+    for start,stop in bins: 
+        chunk = inDataset[start:stop]
+        chunk.sort()        
+        tempDataset[start:stop] = chunk
+            
+    #Determining smaller merge chunk sizes and positions
+    #each chunk is separated into chunkSize/numChunks smaller chunks
+    #Smaller chunks are called "merge chunks"
+    #Further they will be merged one by one   
+    M = len(bins) 
+    mergeChunkSize = chunkSize / M
+    chunkLocations = []
+    for start,stop in bins:
+        chunkBins = range(start,stop,mergeChunkSize) + [stop]  
+        chunkBins = zip(chunkBins[:-1],chunkBins[1:])
+        chunkLocations.append(chunkBins[::-1])   #first chunk is last, as we use pop() later
+    outputPosition = 0  #location in the output file, inDataset now 
+    
+    currentChunks = []   #a set of smaller merge-chunks for each big chunk. 
+    for chunk in chunkLocations:
+        start,end = chunk.pop()
+        currentChunks.append(tempDataset[start:end])
+    maxes = [i.max() for i in currentChunks]  #A set of maximum values of working chunks    
+    positions = [0 for _ in currentChunks]    #A set of current positions in working chunks
+
+    while True:        
+        chInd = numpy.argmin(maxes)  #An index of a chunk that has minimum maximum value right now
+          
+        #We can't merge beyound this value, we need to update this chunk before doing this
+                                  
+        limits = [numpy.searchsorted(chunk,maxes[chInd], side = "right") for chunk in currentChunks]
+        #Up to where can we merge each chunk now? Find it using searchsorted
+         
+        currentMerge  = numpy.concatenate([chunk[st:ed] for chunk,st,ed in zip(currentChunks,positions,limits)])
+        #Create a current array to merge
+         
+        positions = limits #we've merged up to here 
+        currentMerge.sort()  #Poor man's merge 
+        inDataset[outputPosition:outputPosition + len(currentMerge)] = currentMerge  #write sorted merge output here.
+        outputPosition += len(currentMerge)
+        
+        if len(chunkLocations[chInd]) > 0:  #If we still have merge-chunks in that chunk 
+            start,end = chunkLocations[chInd].pop() #pull out a new chunk
+            chunk = tempDataset[start:end] #update all the values
+            maxes[chInd] = chunk.max() 
+            currentChunks[chInd] = chunk
+            positions[chInd] = 0
+        else: #If we don't have any merge-chunks in this chunk 
+            currentChunks.pop(chInd)   #Remove all entrees about this chunk 
+            positions.pop(chInd)
+            chunkLocations.pop(chInd)
+            maxes.pop(chInd)
+
+        if len(currentChunks) == 0:   #If we don't have chunks
+            assert outputPosition == N   #happily exit
+            return
+
+def _testExternalSort():    
+    a = numpy.random.random(150000000)
+    t = h5dict() 
+    t["1"] = a
+    t["2"] = a
+      
+    print "starting sort"
+    import time
+    tt = time.time() 
+    externalMergeSort(t.get_dataset("1"), t.get_dataset("2"),chunkSize = 30000000)
+    print  "time to sort", time.time() - tt
+    tt = time.time()  
+    dif =  t.get_dataset("1")[::1000000] - numpy.sort(a)[::1000000]
+    print "time to do regular sort:", time.time() - tt 
+    assert dif.sum() == 0
+    print "Test finished successfully!"
+
 
 def uniqueIndex(data):
     """Returns a binary index of unique elements in an array data.
@@ -440,6 +445,8 @@ def sumByArray(array,filterarray,dtype = "int64"):
         return _sumByArray(array, filterarray, dtype)
                 
 
+"Mathematical utilities"
+
 def corr2d(x):
     "FFT-based 2D correlation"
     x = numpy.array(x)
@@ -518,9 +525,9 @@ randomOnSphere = random_on_sphere
          
 
 
-#-----------------------------------
+#---------------------------------------------------------
 "Iterative correction, PCA and other Hi-C related things"
-#-----------------------------------
+#---------------------------------------------------------
 
 def maskPCA(A,mask):
     "attempts to perform PCA-like analysis of an array with a masked part"    
