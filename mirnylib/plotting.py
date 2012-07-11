@@ -180,7 +180,7 @@ def niceShow(mytype = None, subplotAdjust =[0.08,0.12,0.95,0.98]):
     plt.gcf().subplots_adjust(*subplotAdjust)
     plt.show()
         
-def mat_img(a,cmap="hot_r",trunk = False, **kwargs):
+def mat_img(a,cmap="jet",trunk = False, **kwargs):
     "shows an array using imshow with colorbar"
     a = numpy.array(a,float)
     if trunk != False:
