@@ -15,26 +15,26 @@ import warnings
 
 "Numpy-related (programming) utilities"
 
-def generalizedDtype(dtype):
+def generalizedDtype(inObject):
     """"returns generalized dtype of an object
     upscales precision to the system-specific precision (int16 -> int; int32 -> int) 
     Accepts all dtype-compatible objects.
     Upscales bool to int.   
      
-    Bool -> int
-    int -> int
-    float -> float
+    Bool -> int64
+    int -> int64
+    float -> float64
     complex -> complex     
     
     """
-    if type(dtype) == type:
-        dtype = numpy.dtype(dtype)    
-    if issubclass( type(dtype) , numpy.ndarray):
-        dtype  = dtype.dtype                     
-    if numpy.issubdtype(dtype,numpy.complex) == True: return numpy.complex
-    if numpy.issubdtype(dtype,numpy.float) == True: return numpy.float
-    if numpy.issubdtype(dtype,numpy.int) == True: return numpy.int        
-    if numpy.issubdtype(dtype,numpy.bool) == True: return numpy.int
+    if type(inObject) == type:
+        inObject = numpy.dtype(inObject)    
+    if issubclass( type(inObject) , numpy.ndarray):
+        inObject  = inObject.dtype                     
+    if numpy.issubdtype(inObject,numpy.complex) == True: return numpy.complex
+    if numpy.issubdtype(inObject,numpy.float) == True: return numpy.float
+    if numpy.issubdtype(inObject,numpy.int) == True: return numpy.int        
+    if numpy.issubdtype(inObject,numpy.bool) == True: return numpy.int
     
     raise ValueError("Data  type not known")
 

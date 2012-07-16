@@ -343,12 +343,13 @@ def plot_function_3d(x, y, function, **kwargs):
     http://www.scipy.org/Cookbook/Matplotlib/mplot3D
 
     """
+    Z = []
     for y_value in y:
         Z.append([])
         for x_value in x:
             Z[-1].append(function(x_value, y_value))
     Z = numpy.array(Z)
-    plot_matrix_3d(Z, x=X, y=Y, **kwargs)
+    plot_matrix_3d(Z, x=x, y=y, **kwargs)
 
 def plot_function_contour(x, y, function, **kwargs):
     """Make a contour plot of a function of two variables.

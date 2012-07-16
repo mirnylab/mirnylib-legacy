@@ -15,12 +15,13 @@ from copy import copy
 
 
 def _exceptionHook(infoType, value, tb):
-    "sets exception hook to pdb"    
+    "Exception hook"        
     traceback.print_exception(infoType, value, tb)
     print     
     pdb.post_mortem(tb)     
 
 def setExceptionHook():
+    "sets exception hook to pdb"
     sys.excepthook = _exceptionHook
 
 class transparentDict(dict):   #transparent dictionary, that returns the key 
