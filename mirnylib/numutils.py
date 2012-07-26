@@ -1,14 +1,11 @@
 import numpy
 import warnings
 import mirnylib.systemutils
-import cProfile
-from mirnylib.systemutils import setExceptionHook
 na = numpy.array 
 import  scipy.weave,scipy.sparse.linalg, scipy.stats 
 from scipy import weave 
 import scipy.linalg
 from math import cos,log,sin,sqrt 
-import warnings
 #-----------------------------
 "Mathematical & programming utilities first" 
 #-----------------------------
@@ -345,14 +342,11 @@ def arraySearch(array,tosearch):
     newinds = numpy.searchsorted(arSorted[:-1],tosearch)    
     return inds[newinds]
 
-def arrayInArray(array,filterarray):    
+def _arrayInArray(array,filterarray):    
     """gives you boolean array of indices of elements in array that are contained in filterarray
     a faster version of  [(i in filterarray) for i in array]
-    In fact, it's faster than numpy's buildin function, that is written in pure numpy but uses 2 argsorts instead of one"""           #sorted array
-    array = numpy.asarray(array)    
-    filterarray = numpy.unique(filterarray)       
-    mask = numpy.zeros(len(array),'bool')   
-    
+    In fact, it's faster than numpy's buildin function, that is written in pure numpy but uses 2 argsorts instead of one"""           #sorted array                
+    mask = numpy.zeros(len(array),'bool')       
     args = numpy.argsort(array)  
     arsort = array[args]
     diffs = numpy.r_[0,numpy.nonzero(numpy.diff(arsort) )[0]+1,len(arsort)]  #places where sorted values of an array are changing
@@ -377,6 +371,46 @@ def arrayInArray(array,filterarray):
                  extra_compile_args=['-march=native -malign-double -O3'],
                  support_code = r"#include <math.h>" )
     return mask
+
+def arrayInArray(array,filterarray,chunkSize = "auto"):
+    array = numpy.asarray(array)
+    filterarray = numpy.unique(filterarray)
+    if chunkSize == "auto":
+        chunkSize = 5 * len(filterarray)
+    if len(array) < 2.5 * chunkSize: 
+        return _arrayInArray(array, filterarray)
+    
+    mask = numpy.zeros(len(array),'bool')
+    N = len(array)
+    chunks =  range(0,N,chunkSize) + [N]
+    bins = zip(chunks[:-1],chunks[1:])
+    for start,end in bins:
+        mask[start:end] = _arrayInArray(array[start:end], filterarray)
+    return mask 
+        
+def _testArayInArray():
+    a = numpy.random.randint(0,1000000,500000000)
+    b = numpy.random.randint(0,1000000,500000)
+    arrayInArray(a, b)
+    import time 
+    tt = time.time() 
+    res1 = arrayInArray(a, b)
+    print "optimized way: ", time.time() - tt
+    tt = time.time()
+    res2 = _arrayInArray(a,b) 
+    print "standard way: ", time.time() - tt
+    tt = time.time()
+    res3 = numpy.in1d(a, b)
+    print "numpy way: ", time.time() - tt
+    assert (res1 != res2).sum() == 0
+    assert (res1 != res3).sum() == 0
+    print "arrayInArray test finished successfully "
+    
+
+#_testArayInArray()
+        
+
+
 
 
     
@@ -823,4 +857,8 @@ def observedOverExpected(matrix):
     """
     weave.inline(code, ['data', 'bins' , 'N' ,'M'], extra_compile_args=['-march=native -malign-double -O3'],support_code =support )
     return data
-    
+
+
+def _test():
+    _testArayInArray()
+    _testExternalSort()
