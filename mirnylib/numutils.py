@@ -343,9 +343,7 @@ def arraySearch(array,tosearch):
     return inds[newinds]
 
 def _arrayInArray(array,filterarray):    
-    """gives you boolean array of indices of elements in array that are contained in filterarray
-    a faster version of  [(i in filterarray) for i in array]
-    In fact, it's faster than numpy's buildin function, that is written in pure numpy but uses 2 argsorts instead of one"""           #sorted array                
+    "Actual implementation of arrayInArray"
     mask = numpy.zeros(len(array),'bool')       
     args = numpy.argsort(array)  
     arsort = array[args]
@@ -373,10 +371,16 @@ def _arrayInArray(array,filterarray):
     return mask
 
 def arrayInArray(array,filterarray,chunkSize = "auto"):
+    """gives you boolean array of indices of elements in array that are contained in filterarray
+    a faster version of  [(i in filterarray) for i in array]
+    In fact, it's faster than numpy's buildin function, that is written in pure numpy but uses 2 argsorts instead of one
+    
+    This method is additionaly optimized for large array and short filterarray!\n    
+    Actual implementation is in the _arrayInArray"""           #sorted array                    
     array = numpy.asarray(array)
     filterarray = numpy.unique(filterarray)
     if chunkSize == "auto":
-        chunkSize = 5 * len(filterarray)
+        chunkSize = max(4 * len(filterarray),50000)
     if len(array) < 2.5 * chunkSize: 
         return _arrayInArray(array, filterarray)
     
@@ -389,7 +393,7 @@ def arrayInArray(array,filterarray,chunkSize = "auto"):
     return mask 
         
 def _testArayInArray():
-    a = numpy.random.randint(0,1000000,500000000)
+    a = numpy.random.randint(0,1000000,10000000)
     b = numpy.random.randint(0,1000000,500000)
     arrayInArray(a, b)
     import time 
@@ -407,19 +411,13 @@ def _testArayInArray():
     print "arrayInArray test finished successfully "
     
 
-#_testArayInArray()
-        
-
-
-
-
     
             
-def arraySumByArray(array,filterarray,meanarray):
-    "faster [sum(meanrrray [array == i]) for i in filterarray]"
+def _arraySumByArray(array,filterarray,weightarray):
+    "faster [sum(weightarray [array == i]) for i in filterarray]"
     array = numpy.asarray(array,dtype = float)
-    meanarray = numpy.asarray(meanarray,dtype = float)    
-    if len(array) != len(meanarray): raise ValueError    
+    weightarray = numpy.asarray(weightarray,dtype = float)    
+    if len(array) != len(weightarray): raise ValueError    
     args = numpy.argsort(array)
     arsort = array[args]
     diffs = numpy.r_[0,numpy.nonzero(numpy.diff(arsort) > 0.5)[0]+1,len(arsort)]
@@ -437,15 +435,46 @@ def arraySumByArray(array,filterarray,meanarray):
         if (exist[i] == 0) continue; 
         for (int j=diffs[allinds[i]];j<diffs[allinds[i]+1];j++)
         {
-            ret[i] += meanarray[args[j]];
+            ret[i] += weightarray[args[j]];
         }
     } 
     """
     support = """
     #include <math.h>  
     """
-    weave.inline(code, ['allinds', 'diffs' , 'args' , 'ret','N','meanarray','exist'], extra_compile_args=['-march=native -malign-double -O3'],support_code =support )
+    weave.inline(code, ['allinds', 'diffs' , 'args' , 'ret','N','weightarray','exist'], extra_compile_args=['-march=native -malign-double -O3'],support_code =support )
     return ret
+
+
+def arraySumByArray(array,filterarray,meanarray):
+    """faster [sum(array == i) for i in filterarray]
+    Current method is a wrapper that optimizes this method for speed and memory efficiency.
+    """
+    if (len(array) / len(filterarray) > 4) and (len(array) > 20000000):
+        M = len(array)/len(filterarray) + 1
+        chunkSize = min(len(filterarray) * M,10000000)        
+        bins = range(0,len(array),chunkSize) + [len(array)]
+        toreturn = numpy.zeros(len(filterarray),float)
+        for i in xrange(len(bins)- 1):
+            toreturn += _arraySumByArray(array[bins[i]:bins[i+1]], filterarray,meanarray[bins[i]:bins[i+1]])
+        return toreturn
+    else:
+        return _arraySumByArray(array, filterarray)
+    
+
+def _testArraySumByArray():    
+    a = numpy.random.randint(0,1000000,30000000)
+    b = numpy.random.randint(0,1000000,500000)
+    c = numpy.random.random(30000000)
+    
+    r1 = _arraySumByArray(a, b, c)
+    r2 = arraySumByArray(a, b, c)
+    
+    dif =  (r1 - r2).sum()
+    print "Difference is {0}, should be less than 1e-10".format(dif)
+    assert dif < 1e-10
+                
+
 
 
 def _sumByArray(array,filterarray, dtype = "int64"):
@@ -862,3 +891,4 @@ def observedOverExpected(matrix):
 def _test():
     _testArayInArray()
     _testExternalSort()
+    _testArraySumByArray

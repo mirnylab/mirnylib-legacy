@@ -167,6 +167,20 @@ class h5dict(collections.MutableMapping):
 
     def get_dataset(self, key): 
         if key not in self.array_keys():
-            logging.warning('The requested key {0} is not an array'.format(key))
-
+            logging.warning('The requested key {0} is not an array'.format(key))            
         return self._h5file[key]
+    
+    def add_empty_dataset(self,key,shape, dtype):
+        if key == self.self_key:
+            raise Exception("'%d' key is reserved by h5dict" % self.self_key)
+        if not isinstance(key, str) and not isinstance(key, unicode):
+            raise Exception('h5dict only accepts string keys')
+        if key in self.keys():
+            self.__delitem__(key)
+        
+        self._h5file.create_dataset(name=key, shape = shape, dtype = dtype, 
+            compression='lzf',
+            chunks=True)
+        self._types[key] = np.ndarray
+        self._dtypes[key] = dtype        
+        

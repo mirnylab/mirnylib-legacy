@@ -143,7 +143,7 @@ Genome API documentation
 
 '''
 
-import os, glob, re, sys
+import os, glob, re
 import numpy 
 import warnings
 import Bio.SeqIO, Bio.SeqUtils, Bio.Restriction
