@@ -71,10 +71,90 @@ def openmpSum(in_array):
     
 "Manipulation with numpy arrays"
 
+
+def fasterBooleanIndexing(array,indexes,output = None,outLen = None, bounds = True):
+    """
+    A faster way of writing "output = a[my_boolean_array]"
+    Is approximately 30-80 % faster, but requires pre-allocation of the output array.  
+    
+    .. warning :: this function relies on the fact that you know the length of the output array, 
+    and either supply it as an output array, or provide outLen. 
+    If not supplied, it will be estimated, and function will be as slow as numpy indexing
+    
+    Parameters
+    ----------
+    array : numpy.array compatible
+        array to be indexed
+    indexes : numpy.array compatible
+        array if indexes of the same length as array
+    output : numpy.array compatible or None, optional 
+        output array. If not provided, please provide outLen parameter
+    outLen : int, optional 
+        length of output array that must be equal to indexes.sum() 
+    bounds : bool, optional 
+        check "on the fly" if length of output is indeed equal to indexes.sum() 
+        
+    """
+    array = numpy.asarray(array)
+    indexes = numpy.asarray(indexes)    
+    N = len(array)
+    N  #Eclipse warning removal
+    if output == None: 
+        if outLen == None: 
+            outLen = indexes.sum() 
+        output = numpy.empty(outLen, dtype = array.dtype)
+    else:
+        output = numpy.asarray(output)  
+    M = len(output)
+    
+    returnFlag = numpy.array([0])
+    assert indexes.dtype == numpy.bool
+    assert len(indexes) == len(array) 
+    if bounds == True:     
+        code = """
+        int j = 0,i=0; 
+        for (i = 0;i<N;i++)
+        {
+        if (indexes[i] == true)
+            {
+            if (j == M) 
+               {
+               returnFlag[0] = -1;
+               break;
+               }
+            output[j] = array[i];
+            j++;        
+            }    
+        }
+        if (returnFlag[0] != -1) returnFlag[0] = j;
+        """
+        weave.inline(code,["array","indexes","output","M","N","returnFlag"])
+        if returnFlag[0] == -1:
+            raise ValueError("Array out of bounds")
+        if returnFlag[0] != M:
+            raise ValueError("Out array is too big")
+    else:      
+        code = """
+        int j = 0,i=0; 
+        for (i = 0;i<N;i++)
+        {
+        if (indexes[i] == true)
+            {
+            output[j] = array[i];
+            j++;        
+            }    
+        }        
+        """
+        weave.inline(code,["array","indexes","output","M","N"])
+    return output        
+    
+
+    
+
 def rank(x):
     "Returns rank of an array"
     tmp = numpy.argsort(x)
-    return na(numpy.arange(len(x)),float)[tmp.argsort()]
+    return na(numpy.arange(len(x)),float).take(tmp.argsort())
 
 def trunc(x,low=0.005,high = 0.005):
     "Truncates top 'low' fraction and top 'high' fraction of an array "    
@@ -164,6 +244,8 @@ def externalMergeSort(inDataset, tempDataset,chunkSize = 300000000):
             assert outputPosition == N   #happily exit
             return
 
+
+
 def _testExternalSort():    
     a = numpy.random.random(150000000)
     from mirnylib.h5dict import h5dict
@@ -196,7 +278,7 @@ def uniqueIndex(data):
     for i in xrange(len(myr)-1):
         start = myr[i]
         end = myr[i+1]
-        dataslice = data[args[start:end]]        
+        dataslice = data.take(args[start:end],axis = 0)        
         ind = dataslice[:-1] != dataslice[1:]
         index[args[start:end-1]] = ind 
         if end != len(data):
@@ -338,7 +420,7 @@ def partialCorrelation(x,y,z,corr = lambda x,y:scipy.stats.spearmanr(x,y)[0] ):
 def arraySearch(array,tosearch):
     "returns location of tosearch in array; -->> assumes that elements exist!!! <--- " 
     inds = numpy.argsort(array)
-    arSorted = array[inds]
+    arSorted = array.take(inds,axis= 0)
     newinds = numpy.searchsorted(arSorted[:-1],tosearch)    
     return inds[newinds]
 
@@ -346,11 +428,11 @@ def _arrayInArray(array,filterarray):
     "Actual implementation of arrayInArray"
     mask = numpy.zeros(len(array),'bool')       
     args = numpy.argsort(array)  
-    arsort = array[args]
+    arsort = array.take(args,axis = 0)    
     diffs = numpy.r_[0,numpy.nonzero(numpy.diff(arsort) )[0]+1,len(arsort)]  #places where sorted values of an array are changing
-    values = arsort[diffs[:-1]]  #values at that places
+    values = arsort.take(diffs[:-1])  #values at that places    
     allinds = numpy.searchsorted(values[:-1],filterarray)   
-    exist = values[allinds] == filterarray                 #check that value in filterarray exists in array
+    exist = values.take(allinds) == filterarray                 #check that value in filterarray exists in array    
     N = len(allinds)    
     N,args,exist  #Eclipse warning remover 
     code = r"""
@@ -419,11 +501,11 @@ def _arraySumByArray(array,filterarray,weightarray):
     weightarray = numpy.asarray(weightarray,dtype = float)    
     if len(array) != len(weightarray): raise ValueError    
     args = numpy.argsort(array)
-    arsort = array[args]
+    arsort = array.take(args)
     diffs = numpy.r_[0,numpy.nonzero(numpy.diff(arsort) > 0.5)[0]+1,len(arsort)]
-    values = arsort[diffs[:-1]]
+    values = arsort.take(diffs[:-1])
     allinds = numpy.searchsorted(values[:-1],filterarray)
-    exist = values[allinds] == filterarray
+    exist = values.take(allinds) == filterarray
     N = len(allinds)
     args,exist,N #Eclipse warning removal 
     ret = numpy.zeros(len(allinds),float)    
@@ -474,7 +556,7 @@ def _testArraySumByArray():
     print "Difference is {0}, should be less than 1e-10".format(dif)
     assert dif < 1e-10
                 
-
+#_testArraySumByArray()
 
 
 def _sumByArray(array,filterarray, dtype = "int64"):
@@ -482,12 +564,12 @@ def _sumByArray(array,filterarray, dtype = "int64"):
     arsort = numpy.sort(array)    
     diffs = numpy.r_[0,numpy.nonzero(numpy.diff(arsort) > 0.5)[0]+1,len(arsort)]
     if dtype != None: diffs = numpy.array(diffs, dtype = dtype)
-    values = arsort[diffs[:-1]]
+    values = arsort.take(diffs[:-1])
     del arsort        
     allinds = numpy.searchsorted(values[:-1],filterarray)
-    notexist = values[allinds] != filterarray    
+    notexist = values.take(allinds) != filterarray    
     del values
-    c = diffs[allinds + 1] - diffs[allinds]
+    c = diffs.take(allinds + 1) - diffs[allinds]
     c[notexist] = 0 
     return c
 
