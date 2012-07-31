@@ -46,7 +46,7 @@ def openmpSum(in_array):
     a = numpy.asarray(in_array)
     b = numpy.array([1.])
     N = int(numpy.prod(a.shape))
-    N  #Eclipse warning remover 
+    N  #PyDev warning remover 
     code = r"""     
     int i=0; 
     double sum = 0;     
@@ -57,8 +57,7 @@ def openmpSum(in_array):
         for (i=0; i<N; i++)
               sum += a[i];
     b[0] = sum;
-    """
-    
+    """    
     weave.inline(code, ['a','N','b'], 
                      extra_compile_args=['-march=native  -O3  -fopenmp ' ],
                      support_code = r"""
@@ -89,6 +88,7 @@ def fasterBooleanIndexing(array,indexes,output = None,outLen = None, bounds = Tr
         array if indexes of the same length as array
     output : numpy.array compatible or None, optional 
         output array. If not provided, please provide outLen parameter
+        Note that if you create it, use numpy.empty, not numpy.zeros! 
     outLen : int, optional 
         length of output array that must be equal to indexes.sum() 
     bounds : bool, optional 
@@ -134,7 +134,7 @@ def fasterBooleanIndexing(array,indexes,output = None,outLen = None, bounds = Tr
         if returnFlag[0] != M:
             raise ValueError("Out array is too big")
     else:      
-        code = """
+        code2 = """
         int j = 0,i=0; 
         for (i = 0;i<N;i++)
         {
@@ -145,9 +145,11 @@ def fasterBooleanIndexing(array,indexes,output = None,outLen = None, bounds = Tr
             }    
         }        
         """
-        weave.inline(code,["array","indexes","output","M","N"])
+        weave.inline(code2,["array","indexes","output","M","N"])
     return output        
     
+
+
 
     
 
