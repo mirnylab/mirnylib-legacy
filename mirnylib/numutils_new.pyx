@@ -14,6 +14,9 @@ ctypedef unsigned short ushort
 ctypedef unsigned char uchar
 
 
+cdef extern from "stdlib.h": 
+    long c_libc_random "random"()
+     
 ctypedef fused my_type:
     cython.int
     cython.float
@@ -326,5 +329,38 @@ def observedOverExpected(matrix):
                     data[offset + j, j] /= meanss
                     if offset > 0: data[j,offset+j] /= meanss
     return _data
-                    
 
+@cython.boundscheck(False)
+@cython.wraparound(False)                    
+def removeDiagonal(np.ndarray[np.double_t,ndim = 2] data,int M):
+    cdef int N = len(data)
+    cdef int i,j 
+    for i in range(N):
+        for j in range(max(i-M,0),min(i+M+1,N)):
+            data[i,j] = 0
+            
+
+@cython.boundscheck(False)
+@cython.wraparound(False)                                
+def fakeCis(np.ndarray[np.double_t, ndim = 2] data, np.ndarray[np.int64_t,ndim = 2] mask):
+    cdef int N
+    N = len(data) 
+    cdef int i,j,r,s
+    for i in range(N):
+        for j in range(i,N):
+            if mask[i,j] == 1:
+                while True:
+                    r = c_libc_random() % 2                    
+                    if (r == 0):
+                        s = c_libc_random() % N 
+                        if mask[i,s] == 0:
+                            data[i,j] = data[i,s]
+                            data[j,i] = data[i,s]
+                            break
+                    else:
+                        s = c_libc_random() % N
+                        if mask[j,s] == 0:
+                            data[i,j] = data[j,s]
+                            data[j,i] = data[j,s]
+
+            
