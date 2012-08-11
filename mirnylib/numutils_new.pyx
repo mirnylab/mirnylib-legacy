@@ -83,11 +83,11 @@ cdef my_type[:] _boolIndex (my_type[:] array, uchar[:] indexes, my_type[:] outpu
 def fasterBooleanIndexing(np.ndarray array, np.ndarray indexes,output = None,outLen = None, bounds = True):
     """
     A faster way of writing "output = a[my_boolean_array]"
-    Is approximately 30-80 % faster, but requires pre-allocation of the output array.  
+    Is approximately 30-50 % faster, but requires pre-allocation of the output array.  
     
     .. warning :: this function relies on the fact that you know the length of the output array, 
     and either supply it as an output array, or provide outLen. 
-    If not supplied, it will be estimated, and function will be as slow as numpy indexing
+    If not supplied, it will be estimated, and function will be almost as slow as numpy indexing
     
     Parameters
     ----------
@@ -153,7 +153,6 @@ def fasterBooleanIndexing(np.ndarray array, np.ndarray indexes,output = None,out
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-@cython.cdivision(True)
 def _arrayInArray(np.ndarray array,np.ndarray filterarray):    
     "Actual implementation of arrayInArray"
     cdef np.ndarray[np.uint8_t,cast = True,ndim = 1] mask = np.zeros(len(array),'bool')       

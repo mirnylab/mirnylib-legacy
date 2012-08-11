@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 
 import pylab
 import numpy 
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 def cmap_map(function = lambda x:x,cmap = plt.cm.get_cmap("jet"),mapRange = [0,1]):
     """ Applies function (which should operate on vectors of shape 3:
@@ -124,13 +125,14 @@ def showPolymerRasmol(x,y=None,z=None):
 def scatter3D(x, y, z, color):
     """shows a scatterplot in 3D"""
         
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure()    
+    ax = Axes3D(fig) 
+    
     if (type(color) == numpy.ndarray) or (type(color) == list):
         color = numpy.array(color,dtype = float)
         color -= color.min()
         color /= float(color.max() - color.min() )
-        if len(set(color)) > 20:                        
+        if len(set(color)) > 20:
             for i in xrange(len(x)):
                 ax.scatter(x[i], y[i], z[i], c=plt.cm.get_cmap("jet")(color[i]))
         else:
@@ -141,6 +143,8 @@ def scatter3D(x, y, z, color):
 
     else: ax.scatter(x,y,z,c=color)
     plt.show()
+    
+#scatter3D(numpy.arange(10),numpy.arange(10),numpy.arange(10),'r')
                 
 def removeAxes(mode = "normal",shift = 0, ax = None):
     if ax == None: 
