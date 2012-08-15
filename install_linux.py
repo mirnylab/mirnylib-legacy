@@ -29,5 +29,5 @@ for profile_path in profiles:
              '\n'])
         print 'PYTHONPATH is added to {0}'.format(profile_path)
 
-
-
+os.chdir("mirnylib")
+os.system("python setup.py build_ext --inplace")
