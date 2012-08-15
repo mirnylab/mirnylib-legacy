@@ -331,7 +331,7 @@ def observedOverExpected(matrix):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)                    
-def removeDiagonal(np.ndarray[np.double_t,ndim = 2] data,int M):
+def removeDiagonalImpl(np.ndarray[np.double_t,ndim = 2] data,int M):
     cdef int N = len(data)
     cdef int i,j 
     for i in range(N):
@@ -341,7 +341,7 @@ def removeDiagonal(np.ndarray[np.double_t,ndim = 2] data,int M):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)                                
-def fakeCis(np.ndarray[np.double_t, ndim = 2] data, np.ndarray[np.int64_t,ndim = 2] mask):
+def fakeCisImpl(np.ndarray[np.double_t, ndim = 2] data, np.ndarray[np.int64_t,ndim = 2] mask):
     cdef int N
     N = len(data) 
     cdef int i,j,r,s

@@ -5,13 +5,15 @@ h5dict - HDF5-based persistent dict
 
 import numpy as np
 import cPickle
-import tempfile, os
+import tempfile
+import os
 import collections
 import logging
 
 import h5py
 
 logging.basicConfig(level=logging.NOTSET)
+
 
 class h5dict(collections.MutableMapping):
     self_key = '_self_key'
@@ -32,19 +34,19 @@ class h5dict(collections.MutableMapping):
             'a'  - Read/write if exists, create otherwise (default)
 
         in_memory : bool
-            if True, than the object is stored in the memory and not saved 
+            if True, than the object is stored in the memory and not saved
             to the disk.
         '''
         if in_memory:
             tmpfile = tempfile.NamedTemporaryFile()
             tmppath = tmpfile.name
             tmpfile.close()
-            self.path=tmppath
-            self._h5file = h5py.File(tmppath, driver='core', 
+            self.path = tmppath
+            self._h5file = h5py.File(tmppath, driver='core',
                                      backing_store=False)
             self.__self_load__()
             self.autoflush = False
-            self.is_tmp = False # In-memory h5dict doesn't have any tmp files.
+            self.is_tmp = False  # In-memory h5dict doesn't have any tmp files.
 
         else:
             if path is None:
@@ -66,13 +68,13 @@ class h5dict(collections.MutableMapping):
 
         data = {'_types': self._types, '_dtypes': self._dtypes}
         self._h5file.create_dataset(name=self.self_key,
-            data=cPickle.dumps(data, protocol = -1))
+                                    data=cPickle.dumps(data, protocol=-1))
 
     def __self_load__(self):
         if self.self_key in self._h5file.keys():
             data = cPickle.loads(self._h5file[self.self_key].value)
-            self._types = data['_types'] 
-            self._dtypes = data['_dtypes'] 
+            self._types = data['_types']
+            self._dtypes = data['_dtypes']
         else:
             self._types = {}
             self._dtypes = {}
@@ -121,14 +123,14 @@ class h5dict(collections.MutableMapping):
             self.__delitem__(key)
 
         if issubclass(value.__class__, np.ndarray):
-            self._h5file.create_dataset(name=key, data=value, 
-                compression='lzf',
-                chunks=True)
+            self._h5file.create_dataset(name=key, data=value,
+                                        compression='lzf',
+                                        chunks=True)
             self._types[key] = type(value)
             self._dtypes[key] = value.dtype
         else:
             self._h5file.create_dataset(name=key,
-                data=cPickle.dumps(value, protocol = -1))
+                                        data=cPickle.dumps(value, protocol=-1))
             self._types[key] = type(value)
             self._dtypes[key] = None
 
@@ -157,30 +159,31 @@ class h5dict(collections.MutableMapping):
                 self[k] = v
         for i in kwargs:
             self[i] = kwargs[i]
-    
+
     def flush(self):
         self._h5file.flush()
 
     def array_keys(self):
-        return [i for i in self._h5file.keys() 
-                if i != self.self_key and issubclass(self._types[i], np.ndarray)]
+        return [i for i in self._h5file.keys()
+                if i != self.self_key and \
+                issubclass(self._types[i], np.ndarray)]
 
-    def get_dataset(self, key): 
+    def get_dataset(self, key):
         if key not in self.array_keys():
-            logging.warning('The requested key {0} is not an array'.format(key))            
+            logging.warning('The requested key {0} is not an array'.format(
+                key))
         return self._h5file[key]
-    
-    def add_empty_dataset(self,key,shape, dtype):
+
+    def add_empty_dataset(self, key, shape, dtype):
         if key == self.self_key:
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
         if not isinstance(key, str) and not isinstance(key, unicode):
             raise Exception('h5dict only accepts string keys')
         if key in self.keys():
             self.__delitem__(key)
-        
-        self._h5file.create_dataset(name=key, shape = shape, dtype = dtype, 
-            compression='lzf',
-            chunks=True)
+
+        self._h5file.create_dataset(name=key, shape=shape, dtype=dtype,
+                                    compression='lzf',
+                                    chunks=True)
         self._types[key] = np.ndarray
-        self._dtypes[key] = dtype        
-        
+        self._dtypes[key] = dtype
