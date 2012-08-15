@@ -30,4 +30,6 @@ for profile_path in profiles:
         print 'PYTHONPATH is added to {0}'.format(profile_path)
 
 os.chdir("mirnylib")
+for name in ["numutils_new.so","numutils_new.c"]:
+    if os.path.exists(name): os.remove(name) 
 os.system("python setup.py build_ext --inplace")
