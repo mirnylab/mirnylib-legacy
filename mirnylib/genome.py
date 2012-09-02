@@ -15,7 +15,7 @@ chromosome index : a zero-based numeric index of a chromosome.
     after, the rest is indexed in alphabetical order.
 
 concatenated genome : a genome with all chromosomes merged together
-    into one sequence.
+into one sequence.
 
 binned genome : a genome splitted into bins `resolution` bp each.
 
@@ -106,6 +106,15 @@ cntrMidsBinCont : array of int
 GCBin : list of arrays of float
     % of GC content of bins in individual chromosomes.
 
+unmappedBasesBin : list of arrays of int
+    Number of bases with N's for each bin
+
+mappedBasesBin : list of arrays of int
+    Number of sequenced bases for each bin
+
+binSizesbp : list of arrays of int
+    Size of each bin. Is less than *resolution* for the last bin only.
+
 -------------------------------------------------------------------------------
 
 The following attributes are calculated after setEnzyme() is called:
@@ -185,56 +194,35 @@ class Genome(object):
 
         return memoized_func
 
-    def clearCache(self):
-        '''Delete the cached data in the genome folder.'''
-        if hasattr(self, '_mymem'):
-            self._mymem.clear()
+    def _parseGapFile(self):
+        """Parse a .gap file to determine centromere positions.
+        """
+        gapPath = os.path.join(self.genomePath, self.gapFile)
+        if not os.path.isfile(gapPath):
+            logging.warning(
+                'Gap file not found!\n'
+                'Please provide a link to a gapfile or '
+                'put a file gap.txt in a genome directory')
+            return
 
-    def __init__(self, genomePath, gapFile='gap.txt',
-                 chrmFileTemplate='chr%s.fa',
-                 readChrms=['#', 'X', 'Y', 'M']):
-        '''__init__ : Initializes the genome,
-        and calculates Genome properties (or loads them from cache).
+        gapFile = open(gapPath).readlines()
 
-        Parameters
-        ----------
+        self.cntrStarts = -1 * numpy.ones(self.chrmCount, int)
+        self.cntrEnds = -1 * numpy.zeros(self.chrmCount, int)
 
-        genomePath : str
-            The path to the folder with the FASTA files.
+        for line in gapFile:
+            splitline = line.split()
+            if splitline[7] == 'centromere':
+                chrm_str = splitline[1][3:]
+                if chrm_str in self.label2idx:
+                    chrm_idx = self.label2idx[chrm_str]
+                    self.cntrStarts[chrm_idx] = int(splitline[2])
+                    self.cntrEnds[chrm_idx] = int(splitline[3])
 
-        gapFile : str
-            The path to the gap file relative to genomePath.
-
-        chrmFileTemplate : str
-            The template of the FASTA file names.
-
-        readChrms : list of str
-            The list with the string labels of chromosomes to read from the
-            genome folder. '#' stands for chromosomes with numerical labels
-            (e.g. 1-22 for human). If readChrms is empty then read all
-            chromosomes.
-        '''
-        # Set the main attributes of the class.
-        self.genomePath = os.path.abspath(genomePath)
-        self.readChrms = set(readChrms)
-
-        self.folderName = os.path.split(self.genomePath)[-1]
-
-        self.gapFile = gapFile
-
-        self.chrmFileTemplate = chrmFileTemplate
-
-        # Scan the folder and obtain the list of chromosomes.
-        self._scanGenomeFolder()
-
-        # Get the lengths of the chromosomes.
-        self.chrmLens = self.getChrmLen()
-        self.maxChrmLen = max(self.chrmLens)
-        # FragIDmult is used in (chrm, frag) -> fragID conversion.
-        self.fragIDmult = self.maxChrmLen + 1000
-
-        # Parse a gap file and mark the centromere positions.
-        self._parseGapFile()
+        self.cntrMids = (self.cntrStarts + self.cntrEnds) / 2
+        lowarms = numpy.array(self.cntrStarts)
+        higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
+        self.maxChrmArm = max(lowarms.max(), higharms.max())
 
     def _extractChrmLabel(self, string):
         # First assume a whole filename as input (e.g. 'chr01.fa')
@@ -306,6 +294,52 @@ class Genome(object):
         self.fastaNames.sort(
             key=lambda path: self.label2idx[self._extractChrmLabel(path)])
 
+    def __init__(self, genomePath, gapFile='gap.txt',
+                 chrmFileTemplate='chr%s.fa',
+                 readChrms=['#', 'X', 'Y', 'M']):
+        '''__init__ : Initializes the genome,
+        and calculates Genome properties (or loads them from cache).
+
+        Parameters
+        ----------
+
+        genomePath : str
+            The path to the folder with the FASTA files.
+
+        gapFile : str
+            The path to the gap file relative to genomePath.
+
+        chrmFileTemplate : str
+            The template of the FASTA file names.
+
+        readChrms : list of str
+            The list with the string labels of chromosomes to read from the
+            genome folder. '#' stands for chromosomes with numerical labels
+            (e.g. 1-22 for human). If readChrms is empty then read all
+            chromosomes.
+        '''
+        # Set the main attributes of the class.
+        self.genomePath = os.path.abspath(genomePath)
+        self.readChrms = set(readChrms)
+
+        self.folderName = os.path.split(self.genomePath)[-1]
+
+        self.gapFile = gapFile
+
+        self.chrmFileTemplate = chrmFileTemplate
+
+        # Scan the folder and obtain the list of chromosomes.
+        self._scanGenomeFolder()
+
+        # Get the lengths of the chromosomes.
+        self.chrmLens = self.getChrmLen()
+        self.maxChrmLen = max(self.chrmLens)
+        # FragIDmult is used in (chrm, frag) -> fragID conversion.
+        self.fragIDmult = self.maxChrmLen + 1000
+
+        # Parse a gap file and mark the centromere positions.
+        self._parseGapFile()
+
     def getChrmLen(self):
         # At the first call redirects itself to a memoized private function.
         self.getChrmLen = self._memoize('_getChrmLen')
@@ -314,6 +348,65 @@ class Genome(object):
     def _getChrmLen(self):
         return numpy.array([len(self.seqs[i])
                             for i in xrange(0, self.chrmCount)])
+
+    def getGCBin(self, resolution):
+        # At the first call the function rewrites itself with a memoized
+        # private function.
+        self.getGCBin = self._memoize('_getGCBin')
+        return self.getGCBin(resolution)
+
+    def _getGCBin(self, resolution):
+        GCBin = []
+        for chrm in xrange(self.chrmCount):
+            chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
+            GCBin.append(numpy.ones(chrmSizeBin, dtype=numpy.float))
+            for j in xrange(chrmSizeBin):
+                GCBin[chrm][j] = self.getGC(
+                    chrm, j * int(resolution), (j + 1) * int(resolution))
+        return GCBin
+
+    def getUnmappedBasesBin(self, resolution):
+        # At the first call the function rewrites itself with a memoized
+        # private function.
+        self.getUnmappedBasesBin = self._memoize('_getUnmappedBasesBin')
+        return self.getUnmappedBasesBin(resolution)
+
+    def _getUnmappedBasesBin(self, resolution):
+        unmappedBasesBin = []
+        for chrm in xrange(self.chrmCount):
+            chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
+            unmappedBasesBin.append(numpy.ones(chrmSizeBin, dtype=numpy.int))
+            for j in xrange(chrmSizeBin):
+                unmappedBasesBin[chrm][j] = self.getUnmappedBases(
+                    chrm, j * int(resolution), (j + 1) * int(resolution))
+        return unmappedBasesBin
+
+    def getRsites(self, enzymeName):
+        # At the first call redirects itself to a memoized private function.
+        self.getRsites = self._memoize('_getRsites')
+        return self.getRsites(enzymeName)
+
+    def _getRsites(self, enzymeName):
+        '''Returns: tuple(rsites, rfrags)
+        Finds restriction sites and mids of rfrags for a given enzyme
+        '''
+
+        #Memorized function
+        enzymeSearchFunc = eval('Bio.Restriction.%s.search' % enzymeName)
+        rsites = []
+        rfragMids = []
+        for i in xrange(self.chrmCount):
+            rsites.append(numpy.r_[
+                0, numpy.array(enzymeSearchFunc(self.seqs[i].seq)) + 1,
+                len(self.seqs[i].seq)])
+            rfragMids.append((rsites[i][:-1] + rsites[i][1:]) / 2)
+
+        # Remove the first trivial restriction site (0)
+        # to equalize the number of points in rsites and rfragMids.
+        for i in xrange(len(rsites)):
+            rsites[i] = rsites[i][1:]
+
+        return rsites, rfragMids
 
     @property
     def seqs(self):
@@ -324,38 +417,10 @@ class Genome(object):
                                                  'fasta'))
         return self._seqs
 
-    def _parseGapFile(self):
-        """Parse a .gap file to determine centromere positions.
-        """
-        gapPath = os.path.join(self.genomePath, self.gapFile)
-        if not os.path.isfile(gapPath):
-            logging.warning(
-                'Gap file not found!\n'
-                'Please provide a link to a gapfile or '
-                'put a file gap.txt in a genome directory')
-            return
-
-        gapFile = open(gapPath).readlines()
-
-        self.cntrStarts = -1 * numpy.ones(self.chrmCount, int)
-        self.cntrEnds = -1 * numpy.zeros(self.chrmCount, int)
-
-        for line in gapFile:
-            splitline = line.split()
-            if splitline[7] == 'centromere':
-                chrm_str = splitline[1][3:]
-                if chrm_str in self.label2idx:
-                    chrm_idx = self.label2idx[chrm_str]
-                    self.cntrStarts[chrm_idx] = int(splitline[2])
-                    self.cntrEnds[chrm_idx] = int(splitline[3])
-
-        self.cntrMids = (self.cntrStarts + self.cntrEnds) / 2
-        lowarms = numpy.array(self.cntrStarts)
-        higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
-        self.maxChrmArm = max(lowarms.max(), higharms.max())
-
     def createGapFile(self, centromere_positions):
         """Create a gap file with the centromere positions.
+
+        Use this method, if the genome you're using has no gap file.
 
         Parameters
         ----------
@@ -427,10 +492,6 @@ class Genome(object):
         self.mappedBasesBin = [i[0] - i[1] for i in zip(
             self.binSizesBp, self.unmappedBasesBin)]
 
-    def splitByChrms(self, inArray):
-        return [inArray[self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]]
-                for i in xrange(self.chrmCount)]
-
     def getUnmappedBases(self, chrmIdx, start, end):
         "Calculate the percentage of unmapped base pairs in a region."
         seq = self.seqs[chrmIdx][start:end]
@@ -454,67 +515,10 @@ class Genome(object):
             corrected_GC = overall_GC * 100.0 / (100.0 - unmapped_content)
             return corrected_GC
 
-    def getGCBin(self, resolution):
-        # At the first call the function rewrites itself with a memoized
-        # private function.
-        self.getGCBin = self._memoize('_getGCBin')
-        return self.getGCBin(resolution)
-
-    def _getGCBin(self, resolution):
-        GCBin = []
-        for chrm in xrange(self.chrmCount):
-            chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
-            GCBin.append(numpy.ones(chrmSizeBin, dtype=numpy.float))
-            for j in xrange(chrmSizeBin):
-                GCBin[chrm][j] = self.getGC(
-                    chrm, j * int(resolution), (j + 1) * int(resolution))
-        return GCBin
-
-    def getUnmappedBasesBin(self, resolution):
-        # At the first call the function rewrites itself with a memoized
-        # private function.
-        self.getUnmappedBasesBin = self._memoize('_getUnmappedBasesBin')
-        return self.getUnmappedBasesBin(resolution)
-
-    def _getUnmappedBasesBin(self, resolution):
-        unmappedBasesBin = []
-        for chrm in xrange(self.chrmCount):
-            chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
-            unmappedBasesBin.append(numpy.ones(chrmSizeBin, dtype=numpy.int))
-            for j in xrange(chrmSizeBin):
-                unmappedBasesBin[chrm][j] = self.getUnmappedBases(
-                    chrm, j * int(resolution), (j + 1) * int(resolution))
-        return unmappedBasesBin
-
-    def getRsites(self, enzymeName):
-        # At the first call redirects itself to a memoized private function.
-        self.getRsites = self._memoize('_getRsites')
-        return self.getRsites(enzymeName)
-
-    def _getRsites(self, enzymeName):
-        '''Returns: tuple(rsites, rfrags)
-        Finds restriction sites and mids of rfrags for a given enzyme
-        '''
-
-        #Memorized function
-        enzymeSearchFunc = eval('Bio.Restriction.%s.search' % enzymeName)
-        rsites = []
-        rfragMids = []
-        for i in xrange(self.chrmCount):
-            rsites.append(numpy.r_[
-                0, numpy.array(enzymeSearchFunc(self.seqs[i].seq)) + 1,
-                len(self.seqs[i].seq)])
-            rfragMids.append((rsites[i][:-1] + rsites[i][1:]) / 2)
-
-        # Remove the first trivial restriction site (0)
-        # to equalize the number of points in rsites and rfragMids.
-        for i in xrange(len(rsites)):
-            rsites[i] = rsites[i][1:]
-
-        return rsites, rfragMids
-
-    def hasEnzyme(self):
-        return hasattr(self, "enzymeName")
+    def clearCache(self):
+        '''Delete the cached data in the genome folder.'''
+        if hasattr(self, '_mymem'):
+            self._mymem.clear()
 
     def setEnzyme(self, enzymeName):
         """Calculates rsite/rfrag positions and IDs for a given enzyme name
@@ -537,6 +541,13 @@ class Genome(object):
              for chrm in xrange(self.chrmCount)])
 
         assert (len(self.rsiteIds) == len(self.rfragMidIds))
+
+    def hasEnzyme(self):
+        return hasattr(self, "enzymeName")
+
+    def splitByChrms(self, inArray):
+        return [inArray[self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]]
+                for i in xrange(self.chrmCount)]
 
     def upgradeMatrix(self, oldGenome):
         """Checks if old genome can be upgraded to new genome by truncation.

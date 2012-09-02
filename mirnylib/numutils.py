@@ -621,7 +621,7 @@ def PCA(A, numPCs=6):
     M = (A - np.mean(A.T, axis=1)).T
     covM = np.dot(M, M.T)
     [latent, coeff] = scipy.sparse.linalg.eigsh(covM, numPCs)
-    print latent
+    print "Eigenvalues are:", latent
     return (np.transpose(coeff[:, ::-1]), latent[::-1])
 
 
@@ -634,10 +634,8 @@ def EIG(A, numPCs=3):
     M = (A - np.mean(A))  # subtract the mean (along columns)
     if (M - M.T).var() < np.var(M[::10, ::10]) * 0.000001:
         [latent, coeff] = scipy.sparse.linalg.eigsh(M, numPCs)
-        print "mode autodetect: hermitian"  # matrix is hermitian
     else:
         [latent, coeff] = scipy.sparse.linalg.eigs(M, numPCs)
-        print "mode autodetect : non-hermitian"  # Matrix is normal
     alatent = np.argsort(np.abs(latent))
     print "eigenvalues are:", latent[alatent]
     coeff = coeff[:, alatent]
@@ -722,6 +720,40 @@ def ultracorrectBiasReturn(x, M=20):
     newx /= (1. * np.mean(newx) / np.mean(x))
     print np.mean(newx)
     return newx, ball
+
+
+def fillDiagonal(inArray, diag, offset):
+    "Puts diag in the offset's diagonal of inArray"
+    N = inArray.shape[0]
+    assert inArray.shape[1] == N
+    if offset >= 0:
+        inArray.flat[offset:N * (N - offset):N + 1] = diag
+    else:
+        inArray.flat[(-offset * N)::N + 1] = diag
+
+
+def shuffleAlongDiagonal(inMatrix):
+    "Shuffles inMatrix along each diagonal"
+    assert len(inMatrix.shape) == 2
+    sh = inMatrix.shape
+    assert sh[0] == sh[1]
+    N = sh[0]
+    for i in xrange(-N + 1, N):
+        diag = np.diagonal(inMatrix, i).copy()
+        np.random.shuffle(diag)
+        fillDiagonal(inMatrix, diag, i)
+    return inMatrix
+
+
+def smeerAlongDiagonal(inMatrix):
+    assert len(inMatrix.shape) == 2
+    sh = inMatrix.shape
+    assert sh[0] == sh[1]
+    N = sh[0]
+    for i in xrange(-N + 1, N):
+        diag = np.diagonal(inMatrix, i).mean()
+        fillDiagonal(inMatrix, diag, i)
+    return inMatrix
 
 
 def create_regions(a):

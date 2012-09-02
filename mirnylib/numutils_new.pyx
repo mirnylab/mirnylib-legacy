@@ -16,6 +16,9 @@ ctypedef unsigned char uchar
 
 cdef extern from "stdlib.h": 
     long c_libc_random "random"()
+cdef extern from "stdlib.h": 
+    double c_libc_drandom "drand48"()
+
      
 ctypedef fused my_type:
     cython.int
@@ -361,5 +364,70 @@ def fakeCisImpl(np.ndarray[np.double_t, ndim = 2] data, np.ndarray[np.int64_t,nd
                         if mask[j,s] == 0:
                             data[i,j] = data[j,s]
                             data[j,i] = data[j,s]
+
+
+def contactMC(in_matrix,repeats = 1):
+    
+    cdef double[:,:] matrix
+    matrix = np.asarray(in_matrix, dtype = np.double)
+    cdef long N = len(matrix)
+    cdef long N2 = N / 2
+    cdef long M = N2 * repeats
+    cdef long[:, :] pairs
+    cdef long i1, i2
+    cdef long[2] p1, p2, newpair1, newpair2
+    cdef double probCur
+    cdef double probNew
+    cdef double transProb
+    cdef int i
+
+    pairs = np.arange(N, dtype=np.int64).reshape((-1, 2))
+    pairs = np.concatenate([pairs for i in xrange(repeats)])
+
+    for i in range(1000 * N * repeats):
+        i1 = c_libc_random() % M
+        i2 = c_libc_random() % M
+        if i1 == i2:
+            continue
+        p1[0] = pairs[i1, 0]
+        p1[1] = pairs[i1, 1]
+        p2[0] = pairs[i2, 0]
+        p2[1] = pairs[i2, 1]
+        if c_libc_random() % 2 == 1:
+            newpair1[0] = p1[0]
+            newpair1[1] = p2[0]
+            newpair2[0] = p1[1]
+            newpair2[1] = p2[1]
+        else:
+            newpair1[0] = p1[0]
+            newpair1[1] = p2[1]
+            newpair2[0] = p1[1]
+            newpair2[1] = p2[0]
+
+        probCur = matrix[p1[0], p1[1]] * matrix[p2[0], p2[1]]
+        probNew = matrix[newpair1[0], newpair1[1]] * matrix[newpair2[0], newpair2[1]]
+        if probNew > probCur:
+            pairs[i1,0] = newpair1[0]
+            pairs[i1,1] = newpair1[1]
+            pairs[i2,0] = newpair2[0]
+            pairs[i2,1] = newpair2[1]
+        else:
+            transProb = probNew / probCur
+            if c_libc_drandom() < transProb:
+                pairs[i1,0] = newpair1[0]
+                pairs[i1,1] = newpair1[1]
+                pairs[i2,0] = newpair2[0]
+                pairs[i2,1] = newpair2[1]
+
+
+    nppairs = np.array(pairs)
+    #assert len(np.unique(nppairs)) == N
+    retmat = np.zeros(in_matrix.shape, int)
+    for s in xrange(20):
+        retmat[nppairs[s::20, 0], nppairs[s::20, 1]] = 1
+        retmat[nppairs[s::20, 1], nppairs[s::20, 0]] = 1
+    #assert retmat.sum() == N
+    return retmat
+
 
             

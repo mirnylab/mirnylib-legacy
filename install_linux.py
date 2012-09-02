@@ -1,7 +1,6 @@
 '''Add the parent directory ../ to one of the bash settings files.
 '''
 import os
-import sys
 
 libpath = os.getcwd()
 libpath = os.path.normpath(libpath.replace(os.path.expanduser('~'), '$HOME/'))
