@@ -1,6 +1,13 @@
 import numpy as np
 import warnings
 import mirnylib.systemutils
+from numutils_new import _arrayInArray #@UnresolvedImport @IgnorePep8
+from numutils_new import fasterBooleanIndexing #@UnresolvedImport @IgnorePep8
+from numutils_new import removeDiagonalImpl #@UnresolvedImport @IgnorePep8
+from numutils_new import fakeCisImpl #@UnresolvedImport @IgnorePep8
+from numutils_new import _arraySumByArray #@UnresolvedImport @IgnorePep8
+from mirnylib.plotting import mat_img
+from scipy.ndimage.filters import convolve, gaussian_filter
 na = np.array
 import  scipy.sparse.linalg
 import scipy.stats
@@ -15,13 +22,7 @@ import numutils_new
 
 #----------Importing cytonised functions----------
 
-from numutils_new import _arrayInArray
-from numutils_new import _arraySumByArray
-from numutils_new import fasterBooleanIndexing
-from numutils_new import removeDiagonalImpl
-from numutils_new import fakeCisImpl
 fasterBooleanIndexing, removeDiagonalImpl, fakeCisImpl
-#Pydev warning remover
 
 
 def generalizedDtype(inObject):
@@ -585,9 +586,65 @@ randomOnSphere = random_on_sphere
 
 #-------------Importing cytonized functions--------------
 
-observedOverExpected = numutils_new.observedOverExpected
-ultracorrectSymmetricByMask = numutils_new.ultracorrectSymmetricByMask
-ultracorrectSymmetricWithVector = numutils_new.ultracorrectSymmetricWithVector
+observedOverExpected = \
+numutils_new.observedOverExpected #@UndefinedVariable @IgnorePep8
+ultracorrectSymmetricByMask = \
+numutils_new.ultracorrectSymmetricByMask #@UndefinedVariable @IgnorePep8
+ultracorrectSymmetricWithVector = \
+numutils_new.ultracorrectSymmetricWithVector #@UndefinedVariable @IgnorePep8
+
+
+def adaptiveSmoothing(matrix, parameter, alpha=0.5,
+                      mask="auto", originalCounts="matrix"):
+    """This is a super-cool method to smooth a heatmap.
+    It smoothes 
+    Smoothes each point of a gaussian """
+    matrix = np.asarray(matrix, dtype=np.double)
+    if sourceCounts == "matrix":
+        sourceCounts = matrix
+
+    if mask == None:
+        mask = np.ones(matrix.shape, bool)
+
+    elif mask == "auto":
+        sum1 = np.sum(matrix, axis=0) > 0
+        sum0 = np.sum(matrix, axis=1) > 0
+        mask = sum0[:, None] * sum1[None, :]
+
+    mask = np.array(mask, dtype=float)
+    assert mask.shape == matrix.shape
+
+    def coolFilter(matrix, value):
+        "gaussian filter for masked data"
+        mf = gaussian_filter(mask, value)
+        gf = gaussian_filter(matrix / mf, value)
+        gf[mask == 0] = 0
+        return gf
+
+    outMatrix = np.zeros_like(matrix)
+    N = len(matrix)
+    nonZero = matrix > 0
+    nonZeroSum = nonZero.sum()
+    values = np.logspace(-4, 4, 100, 2)
+    values = values[values * 2 * np.pi > 1]
+    #print values
+    covered = np.zeros(matrix.shape, dtype=bool)
+    #outMatrix[covered] += matrix[covered]
+
+    for value in values:
+        smoothed = gaussian_filter(sourceCounts, value) * 2 * np.pi * (value ** 2)
+        smoothed -= alpha * sourceCounts
+        new = (smoothed > parameter) * (covered != True) * nonZero
+        newMatrix = np.zeros_like(matrix, dtype=np.double)
+        np.putmask(newMatrix, new, matrix)
+        #newMatrix[new] = matrix[new]
+        outMatrix += coolFilter(newMatrix, value)
+        covered[new] = True
+        #print matrix.sum(), outMatrix.sum()
+        if covered.sum() == nonZeroSum:
+            break
+
+    return outMatrix
 
 
 def maskPCA(A, mask):
@@ -651,7 +708,7 @@ def project(data, vector):
 
 def projectOnEigenvalues(data, N=1):
     "projects symmetric data on the first N eigenvalues"
-    #TODO: rewrite properly for both symmetric and non-symmetric case
+    #TODO:(MI) rewrite properly for both symmetric and non-symmetric case
     meanOfData = np.mean(data)
     mdata = data - meanOfData
     symData = 0.5 * (mdata + mdata.T)

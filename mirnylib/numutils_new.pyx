@@ -1,7 +1,7 @@
 """
 Cythonised utilities from numutils 
 """
-
+#@PydevCodeAnalysisIgnore
 import numpy as np
 cimport numpy as np 
 cimport cython   
@@ -242,7 +242,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1):
     corr = totalBias[s0!=0].mean()  #mean correction factor
     x  = x * corr * corr #renormalizing everything
     totalBias /= corr
-    return x,v/totalBias
+    return x, v/totalBias, totalBias
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
