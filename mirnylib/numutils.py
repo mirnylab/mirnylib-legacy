@@ -21,7 +21,7 @@ import numutils_new
 
 #----------Importing cytonised functions----------
 
-fasterBooleanIndexing, removeDiagonalImpl, fakeCisImpl
+fasterBooleanIndexing, fakeCisImpl
 
 
 def generalizedDtype(inObject):
