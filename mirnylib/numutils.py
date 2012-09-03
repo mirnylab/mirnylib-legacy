@@ -1,3 +1,35 @@
+# Copyright (C) 2010-2012 Leonid Mirny lab
+# Contact Maksim V Imakaev (mimakaev@gmail.com)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted FOR ACADEMIC USE ONLY, provided the
+# following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above
+#    copyright notice, this list of conditions and the following
+#    disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#
+# 3. The name of the author may not be used to endorse or promote
+#    products derived from this software without specific prior
+#    written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 import numpy as np
 import warnings
 import mirnylib.systemutils
@@ -55,8 +87,24 @@ def generalizedDtype(inObject):
 
 
 def isInteger(inputData):
-    return np.mod(inputData, 1).mean() < 0.00001
+    """checks if input array consists of integers"""
+    inputData = np.asarray(inputData)
+    if generalizedDtype(inputData) == np.int:
+        return True
 
+    #checking if variance of the data is significantly less than 1
+    if np.prod(inputData.shape) < 10000:
+        varvar = inputData.var()
+    else:
+        varvar = inputData.flat[::100].var() + inputData.flat[33::231].var()\
+        + inputData.flat[24::242].var() + inputData[55::413].var()
+    varvar = np.sqrt(varvar)
+
+    mod = np.fmod(inputData, 1)
+    minmod = np.minimum(mod, 1 - mod)
+    if minmod.mean() < 0.00001 * min(varvar, 1):
+        return True
+    return False
 
 def openmpSum(in_array):
     """
@@ -597,11 +645,12 @@ numutils_new.ultracorrectSymmetricWithVector #@UndefinedVariable @IgnorePep8
 def adaptiveSmoothing(matrix, parameter, alpha=0.5,
                       mask="auto", originalCounts="matrix"):
     """This is a super-cool method to smooth a heatmap.
-    It smoothes 
-    Smoothes each point of a gaussian """
+    Smoothes each point into a gaussian, encoumpassing parameter
+    raw reads, taked from originalCounts data, or from matrix if not provided
+    """
     matrix = np.asarray(matrix, dtype=np.double)
-    if sourceCounts == "matrix":
-        sourceCounts = matrix
+    if originalCounts == "matrix":
+        originalCounts = matrix
 
     if mask == None:
         mask = np.ones(matrix.shape, bool)
@@ -612,13 +661,21 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
         mask = sum0[:, None] * sum1[None, :]
 
     mask = np.array(mask, dtype=float)
+    antimask = np.nonzero(mask.flat == False)[0]
     assert mask.shape == matrix.shape
+
+    #Getting sure that there are no reads in masked regions
+    originalCounts.flat[antimask] = 0
+    matrix.flat[antimask] = 0
 
     def coolFilter(matrix, value):
         "gaussian filter for masked data"
         mf = gaussian_filter(mask, value)
-        gf = gaussian_filter(matrix / mf, value)
-        gf[mask == 0] = 0
+        mf.flat[antimask] = 1
+        mfDivided = matrix / mf
+        mfDivided.flat[antimask] = 0
+        gf = gaussian_filter(mfDivided, value)
+        gf.flat[antimask] = 0
         return gf
 
     outMatrix = np.zeros_like(matrix)
@@ -632,8 +689,8 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
     #outMatrix[covered] += matrix[covered]
 
     for value in values:
-        smoothed = gaussian_filter(sourceCounts, value) * 2 * np.pi * (value ** 2)
-        smoothed -= alpha * sourceCounts
+        smoothed = gaussian_filter(originalCounts, value) * 2 * np.pi * (value ** 2)
+        smoothed -= alpha * originalCounts
         new = (smoothed > parameter) * (covered != True) * nonZero
         newMatrix = np.zeros_like(matrix, dtype=np.double)
         np.putmask(newMatrix, new, matrix)
@@ -643,7 +700,6 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
         #print matrix.sum(), outMatrix.sum()
         if covered.sum() == nonZeroSum:
             break
-
     return outMatrix
 
 
@@ -787,6 +843,16 @@ def fillDiagonal(inArray, diag, offset):
         inArray.flat[offset:N * (N - offset):N + 1] = diag
     else:
         inArray.flat[(-offset * N)::N + 1] = diag
+
+
+def removeDiagonals(inArray, m):
+    """removes up to mth diagonal in array
+    m = 0: main
+    m = 1: 3 diagonals, etc.
+    """
+    for i in xrange(-m, m + 1):
+        fillDiagonal(inArray, 0, i)
+
 
 
 def shuffleAlongDiagonal(inMatrix):

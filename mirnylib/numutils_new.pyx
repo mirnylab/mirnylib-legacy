@@ -332,15 +332,7 @@ def observedOverExpected(matrix):
                     if offset > 0: data[j,offset+j] /= meanss
     return _data
 
-@cython.boundscheck(False)
-@cython.wraparound(False)                    
-def removeDiagonalImpl(np.ndarray[np.double_t,ndim = 2] data,int M):
-    cdef int N = len(data)
-    cdef int i,j 
-    for i in range(N):
-        for j in range(max(i-M,0),min(i+M+1,N)):
-            data[i,j] = 0
-            
+          
 
 @cython.boundscheck(False)
 @cython.wraparound(False)                                
