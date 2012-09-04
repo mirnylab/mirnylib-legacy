@@ -1,3 +1,21 @@
+# Copyright (C) 2010-2012 Leonid Mirny lab (mirnylab.mit.edu)
+# Code written by: Maksim Imakaev (imakaev@mit.edu),
+# Anton Goloborodko (golobor@mit.edu)
+# For questions regarding using and/or distributing this code
+# please contact Leonid Mirny (leonid@mit.edu)
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import numpy as np
 import warnings
 import mirnylib.systemutils
@@ -7,6 +25,7 @@ from numutils_new import fakeCisImpl #@UnresolvedImport @IgnorePep8
 from numutils_new import _arraySumByArray #@UnresolvedImport @IgnorePep8
 from mirnylib.plotting import mat_img
 from scipy.ndimage.filters import convolve, gaussian_filter
+from mirnylib.systemutils import setExceptionHook
 na = np.array
 import  scipy.sparse.linalg
 import scipy.stats
@@ -72,6 +91,7 @@ def isInteger(inputData):
     if minmod.mean() < 0.00001 * min(varvar, 1):
         return True
     return False
+
 
 def openmpSum(in_array):
     """
@@ -649,24 +669,44 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
     N = len(matrix)
     nonZero = matrix > 0
     nonZeroSum = nonZero.sum()
-    values = np.logspace(-4, 4, 100, 2)
+    values = np.r_[np.logspace(-1, 4, 50, 2)]
     values = values[values * 2 * np.pi > 1]
     #print values
     covered = np.zeros(matrix.shape, dtype=bool)
     #outMatrix[covered] += matrix[covered]
 
     for value in values:
-        smoothed = gaussian_filter(originalCounts, value) * 2 * np.pi * (value ** 2)
+        p = parameter
+        #finding normalization of a discrete gaussian filter
+        test = np.zeros((8 * value, 8 * value), dtype=float)
+        test[4 * value, 4 * value] = 1
+        stest = gaussian_filter(test, value)
+        stest /= stest[4 * value, 4 * value]
+        norm = stest.sum()
+
+        smoothed = gaussian_filter(originalCounts, value) * norm
         smoothed -= alpha * originalCounts
+
+        #Indeces to smooth on that iteration
         new = (smoothed > parameter) * (covered != True) * nonZero
+        newInds = np.nonzero(new.flat)[0]
+
+        #newReads = originalCounts.flat[newInds]
+        #directPercent = (newReads - p) / (1. * p)
+        #directPercent[newReads <= p] = 0
+        #directPercent[newReads >= 2 * p] = 1
+
         newMatrix = np.zeros_like(matrix, dtype=np.double)
-        np.putmask(newMatrix, new, matrix)
-        #newMatrix[new] = matrix[new]
+        newMatrix.flat[newInds] = matrix.flat[newInds]
+        #newMatrix.flat[newInds] = matrix.flat[newInds] * (1. - directPercent)
+        #outMatrix.flat[newInds] += matrix.flat[newInds] * directPercent
+
         outMatrix += coolFilter(newMatrix, value)
         covered[new] = True
-        #print matrix.sum(), outMatrix.sum()
+
         if covered.sum() == nonZeroSum:
             break
+    #print matrix.sum(), outMatrix.sum()
     return outMatrix
 
 
@@ -819,7 +859,6 @@ def removeDiagonals(inArray, m):
     """
     for i in xrange(-m, m + 1):
         fillDiagonal(inArray, 0, i)
-
 
 
 def shuffleAlongDiagonal(inMatrix):
