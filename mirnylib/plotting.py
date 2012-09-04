@@ -151,7 +151,7 @@ def showPolymerRasmol(x, y=None, z=None):
             towrite.name, rascript.name))
 
 
-def scatter3D(x, y, z, color):
+def scatter3D(x, y, z, color='b'):
     """shows a scatterplot in 3D"""
 
     fig = plt.figure()
