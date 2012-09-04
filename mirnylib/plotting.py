@@ -132,7 +132,6 @@ def showPolymerRasmol(x, y=None, z=None):
         os.system("C:/RasWin/raswin.exe -xyz %s -script %s" % (
             towrite.name, rascript.name))
 
-
 def scatter3D(x, y, z, color='b'):
     """shows a scatterplot in 3D"""
 
@@ -158,9 +157,6 @@ def scatter3D(x, y, z, color='b'):
         ax.scatter(x, y, z, c=color)
     plt.show()
 
-#scatter3D(numpy.arange(10),numpy.arange(10),numpy.arange(10),'r')
-
-
 def removeAxes(mode="normal", shift=0, ax=None):
     if ax is None:
         ax = plt.gca()
@@ -180,7 +176,6 @@ def removeAxes(mode="normal", shift=0, ax=None):
             else:
                 raise ValueError('unknown spine location: %s' % loc)
 
-
 def removeBorder(ax=None):
     removeAxes("all", 0, ax=ax)
     if ax is None:
@@ -191,7 +186,6 @@ def removeBorder(ax=None):
         ax = plt.axes()
     ax.set_xticklabels([])
     ax.set_yticklabels([])
-
 
 def niceShow(mytype=None, subplotAdjust=[0.08, 0.12, 0.95, 0.98]):
     if mytype == "log":
@@ -204,7 +198,6 @@ def niceShow(mytype=None, subplotAdjust=[0.08, 0.12, 0.95, 0.98]):
     removeAxes(shift=0)
     plt.gcf().subplots_adjust(*subplotAdjust)
     plt.show()
-
 
 def mat_img(a, cmap="jet", trunk=False, **kwargs):
     "shows an array using imshow with colorbar"
@@ -227,7 +220,6 @@ def mat_img(a, cmap="jet", trunk=False, **kwargs):
         plt.show()
     do_all()
 
-
 def plot_line(a, b, **kwargs):
     """Plot a line y = a * x + b.
 
@@ -240,7 +232,6 @@ def plot_line(a, b, **kwargs):
     pylab.plot([xlim[0], xlim[1]],
                [a * xlim[0] + b, a * xlim[1] + b],
                **kwargs)
-
 
 def linear_regression(x, y, a=None, b=None):
     """Calculate coefficients of a linear regression y = a * x + b.
@@ -274,7 +265,6 @@ def linear_regression(x, y, a=None, b=None):
     stderr = numpy.std([y[i] - a * x[i] - b for i in range(len(x))])
 
     return (a, b, r, stderr)
-
 
 def scatter_trend(x, y, **kwargs):
     """Make a scatter plot with a linear regression.
@@ -319,7 +309,6 @@ def scatter_trend(x, y, **kwargs):
                            max(x) + b + i * stderr],
                        'r--')
 
-
 def plot_matrix_3d(matrix, **kwargs):
     import mpl_toolkits.mplot3d.axes3d as pylab3d
     ax = pylab3d.Axes3D(pylab.gcf())
@@ -350,6 +339,9 @@ def plot_matrix_3d(matrix, **kwargs):
     ax.set_zlabel(kwargs.get('zlabel', ''))
     ax.set_title(kwargs.get('title', ''))
 
+def plot_matrix(matrix, **kwargs):
+    plt.imshow(matrix, interpolation = 'nearest', **kwargs)
+    plt.colorbar()
 
 def plot_function_3d(x, y, function, **kwargs):
     """Plot values of a function of two variables in 3D.
@@ -384,7 +376,6 @@ def plot_function_3d(x, y, function, **kwargs):
             Z[-1].append(function(x_value, y_value))
     Z = numpy.array(Z)
     plot_matrix_3d(Z, x=x, y=y, **kwargs)
-
 
 def plot_function_contour(x, y, function, **kwargs):
     """Make a contour plot of a function of two variables.
