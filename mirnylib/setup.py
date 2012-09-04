@@ -4,6 +4,7 @@ from Cython.Distutils import build_ext
 
 ext_modules = [Extension("numutils_new", ["numutils_new.pyx"])]
 
+
 setup(
   name = 'New numutils',
   cmdclass = {'build_ext': build_ext},
