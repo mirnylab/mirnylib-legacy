@@ -1,3 +1,21 @@
+# Copyright (C) 2010-2012 Leonid Mirny lab (mirnylab.mit.edu)
+# Code written by: Maksim Imakaev (imakaev@mit.edu)
+# Anton Goloborodko (golobor@mit.edu)
+# For questions regarding using and/or distributing this code
+# please contact Leonid Mirny (leonid@mit.edu)
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 """
 Some nice plotting utilities from Max
 These include:
@@ -48,7 +66,7 @@ def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1])
                 this_cdict[step] = new_LUT[j, i]
             elif new_LUT[j, i] != old_LUT[j, i]:
                 this_cdict[step] = new_LUT[j, i]
-        colorvector = map(lambda x: x + (x[1], ), this_cdict.items())
+        colorvector = map(lambda x: x + (x[1],), this_cdict.items())
         colorvector.sort()
         cdict[key] = colorvector
     return matplotlib.colors.LinearSegmentedColormap('colormap', cdict, 1024)

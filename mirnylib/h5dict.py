@@ -1,3 +1,23 @@
+# Copyright (C) 2010-2012 Leonid Mirny lab (mirnylab.mit.edu)
+# Code written by: Anton Goloborodko (golobor@mit.edu),
+# Maksim Imakaev (imakaev@mit.edu)
+#
+# For questions regarding using and/or distributing this code
+# please contact Leonid Mirny (leonid@mit.edu)
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 """
 h5dict - HDF5-based persistent dict
 ===================================
@@ -68,7 +88,7 @@ class h5dict(collections.MutableMapping):
 
         data = {'_types': self._types, '_dtypes': self._dtypes}
         self._h5file.create_dataset(name=self.self_key,
-                                    data=cPickle.dumps(data, protocol=-1))
+                                    data=cPickle.dumps(data, protocol= -1))
 
     def __self_load__(self):
         if self.self_key in self._h5file.keys():
@@ -130,7 +150,7 @@ class h5dict(collections.MutableMapping):
             self._dtypes[key] = value.dtype
         else:
             self._h5file.create_dataset(name=key,
-                                        data=cPickle.dumps(value, protocol=-1))
+                                        data=cPickle.dumps(value, protocol= -1))
             self._types[key] = type(value)
             self._dtypes[key] = None
 
