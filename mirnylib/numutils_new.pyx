@@ -203,10 +203,12 @@ def _arraySumByArray(array,filterarray,weightarray):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1):
+def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1, 
+                                    tolerance=1e-5):
     """Main method for correcting DS and SS read data. Possibly excludes diagonal.
     By default does iterative correction, but can perform an M-time correction"""
-         
+    if M == None:
+        M = 9999
     totalBias = np.ones(len(x),float)    
     if v == None: v = np.zeros(len(x),float)  #single-sided reads    
     x = np.array(x,np.double,order = 'C')
@@ -217,7 +219,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1):
     v = np.array(v,float,order = "C")        
     cdef int i , j, N
     N = len(x)       
-    for _ in xrange(M):         
+    for iternum in xrange(M):         
         s0 = np.sum(_x,axis = 1)         
         mask = [s0 == 0]            
         v[mask] = 0   #no SS reads if there are no DS reads here        
@@ -232,12 +234,18 @@ def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1):
                 s[dd:] = s[dd:] -  dia
                 s[:-dd] = s[:-dd] - dia 
         s = s / np.mean(s[s0!=0])
-        s[s0==0] = 1
+        s[s0==0] = 1                
         totalBias *= s
           
         for i in range(N):
             for j in range(N):
                 _x[i,j] = _x[i,j] / (s[i] * s[j])
+        
+        if M == 9999:
+            if np.abs(s-1).max() < tolerance:
+                print "IC used {} iterations".format(iternum+1)
+                break
+
                          
     corr = totalBias[s0!=0].mean()  #mean correction factor
     x  = x * corr * corr #renormalizing everything
@@ -247,7 +255,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def ultracorrectSymmetricByMask(x,mask,M = 50):
+def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
     """performs iterative correction excluding some regions of a heatmap from consideration.
     These regions are still corrected, but don't contribute to the sums 
     """
@@ -257,6 +265,7 @@ def ultracorrectSymmetricByMask(x,mask,M = 50):
     assert mask.shape == x.shape
     assert mask.dtype == np.bool
     cdef np.ndarray[np.double_t , ndim = 2] _x 
+    cdef np.ndarray[np.uint8_t , ndim = 2] _mask
     x = np.array(x,np.double,order = 'C')
     if not  np.abs(x-x.T).mean() / (1. * np.abs(x.mean())) < 1e-10:
         raise ValueError("Please provide symmetric matrix!")    
@@ -265,8 +274,10 @@ def ultracorrectSymmetricByMask(x,mask,M = 50):
     cdef np.ndarray[np.double_t,ndim = 1] counts
     _mask = mask.view(dtype = np.uint8)
     cdef int i, j, N
+    if M == None:
+        M = 9999    
     N = len(x)
-    allsums = np.zeros(N,float)    
+    allsums = np.ones(N,float)    
     cdef double ss, count
     for iteration in range(M):
         sums = np.zeros(N,float)
@@ -285,14 +296,24 @@ def ultracorrectSymmetricByMask(x,mask,M = 50):
                 ss = ss + sums[i]
                 count += 1
             else:
-                sums[i] = 1
+                sums[i] = -1
+                
         for i in range(N):
-            sums[i] = sums[i] / (ss / count)                                
+            if sums[i] == -1:
+                sums[i] = 1
+            else:
+                sums[i] = sums[i] / (ss / count)                                
         for i in range(N):
             for j in range(N):
                 _x[i,j] = _x[i,j] / (sums[i] * sums[j])
         
-        allsums *= sums
+        allsums *= sums        
+        if M == 9999:
+            if np.abs(sums-1).max() < tolerance:
+                print "IC used {} iterations".format(iteration+1)
+                break
+            
+            
     return x,allsums
 
 

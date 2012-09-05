@@ -842,7 +842,7 @@ def ultracorrectBiasReturn(x, M=20):
     return newx, ball
 
 
-def fillDiagonal(inArray, diag, offset):
+def fillDiagonal(inArray, diag, offset=0):
     "Puts diag in the offset's diagonal of inArray"
     N = inArray.shape[0]
     assert inArray.shape[1] == N
