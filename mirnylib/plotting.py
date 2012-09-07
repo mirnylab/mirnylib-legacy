@@ -358,7 +358,25 @@ def plot_matrix_3d(matrix, **kwargs):
     ax.set_title(kwargs.get('title', ''))
 
 def plot_matrix(matrix, **kwargs):
-    plt.imshow(matrix, interpolation = 'nearest', **kwargs)
+    """Plot a 2D array with a colorbar.
+
+    Parameters
+    ----------
+
+    matrix : a 2d numpy array
+        A 2d array to plot
+    clip_min : float, optional
+        The lower clipping value. If an element of a matrix is <clip_min, it is
+        plotted as clip_min.
+    clip_min : float, optional
+        The upper clipping value. 
+    """
+    clip_min = kwargs.pop('clip_min', -numpy.inf)
+    clip_max = kwargs.pop('clip_max', numpy.inf)
+    plt.imshow(
+        numpy.clip(matrix, a_min=clip_min, a_max=clip_max),
+        interpolation = 'nearest',
+        **kwargs)
     plt.colorbar()
 
 def plot_function_3d(x, y, function, **kwargs):
