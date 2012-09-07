@@ -122,6 +122,10 @@ cntrMidsBinCont : array of int
     The position of the middle bin of a centromere in the concatenated
     genome.
 
+chrmArmLimitsBinCont: array of int
+    The position of the chromosome arm borders in the concatenated
+    genome.
+
 GCBin : list of arrays of float
     % of GC content of bins in individual chromosomes.
 
@@ -467,7 +471,8 @@ class Genome(object):
             for i in ["chrmLensBin", "chrmStartsBinCont",
                       "chrmEndsBinCont", "numBins",
                       "chrmIdxBinCont", "posBinCont",
-                      "cntrMidsBinCont", "GCBin",
+                      "cntrMidsBinCont", "chrmArmLimitsBinCont",
+                      "GCBin",
                       "unmappedBasesBin", "binSizesBp",
                       "mappedBasesBin", "resolution"]:
                 exec("del self.%s" % i)
@@ -498,6 +503,9 @@ class Genome(object):
         # Bin centromeres.
         self.cntrMidsBinCont = (self.chrmStartsBinCont
                                 + self.cntrMids / self.resolution)
+        self.chrmArmLimitsBinCont = numpy.zeros(self.chrmCount * 2 + 1, dtype=numpy.int)
+        self.chrmArmLimitsBinCont[1::2] = self.cntrMidsBinCont
+        self.chrmArmLimitsBinCont[2::2] = self.chrmEndsBinCont
 
         # Bin GC content.
         self.GCBin = self.getGCBin(self.resolution)
