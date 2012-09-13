@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.abspath('../mirnylab'))
 import unittest
 import numpy 
 
-import genome
+from mirnylib import genome
 
 class TestSequenceFunctions(unittest.TestCase):
     def setUp(self):
@@ -41,10 +41,12 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def test_restriction(self):
         self.db.setEnzyme('HindIII')
+
         self.assertTrue(numpy.all(numpy.equal(
             self.db.rsites[1],
-            [0, 15300, 16051, 18134, 24994, 28072, 
-             28181, 36365, 39162, 39796, 40431])))
+            [15300, 16051, 18134, 24994, 28072, 
+             28181, 36365, 39162, 39796, 40431,
+             49950])))
         self.assertTrue(numpy.all(numpy.equal(
             self.db.rfragMids[0],
             [8004, 20291, 26278, 29207, 31293, 32465,

@@ -358,7 +358,25 @@ def plot_matrix_3d(matrix, **kwargs):
     ax.set_title(kwargs.get('title', ''))
 
 def plot_matrix(matrix, **kwargs):
-    plt.imshow(matrix, interpolation = 'nearest', **kwargs)
+    """Plot a 2D array with a colorbar.
+
+    Parameters
+    ----------
+
+    matrix : a 2d numpy array
+        A 2d array to plot
+    clip_min : float, optional
+        The lower clipping value. If an element of a matrix is <clip_min, it is
+        plotted as clip_min.
+    clip_min : float, optional
+        The upper clipping value. 
+    """
+    clip_min = kwargs.pop('clip_min', -numpy.inf)
+    clip_max = kwargs.pop('clip_max', numpy.inf)
+    plt.imshow(
+        numpy.clip(matrix, a_min=clip_min, a_max=clip_max),
+        interpolation = 'nearest',
+        **kwargs)
     plt.colorbar()
 
 def plot_function_3d(x, y, function, **kwargs):
@@ -429,3 +447,55 @@ def plot_function_contour(x, y, function, **kwargs):
     pylab.xlabel(kwargs.get('xlabel', ''))
     pylab.ylabel(kwargs.get('ylabel', ''))
     pylab.title(kwargs.get('title', ''))
+
+def average_3d_data(x, y, z, nbins):
+    """Breaks the xy plane into square regions and calculates an average for
+    every region.
+    """
+
+    x_min, x_max = min(x), max(x)
+    y_min, y_max = min(y), max(y)
+    
+    if (x_max - x_min) > (y_max - y_min):
+        delta = (x_max - x_min) / nbins
+        nbins_x = nbins + 1
+        nbins_y = int(numpy.ceil((y_max - y_min) / delta))
+    else:
+        delta = (y_max - y_min) / nbins
+        nbins_y = nbins
+        nbins_x = int(numpy.ceil((x_max - x_min) / delta))
+    nbins_x += 1
+    nbins_y += 1
+    x_min -= delta / 2.0
+    y_min -= delta / 2.0
+    x_max += delta / 2.0
+    y_max += delta / 2.0
+        
+    if not issubclass(numpy.ndarray, type(x)):
+        x = numpy.array(x)
+    if not issubclass(numpy.ndarray, type(y)):
+        y = numpy.array(y)
+    if not issubclass(numpy.ndarray, type(z)):
+        z = numpy.array(z)
+
+    matrix = numpy.zeros(shape=(nbins_x, nbins_y), dtype=float)
+    for i in range(nbins_x):
+        for j in range(nbins_y):
+            lower_x = x_min + i * delta
+            upper_x = x_min + (i+1) * delta
+            lower_y = y_min + j * delta
+            upper_y = y_min + (j+1) * delta
+            mask = ((x >= lower_x) * (x < upper_x) * (y >= lower_y) * (y < upper_y))
+            if numpy.any(mask):
+                matrix[i, j] = numpy.mean(z[mask])
+            else:
+                matrix[i, j] = numpy.nan
+    return matrix
+            
+def plot_average_3d(x, y, z, nbins, **kwargs):
+    """Breaks the xy plane into square regions and plots an average for every
+    region.
+    """
+
+    matrix = average_3d_data(x, y, z, nbins)
+    plot_matrix_3d(matrix, **kwargs)

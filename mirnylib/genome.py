@@ -41,134 +41,8 @@ binned genome : a genome splitted into bins `resolution` bp each.
 binned concatenated genome : a genome with chromosomes binned and merged.
     GOTCHA: since the genome is binned FIRST and merged after that, the
     number of bins may be greater than (sum of lengths / resolution).
-    The reason for this behavior is that the last bins in the chromosomes
-    are usually shorter than `resolution`, but still count as a full bin.
-
-Attributes
-----------
-
-chrmCount : int
-    the total number of chromosomes.
-
-chrmLabels : list of str
-    a list of chromosomal IDs sorted in ascending index order.
-
-fastaNames : list of str
-    FASTA files for sorted in ascending index order of respective
-    chromosomes.
-
-genomePath : str
-    The path to the folder with the genome.
-
-name : str
-    The string identifier of the genome, the name of the last folder in
-    the path.
-
-label2idx : dict
-    a dictionary for conversion between string chromosome labels and
-    zero-based indices.
-
-idx2label : dict
-    a dictionary for conversion between zero-based indices and
-    string chromosome labels.
-
-seqs : list of str
-    a list of chromosome sequences. Loads on demand.
-
-chrmLens : list of int
-    The lengths of chromosomes.
-
-maxChrmLen : int
-    The length of the longest chromosome.
-
-cntrStarts : array of int
-    The start positions of the centromeres.
-
-cntrMids : array of int
-    The middle positions of the centromeres.
-
-cntrEnds : array of int
-    The end positions of the centromeres.
-
--------------------------------------------------------------------------------
-
-The following attributes are calculated after setResolution() is called:
-
-Attributes for setResolution
-----------------------------
-
-resolution : int
-    The size of a bin for the binned values.
-
-chrmLensBin : array of int
-    The lengths of chromosomes in bins.
-
-chrmStartsBinCont : array of int
-    The positions of the first bins of the chromosomes in the
-    concatenated genome.
-
-chrmEndsBinCont : array of int
-    The positions of the last plus one bins of the chromosomes in the
-    concatenated genome.
-
-chrmIdxBinCont : array of int
-    The index of a chromosome in each bin of the concatenated genome.
-
-posBinCont : array of int
-    The index of the first base pair in a bin in the concatenated
-    genome.
-
-cntrMidsBinCont : array of int
-    The position of the middle bin of a centromere in the concatenated
-    genome.
-
-GCBin : list of arrays of float
-    % of GC content of bins in individual chromosomes.
-
-unmappedBasesBin : list of arrays of int
-    Number of bases with N's for each bin
-
-mappedBasesBin : list of arrays of int
-    Number of sequenced bases for each bin
-
-binSizesbp : list of arrays of int
-    Size of each bin. Is less than *resolution* for the last bin only.
-
--------------------------------------------------------------------------------
-
-The following attributes are calculated after setEnzyme() is called:
-
-Attributes for setEnzyme
-------------------------
-
-enzymeName : str
-    The restriction enzyme used to find the restriction sites.
-
-rsites : list of arrays of int
-    The indices of the first base pairs of restriction fragments
-    in individual chromosomes.
-
-rfragMids : list of arrays of int
-    The indices of the middle base pairs of restriction fragments
-    in individual chromosomes.
-
-rsiteIds : array of int
-    The position identifiers of the first base pairs of restriction
-    fragments.
-
-rsiteMidIds : array of int
-    The position identifiers of the middle base pairs of restriction
-    fragments.
-
-rsiteChrms : array of int
-    The indices of chromosomes for restriction sites in corresponding
-    positions of rsiteIds and rsiteMidIds.
-
-----------------------------------------------------------------------
-
-Genome API documentation
-------------------------
-
+    The reason for this behavior is that the last bin in a chromosome
+    is usually shorter than `resolution` but still counts as a full bin.
 '''
 
 import os
@@ -185,9 +59,10 @@ from scipy import weave
 import logging
 import numutils
 
+log = logging.getLogger(__name__)
 
 class Genome(object):
-    """API documentation for the Genome class"""
+    """A class to compute and cache various properties of genomic sequences."""
 
     def _memoize(self, func_name):
         '''Local version of joblib memoization.
@@ -218,7 +93,7 @@ class Genome(object):
         """
         gapPath = os.path.join(self.genomePath, self.gapFile)
         if not os.path.isfile(gapPath):
-            logging.warning(
+            log.warning(
                 'Gap file not found!\n'
                 'Please provide a link to a gapfile or '
                 'put a file gap.txt in a genome directory')
@@ -260,10 +135,15 @@ class Genome(object):
         return chrm_label
 
     def _scanGenomeFolder(self):
+        if not os.path.isdir(self.genomePath):
+            raise Exception('{0} is not a folder'.format(self.genomePath))
+
         self.fastaNames = [os.path.join(self.genomePath, i)
                            for i in glob.glob(os.path.join(
                                           self.genomePath,
                                           self.chrmFileTemplate % ('*',)))]
+        log.debug('Scan genome folder: {0}'.format(self.genomePath))
+        log.debug('FASTA files are found: {0}'.format(self.fastaNames))
 
         if len(self.fastaNames) == 0:
             raise Exception('No Genome files found at %s' % self.genomePath)
@@ -281,11 +161,24 @@ class Genome(object):
 
                 self.chrmLabels.append(chrm)
                 filteredFastaNames.append(i)
+                logging.debug('Convert %s FASTA filename to %s chromosome label, '
+                              'store in the Genome object', i, chrm)
+            else:
+                logging.debug('Convert %s FASTA filename to %s chromosome label, '
+                              'discard', i, chrm)
+
         self.fastaNames = filteredFastaNames
+        log.debug('The following FASTA files satisfy the readChrms variable '
+                      '(={0}): {1}'.format(self.readChrms, self.fastaNames))
+
+        if len(self.fastaNames) == 0:
+            raise Exception('No Genome files at %s contain '
+                            'the specified chromosomes' % self.genomePath)
 
         # Convert IDs to indices:
         # A. Convert numerical IDs.
         num_ids = [i for i in self.chrmLabels if i.isdigit()]
+        log.debug('The chromosomes with numerical IDs: {0}'.format(num_ids))
         # Sort IDs naturally, i.e. place '2' before '10'.
         num_ids.sort(key=lambda x: int(re.findall(r'\d+$', x)[0]))
 
@@ -297,6 +190,7 @@ class Genome(object):
 
         # B. Convert non-numerical IDs. Give the priority to XYM over the rest.
         nonnum_ids = [i for i in self.chrmLabels if not i.isdigit()]
+        log.debug('The chromosomes with non-numerical IDs: {0}'.format(nonnum_ids))
         for i in ['M', 'Y', 'X']:
             if i in nonnum_ids:
                 nonnum_ids.pop(nonnum_ids.index(i))
@@ -312,15 +206,19 @@ class Genome(object):
                                       key=lambda x: x[0]))[1]
         self.fastaNames.sort(
             key=lambda path: self.label2idx[self._extractChrmLabel(path)])
+        log.debug('The genome folder is scanned successfully.')
 
     def __init__(self, genomePath, gapFile='gap.txt',
                  chrmFileTemplate='chr%s.fa',
                  readChrms=['#', 'X', 'Y', 'M']):
-        '''__init__ : Initializes the genome,
-        and calculates Genome properties (or loads them from cache).
+        '''
+        A class that stores cached properties of a genome. To initialize,
+        a Genome object needs FASTA files with chromosome sequences.
+        For the basic definitions please refer to the module documentation.
 
         Parameters
         ----------
+        (for the constructor method)
 
         genomePath : str
             The path to the folder with the FASTA files.
@@ -336,16 +234,131 @@ class Genome(object):
             genome folder. '#' stands for chromosomes with numerical labels
             (e.g. 1-22 for human). If readChrms is empty then read all
             chromosomes.
+
+        Attributes
+        ----------
+
+        chrmCount : int
+            the total number of chromosomes.
+
+        chrmLabels : list of str
+            a list of chromosomal IDs sorted in ascending index order.
+
+        fastaNames : list of str
+            FASTA files for sorted in ascending index order of respective
+            chromosomes.
+
+        genomePath : str
+            The path to the folder with the genome.
+
+        name : str
+            The string identifier of the genome, the name of the last folder in
+            the path.
+
+        label2idx : dict
+            a dictionary for conversion between string chromosome labels and
+            zero-based indices.
+
+        idx2label : dict
+            a dictionary for conversion between zero-based indices and
+            string chromosome labels.
+
+        seqs : list of str
+            a list of chromosome sequences. Loads on demand.
+
+        chrmLens : list of int
+            The lengths of chromosomes.
+
+        maxChrmLen : int
+            The length of the longest chromosome.
+
+        cntrStarts : array of int
+            The start positions of the centromeres.
+
+        cntrMids : array of int
+            The middle positions of the centromeres.
+
+        cntrEnds : array of int
+            The end positions of the centromeres.
+
+        The following attributes are calculated after setResolution() is called:
+
+        resolution : int
+            The size of a bin for the binned values.
+
+        chrmLensBin : array of int
+            The lengths of chromosomes in bins.
+
+        chrmStartsBinCont : array of int
+            The positions of the first bins of the chromosomes in the
+            concatenated genome.
+
+        chrmEndsBinCont : array of int
+            The positions of the last plus one bins of the chromosomes in the
+            concatenated genome.
+
+        chrmIdxBinCont : array of int
+            The index of a chromosome in each bin of the concatenated genome.
+
+        posBinCont : array of int
+            The index of the first base pair in a bin in the concatenated
+            genome.
+
+        cntrMidsBinCont : array of int
+            The position of the middle bin of a centromere in the concatenated
+            genome.
+
+        chrmArmLimitsBinCont: array of int
+            The position of the chromosome arm borders in the concatenated
+            genome.
+
+        GCBin : list of arrays of float
+            % of GC content of bins in individual chromosomes.
+
+        unmappedBasesBin : list of arrays of int
+            Number of bases with N's for each bin
+
+        mappedBasesBin : list of arrays of int
+            Number of sequenced bases for each bin
+
+        binSizesbp : list of arrays of int
+            Size of each bin. Is less than *resolution* for the last bin only.
+
+        The following attributes are calculated after setEnzyme() is called:
+
+        enzymeName : str
+            The restriction enzyme used to find the restriction sites.
+
+        rsites : list of arrays of int
+            The indices of the first base pairs of restriction fragments
+            in individual chromosomes.
+
+        rfragMids : list of arrays of int
+            The indices of the middle base pairs of restriction fragments
+            in individual chromosomes.
+
+        rsiteIds : array of int
+            The position identifiers of the first base pairs of restriction
+            fragments.
+
+        rsiteMidIds : array of int
+            The position identifiers of the middle base pairs of restriction
+            fragments.
+
+        rsiteChrms : array of int
+            The indices of chromosomes for restriction sites in corresponding
+            positions of rsiteIds and rsiteMidIds.
         '''
         # Set the main attributes of the class.
         self.genomePath = os.path.abspath(genomePath)
-        self.readChrms = set(readChrms)
-
         self.folderName = os.path.split(self.genomePath)[-1]
-
+        self.readChrms = set(readChrms)
         self.gapFile = gapFile
-
         self.chrmFileTemplate = chrmFileTemplate
+
+        logging.debug('Initialize a Genome object genomePath=%s, readChrms=%s, '
+                    'gapFile=%s, chrmFileTemplate=%s', self.genomePath,
+                    self.readChrms, self.gapFile, self.chrmFileTemplate)
 
         # Scan the folder and obtain the list of chromosomes.
         self._scanGenomeFolder()
@@ -463,11 +476,57 @@ class Genome(object):
         self._parseGapFile()
 
     def setResolution(self, resolution):
+        """Set the resolution of genome binning and calculate the following 
+        attributes:
+
+        resolution : int
+            The size of a bin for the binned values.
+
+        chrmLensBin : array of int
+            The lengths of chromosomes in bins.
+
+        chrmStartsBinCont : array of int
+            The positions of the first bins of the chromosomes in the
+            concatenated genome.
+
+        chrmEndsBinCont : array of int
+            The positions of the last plus one bins of the chromosomes in the
+            concatenated genome.
+
+        chrmIdxBinCont : array of int
+            The index of a chromosome in each bin of the concatenated genome.
+
+        posBinCont : array of int
+            The index of the first base pair in a bin in the concatenated
+            genome.
+
+        cntrMidsBinCont : array of int
+            The position of the middle bin of a centromere in the concatenated
+            genome.
+
+        chrmArmLimitsBinCont: array of int
+            The position of the chromosome arm borders in the concatenated
+            genome.
+
+        GCBin : list of arrays of float
+            % of GC content of bins in individual chromosomes.
+
+        unmappedBasesBin : list of arrays of int
+            Number of bases with N's for each bin
+
+        mappedBasesBin : list of arrays of int
+            Number of sequenced bases for each bin
+
+        binSizesbp : list of arrays of int
+            Size of each bin. Is less than *resolution* for the last bin only.
+        """
+
         if (resolution == -1) and hasattr(self, "resolution"):
             for i in ["chrmLensBin", "chrmStartsBinCont",
                       "chrmEndsBinCont", "numBins",
                       "chrmIdxBinCont", "posBinCont",
-                      "cntrMidsBinCont", "GCBin",
+                      "cntrMidsBinCont", "chrmArmLimitsBinCont",
+                      "GCBin",
                       "unmappedBasesBin", "binSizesBp",
                       "mappedBasesBin", "resolution"]:
                 exec("del self.%s" % i)
@@ -498,6 +557,9 @@ class Genome(object):
         # Bin centromeres.
         self.cntrMidsBinCont = (self.chrmStartsBinCont
                                 + self.cntrMids / self.resolution)
+        self.chrmArmLimitsBinCont = numpy.zeros(self.chrmCount * 2 + 1, dtype=numpy.int)
+        self.chrmArmLimitsBinCont[1::2] = self.cntrMidsBinCont
+        self.chrmArmLimitsBinCont[2::2] = self.chrmEndsBinCont
 
         # Bin GC content.
         self.GCBin = self.getGCBin(self.resolution)
@@ -540,8 +602,34 @@ class Genome(object):
             self._mymem.clear()
 
     def setEnzyme(self, enzymeName):
-        """Calculates rsite/rfrag positions and IDs for a given enzyme name
-        and memoizes them"""
+        """Apply a specified restriction enzyme to the genomic sequences and 
+        calculate the positions of restriction sites.
+
+        The following attributes are set with this method:
+
+        enzymeName : str
+            The restriction enzyme used to find the restriction sites.
+
+        rsites : list of arrays of int
+            The indices of the first base pairs of restriction fragments
+            in individual chromosomes.
+
+        rfragMids : list of arrays of int
+            The indices of the middle base pairs of restriction fragments
+            in individual chromosomes.
+
+        rsiteIds : array of int
+            The position identifiers of the first base pairs of restriction
+            fragments.
+
+        rsiteMidIds : array of int
+            The position identifiers of the middle base pairs of restriction
+            fragments.
+
+        rsiteChrms : array of int
+            The indices of chromosomes for restriction sites in corresponding
+            positions of rsiteIds and rsiteMidIds.
+        """
 
         self.enzymeName = enzymeName
 
