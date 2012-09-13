@@ -118,14 +118,15 @@ class Genome(object):
         higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
         self.maxChrmArm = max(lowarms.max(), higharms.max())
 
-    def _extractChrmLabel(self, string):
+    def _extractChrmLabel(self, fastaName):
         # First assume a whole filename as input (e.g. 'chr01.fa')
+        _, fastaName = os.path.split(fastaName)
         regexp = self.chrmFileTemplate % ('(.*)')
-        search_results = re.search(regexp, string)
+        search_results = re.search(regexp, fastaName)
         # If not, assume that only the name is supplied as input (e.g. 'chr01')
         if search_results is None:
             regexp = self.chrmFileTemplate.split('.')[0] % ('(.*)')
-            search_results = re.search(regexp, string)
+            search_results = re.search(regexp, fastaName)
         chrm_label = search_results.group(1)
 
         # Remove leading zeroes.
