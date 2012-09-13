@@ -162,10 +162,10 @@ class Genome(object):
 
                 self.chrmLabels.append(chrm)
                 filteredFastaNames.append(i)
-                logging.debug('Convert %s FASTA filename to %s chromosome label, '
+                log.debug('Convert %s FASTA filename to %s chromosome label, '
                               'store in the Genome object', i, chrm)
             else:
-                logging.debug('Convert %s FASTA filename to %s chromosome label, '
+                log.debug('Convert %s FASTA filename to %s chromosome label, '
                               'discard', i, chrm)
 
         self.fastaNames = filteredFastaNames
@@ -357,7 +357,7 @@ class Genome(object):
         self.gapFile = gapFile
         self.chrmFileTemplate = chrmFileTemplate
 
-        logging.debug('Initialize a Genome object genomePath=%s, readChrms=%s, '
+        log.debug('Initialize a Genome object genomePath=%s, readChrms=%s, '
                     'gapFile=%s, chrmFileTemplate=%s', self.genomePath,
                     self.readChrms, self.gapFile, self.chrmFileTemplate)
 
