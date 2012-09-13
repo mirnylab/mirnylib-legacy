@@ -32,8 +32,7 @@ import logging
 
 import h5py
 
-logging.basicConfig(level=logging.NOTSET)
-
+log = logging.getLogger(__name__)
 
 class h5dict(collections.MutableMapping):
     self_key = '_self_key'
@@ -190,7 +189,7 @@ class h5dict(collections.MutableMapping):
 
     def get_dataset(self, key):
         if key not in self.array_keys():
-            logging.warning('The requested key {0} is not an array'.format(
+            log.warning('The requested key {0} is not an array'.format(
                 key))
         return self._h5file[key]
 

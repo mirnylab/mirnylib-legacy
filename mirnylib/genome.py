@@ -59,6 +59,7 @@ from scipy import weave
 import logging
 import numutils
 
+log = logging.getLogger(__name__)
 
 class Genome(object):
     """A class to compute and cache various properties of genomic sequences."""
@@ -92,7 +93,7 @@ class Genome(object):
         """
         gapPath = os.path.join(self.genomePath, self.gapFile)
         if not os.path.isfile(gapPath):
-            logging.warning(
+            log.warning(
                 'Gap file not found!\n'
                 'Please provide a link to a gapfile or '
                 'put a file gap.txt in a genome directory')
@@ -141,6 +142,8 @@ class Genome(object):
                            for i in glob.glob(os.path.join(
                                           self.genomePath,
                                           self.chrmFileTemplate % ('*',)))]
+        log.debug('Scan genome folder: {0}'.format(self.genomePath))
+        log.debug('FASTA files are found: {0}'.format(self.fastaNames))
 
         if len(self.fastaNames) == 0:
             raise Exception('No Genome files found at %s' % self.genomePath)
@@ -159,6 +162,8 @@ class Genome(object):
                 self.chrmLabels.append(chrm)
                 filteredFastaNames.append(i)
         self.fastaNames = filteredFastaNames
+        log.debug('The following FASTA files satisfy the readChrms variable '
+                      '(={0}): {1}'.format(self.readChrms, self.fastaNames))
 
         if len(self.fastaNames) == 0:
             raise Exception('No Genome files at %s contain '
@@ -167,6 +172,7 @@ class Genome(object):
         # Convert IDs to indices:
         # A. Convert numerical IDs.
         num_ids = [i for i in self.chrmLabels if i.isdigit()]
+        log.debug('The chromosomes with numerical IDs: {0}'.format(num_ids))
         # Sort IDs naturally, i.e. place '2' before '10'.
         num_ids.sort(key=lambda x: int(re.findall(r'\d+$', x)[0]))
 
@@ -178,6 +184,7 @@ class Genome(object):
 
         # B. Convert non-numerical IDs. Give the priority to XYM over the rest.
         nonnum_ids = [i for i in self.chrmLabels if not i.isdigit()]
+        log.debug('The chromosomes with non-numerical IDs: {0}'.format(nonnum_ids))
         for i in ['M', 'Y', 'X']:
             if i in nonnum_ids:
                 nonnum_ids.pop(nonnum_ids.index(i))
