@@ -161,6 +161,12 @@ class Genome(object):
 
                 self.chrmLabels.append(chrm)
                 filteredFastaNames.append(i)
+                logging.debug('Convert %s FASTA filename to %s chromosome label, '
+                              'store in the Genome object', i, chrm)
+            else:
+                logging.debug('Convert %s FASTA filename to %s chromosome label, '
+                              'discard', i, chrm)
+
         self.fastaNames = filteredFastaNames
         log.debug('The following FASTA files satisfy the readChrms variable '
                       '(={0}): {1}'.format(self.readChrms, self.fastaNames))
@@ -200,6 +206,7 @@ class Genome(object):
                                       key=lambda x: x[0]))[1]
         self.fastaNames.sort(
             key=lambda path: self.label2idx[self._extractChrmLabel(path)])
+        log.debug('The genome folder is scanned successfully.')
 
     def __init__(self, genomePath, gapFile='gap.txt',
                  chrmFileTemplate='chr%s.fa',
@@ -344,13 +351,14 @@ class Genome(object):
         '''
         # Set the main attributes of the class.
         self.genomePath = os.path.abspath(genomePath)
-        self.readChrms = set(readChrms)
-
         self.folderName = os.path.split(self.genomePath)[-1]
-
+        self.readChrms = set(readChrms)
         self.gapFile = gapFile
-
         self.chrmFileTemplate = chrmFileTemplate
+
+        logging.debug('Initialize a Genome object genomePath=%s, readChrms=%s, '
+                    'gapFile=%s, chrmFileTemplate=%s', self.genomePath,
+                    self.readChrms, self.gapFile, self.chrmFileTemplate)
 
         # Scan the folder and obtain the list of chromosomes.
         self._scanGenomeFolder()
