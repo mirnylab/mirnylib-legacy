@@ -826,7 +826,7 @@ class Genome(object):
 
         return data
 
-    def parseBigWigFile(self, filename, lowCountCutoff=200, resolution=5000,
+    def parseBigWigFile(self, filename, resolution=5000,
                         divideByValidCounts=False):
         """
         Parses bigWig file using bxPython build-in method "summary".
@@ -855,5 +855,5 @@ class Genome(object):
         # At the first call the function rewrites itself with a memoized
         # private function.
         self.parseBigWigFile = self._memoize('_parseBigWigFile')
-        return self.parseBigWigFile(filename, lowCountCutoff,
+        return self.parseBigWigFile(filename,
                                     resolution, divideByValidCounts)
