@@ -379,13 +379,41 @@ def plot_matrix(matrix, **kwargs):
         **kwargs)
     plt.colorbar()
 
+def plot_function(function, **kwargs):
+    """Plot the values of a 1-D function on a lattice
+    The values of the argument may be supplied as an array or as the range+step
+    combination.
+
+    Parameters
+    ----------
+    function : function
+        A 1-D function to plot
+    x : array_like of float, optional
+        The values of the argument to plot
+    x_range : (float, float, float), optional
+        The range of the argument and the step in the format (x_min, x_max, step)
+    """
+
+    if 'x' in kwargs and 'x_range' in kwargs:
+        raise Exception('Please supply either x or x_range, but not both')
+
+    if 'x' in kwargs:
+        x = kwargs.pop('x')
+    elif 'x_range' in kwargs:
+        x_range = kwargs.pop('x_range')
+        x = numpy.arange(x_range[0], x_range[1], x_range[3])
+
+    y = numpy.array([function(i) for i in x])
+
+    plt.plot(x, y, **kwargs)
+
 def plot_function_3d(x, y, function, **kwargs):
     """Plot values of a function of two variables in 3D.
 
     Parameters
     ----------
     x, y : array_like of float
-        The plotting range.
+        The values of the arguments to plot.
     function : function
         The function to plot.
     plot_type : {'surface', 'wireframe', 'scatter', 'contour', 'contourf'}
