@@ -663,8 +663,8 @@ class Genome(object):
         to upgrade chromosome positions.
         If upgrade not possible, raises an exception.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         old Genome : Genome, or label2idx dictionary
             old genome from which upgrade is done
 
@@ -935,7 +935,7 @@ class Genome(object):
         divideByValidCounts : bool
             Divide  total coverage of the kb bin.
 
-        Retruns
+        Returns
         -------
         List of numpy.arrays with average values for each chromosomes
         Length of each array is ceil(chromLens / resolution)
