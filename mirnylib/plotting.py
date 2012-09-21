@@ -368,7 +368,7 @@ def plot_matrix(matrix, **kwargs):
     clip_min : float, optional
         The lower clipping value. If an element of a matrix is <clip_min, it is
         plotted as clip_min.
-    clip_min : float, optional
+    clip_max : float, optional
         The upper clipping value. 
     """
     clip_min = kwargs.pop('clip_min', -numpy.inf)
@@ -392,6 +392,8 @@ def plot_function(function, **kwargs):
         The values of the argument to plot
     x_range : (float, float, float), optional
         The range of the argument and the step in the format (x_min, x_max, step)
+    plot_type : {'line', 'scatter'}
+        The type of plot, a continuous line or a scatter plot. 'line' by default.
     """
 
     if 'x' in kwargs and 'x_range' in kwargs:
@@ -403,9 +405,15 @@ def plot_function(function, **kwargs):
         x_range = kwargs.pop('x_range')
         x = numpy.arange(x_range[0], x_range[1], x_range[3])
 
-    y = numpy.array([function(i) for i in x])
+    y = numpy.array([function(i) for i in x], dtype=float)
 
-    plt.plot(x, y, **kwargs)
+    plot_type = kwargs.pop('plot_type')
+    if plot_type == 'line':
+        plt.plot(x, y, **kwargs)
+    elif plot_type == 'scatter':
+        plt.scatter(x, y, **kwargs)
+    else:
+        raise Exception('An unknown type of plot: {0}'.format(plot_type))
 
 def plot_function_3d(x, y, function, **kwargs):
     """Plot values of a function of two variables in 3D.
