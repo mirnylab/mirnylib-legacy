@@ -37,7 +37,8 @@ log = logging.getLogger(__name__)
 class h5dict(collections.MutableMapping):
     self_key = '_self_key'
 
-    def __init__(self, path=None, mode='a', autoflush=True, in_memory=False):
+    def __init__(self, path=None, mode='a', autoflush=True, in_memory=False, 
+                 read_only=False):
         '''A persistent dictionary with data stored in an HDF5 file.
 
         Parameters:
@@ -56,6 +57,8 @@ class h5dict(collections.MutableMapping):
             if True, than the object is stored in the memory and not saved
             to the disk.
         '''
+        self.read_only = (mode == 'r')
+
         if in_memory:
             tmpfile = tempfile.NamedTemporaryFile()
             tmppath = tmpfile.name
@@ -77,6 +80,10 @@ class h5dict(collections.MutableMapping):
             else:
                 self.path = path
                 self.is_tmp = False
+            if not os.access(self.path, os.R_OK):
+                raise Exception('Cannot read {0}.')
+            if not self.read_only and not os.access(self.path, os.W_OK):
+                raise Exception('The file {0} is read-only, set mode=\'r\'.')
             self._h5file = h5py.File(self.path, mode)
             self.__self_load__()
             self.autoflush = autoflush
@@ -125,6 +132,8 @@ class h5dict(collections.MutableMapping):
         return value
 
     def __delitem__(self, key):
+        if self.read_only:
+            raise Exception('You cannot modify an h5dict with mode=\'r\'')
         self._types.__delitem__(key)
         self._dtypes.__delitem__(key)
         self._h5file.__delitem__(key)
@@ -134,6 +143,8 @@ class h5dict(collections.MutableMapping):
             self._h5file.flush()
 
     def __setitem__(self, key, value):
+        if self.read_only:
+            raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if key == self.self_key:
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
         if not isinstance(key, str) and not isinstance(key, unicode):
@@ -169,15 +180,22 @@ class h5dict(collections.MutableMapping):
         if self.is_tmp:
             os.remove(self.path)
 
+    def pop(self, key):
+        value = self.__getitem__(key)
+        self.__delitem__(key)
+        return value
+
     def update(self, other=None, **kwargs):
+        if self.read_only:
+            raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if hasattr(other, 'keys'):
             for i in other:
-                self[i] = other[i]
+                self.__setitem__(i, other[i])
         elif other:
             for (k, v) in other:
-                self[k] = v
+                self.__setitem__(k, v)
         for i in kwargs:
-            self[i] = kwargs[i]
+            self.__setitem__(i, kwargs[i])
 
     def flush(self):
         self._h5file.flush()
@@ -194,6 +212,8 @@ class h5dict(collections.MutableMapping):
         return self._h5file[key]
 
     def add_empty_dataset(self, key, shape, dtype):
+        if self.read_only:
+            raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if key == self.self_key:
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
         if not isinstance(key, str) and not isinstance(key, unicode):
