@@ -118,14 +118,15 @@ class Genome(object):
         higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
         self.maxChrmArm = max(lowarms.max(), higharms.max())
 
-    def _extractChrmLabel(self, string):
+    def _extractChrmLabel(self, fastaName):
         # First assume a whole filename as input (e.g. 'chr01.fa')
+        _, fastaName = os.path.split(fastaName)
         regexp = self.chrmFileTemplate % ('(.*)')
-        search_results = re.search(regexp, string)
+        search_results = re.search(regexp, fastaName)
         # If not, assume that only the name is supplied as input (e.g. 'chr01')
         if search_results is None:
             regexp = self.chrmFileTemplate.split('.')[0] % ('(.*)')
-            search_results = re.search(regexp, string)
+            search_results = re.search(regexp, fastaName)
         chrm_label = search_results.group(1)
 
         # Remove leading zeroes.
@@ -161,10 +162,10 @@ class Genome(object):
 
                 self.chrmLabels.append(chrm)
                 filteredFastaNames.append(i)
-                logging.debug('Convert %s FASTA filename to %s chromosome label, '
+                log.debug('Convert %s FASTA filename to %s chromosome label, '
                               'store in the Genome object', i, chrm)
             else:
-                logging.debug('Convert %s FASTA filename to %s chromosome label, '
+                log.debug('Convert %s FASTA filename to %s chromosome label, '
                               'discard', i, chrm)
 
         self.fastaNames = filteredFastaNames
@@ -356,7 +357,7 @@ class Genome(object):
         self.gapFile = gapFile
         self.chrmFileTemplate = chrmFileTemplate
 
-        logging.debug('Initialize a Genome object genomePath=%s, readChrms=%s, '
+        log.debug('Initialize a Genome object genomePath=%s, readChrms=%s, '
                     'gapFile=%s, chrmFileTemplate=%s', self.genomePath,
                     self.readChrms, self.gapFile, self.chrmFileTemplate)
 
@@ -662,8 +663,8 @@ class Genome(object):
         to upgrade chromosome positions.
         If upgrade not possible, raises an exception.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         old Genome : Genome, or label2idx dictionary
             old genome from which upgrade is done
 
@@ -934,7 +935,7 @@ class Genome(object):
         divideByValidCounts : bool
             Divide  total coverage of the kb bin.
 
-        Retruns
+        Returns
         -------
         List of numpy.arrays with average values for each chromosomes
         Length of each array is ceil(chromLens / resolution)
