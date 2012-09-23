@@ -214,8 +214,11 @@ def _fmapredcount(function, data, reduction=lambda x, y: x + y, n=4, exceptionLi
                 return (reduction(x[0], y[0]), x[1] + y[1])
 
     def newfunction(x):
-        "if function is evaluated, it was evaluated one time"
-        return function(x), 1
+        try:
+            "if function is evaluated, it was evaluated one time"
+            return function(x), 1
+        except tuple(exceptionList):
+            return None
 
     if len(data) < n:
         n = len(data)
@@ -225,11 +228,8 @@ def _fmapredcount(function, data, reduction=lambda x, y: x + y, n=4, exceptionLi
         datas.append(copy(data[i::n]))  # split like that if beginning and end of the array have different evaluation time
 
     def worker(dataList):
-        try:
-            dataList[0] = newfunction(dataList[0])
-            return reduce(lambda z, y: funsum(z, newfunction(y)), dataList)  # reducing newfunction with our new reduction algorithm
-        except tuple(exceptionList):
-            return None
+        dataList[0] = newfunction(dataList[0])
+        return reduce(lambda z, y: funsum(z, newfunction(y)), dataList)  # reducing newfunction with our new reduction algorithm
 
     reduced = fmap(worker, datas, n=n)
     return reduce(funsum, reduced)

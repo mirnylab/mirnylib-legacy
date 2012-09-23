@@ -142,7 +142,7 @@ trunk = mirnylib.systemutils.deprecate(trunc, "trunk")
 
 def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
     """
-    An in-place merge sort to work with persistent np-type arrays,
+    An in-place merge sort to work with persistent numpy-type arrays,
     in particular, h5py datasets.
 
     Accepts two persistent arrays: inDataset, an array to be sorted,
