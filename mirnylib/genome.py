@@ -298,6 +298,11 @@ class Genome(object):
             The positions of the last plus one bins of the chromosomes in the
             concatenated genome.
 
+        chrmBordersBinCont : array of int
+            The positions of the chromosome borders in the concatenated genome.
+            chrmBordersBinCont equals to chrmStartsBinCont with the total
+            number of bins + 1 appended.
+
         chrmIdxBinCont : array of int
             The index of a chromosome in each bin of the concatenated genome.
 
@@ -309,7 +314,7 @@ class Genome(object):
             The position of the middle bin of a centromere in the concatenated
             genome.
 
-        chrmArmLimitsBinCont: array of int
+        chrmArmBordersBinCont: array of int
             The position of the chromosome arm borders in the concatenated
             genome.
 
@@ -494,6 +499,11 @@ class Genome(object):
             The positions of the last plus one bins of the chromosomes in the
             concatenated genome.
 
+        chrmBordersBinCont : array of int
+            The positions of the chromosome borders in the concatenated genome.
+            chrmBordersBinCont equals to chrmStartsBinCont with the total
+            number of bins + 1 appended.
+
         chrmIdxBinCont : array of int
             The index of a chromosome in each bin of the concatenated genome.
 
@@ -505,7 +515,7 @@ class Genome(object):
             The position of the middle bin of a centromere in the concatenated
             genome.
 
-        chrmArmLimitsBinCont: array of int
+        chrmArmBordersBinCont: array of int
             The position of the chromosome arm borders in the concatenated
             genome.
 
@@ -523,10 +533,11 @@ class Genome(object):
         """
 
         if (resolution == -1) and hasattr(self, "resolution"):
-            for i in ["chrmLensBin", "chrmStartsBinCont",
+            for i in ["chrmLensBin", "chrmBordersBinCont",
+                      "chrmStartsBinCont",
                       "chrmEndsBinCont", "numBins",
                       "chrmIdxBinCont", "posBinCont",
-                      "cntrMidsBinCont", "chrmArmLimitsBinCont",
+                      "cntrMidsBinCont", "chrmArmBordersBinCont",
                       "GCBin",
                       "unmappedBasesBin", "binSizesBp",
                       "mappedBasesBin", "resolution"]:
@@ -537,8 +548,8 @@ class Genome(object):
 
         # Bin chromosomes.
         self.chrmLensBin = self.chrmLens / self.resolution + 1
-        self.chrmStartsBinCont = numpy.r_[0, numpy.cumsum(
-            self.chrmLensBin)[:-1]]
+        self.chrmBordersBinCont = numpy.r_[0, numpy.cumsum(self.chrmLensBin)]
+        self.chrmStartsBinCont = numpy.r_[0, numpy.cumsum(self.chrmLensBin)[:-1]]
         self.chrmEndsBinCont = numpy.cumsum(self.chrmLensBin)
         self.numBins = self.chrmEndsBinCont[-1]
 
@@ -558,9 +569,9 @@ class Genome(object):
         # Bin centromeres.
         self.cntrMidsBinCont = (self.chrmStartsBinCont
                                 + self.cntrMids / self.resolution)
-        self.chrmArmLimitsBinCont = numpy.zeros(self.chrmCount * 2 + 1, dtype=numpy.int)
-        self.chrmArmLimitsBinCont[1::2] = self.cntrMidsBinCont
-        self.chrmArmLimitsBinCont[2::2] = self.chrmEndsBinCont
+        self.chrmArmBordersBinCont = numpy.zeros(self.chrmCount * 2 + 1, dtype=numpy.int)
+        self.chrmArmBordersBinCont[1::2] = self.cntrMidsBinCont
+        self.chrmArmBordersBinCont[2::2] = self.chrmEndsBinCont
 
         # Bin GC content.
         self.GCBin = self.getGCBin(self.resolution)
