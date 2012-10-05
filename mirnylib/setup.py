@@ -6,7 +6,7 @@ ext_modules = [Extension("numutils_new", ["numutils_new.pyx"], include_dirs=[num
 
 
 setup(
-  name = 'New numutils',
-  cmdclass = {'build_ext': build_ext},
-  ext_modules = ext_modules
+  name='New numutils',
+  cmdclass={'build_ext': build_ext},
+  ext_modules=ext_modules
 )

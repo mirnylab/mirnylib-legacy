@@ -879,7 +879,7 @@ class Genome(object):
         from bx.bbi.bigwig_file import BigWigFile
 
         """
-        Internal method for parsing bigWig files
+        Internal method for parsing bigWig files, updated
         """
         data = []
         if type(filename) == str:
@@ -906,7 +906,7 @@ class Genome(object):
                 stepCounts = summary.valid_count
                 if divideByValidCounts == True:
                     stepValues = stepValues / stepCounts
-                    stepCounts[stepCounts == 0] = 0
+                    stepValues[stepCounts == 0] = 0
                 values[beg:end] = stepValues
             if values.sum() == 0:
                 raise  StandardError("Chromosome {0} is absent in bigWig"\

@@ -23,7 +23,6 @@ from numutils_new import _arrayInArray #@UnresolvedImport @IgnorePep8
 from numutils_new import fasterBooleanIndexing #@UnresolvedImport @IgnorePep8
 from numutils_new import fakeCisImpl #@UnresolvedImport @IgnorePep8
 from numutils_new import _arraySumByArray #@UnresolvedImport @IgnorePep8
-from mirnylib.plotting import mat_img
 from scipy.ndimage.filters import convolve, gaussian_filter
 from mirnylib.systemutils import setExceptionHook
 na = np.array
