@@ -114,6 +114,9 @@ class Genome(object):
                     self.cntrEnds[chrm_idx] = int(splitline[3])
 
         self.cntrMids = (self.cntrStarts + self.cntrEnds) / 2
+        self.chrmArmLens = numpy.zeros(2 * self.chrmCount, int)
+        self.chrmArmLens[1::2] = self.cntrMids
+        self.chrmArmLens[1::2] = self.chrmLens - self.cntrMids
         lowarms = numpy.array(self.cntrStarts)
         higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
         self.maxChrmArm = max(lowarms.max(), higharms.max())
@@ -289,6 +292,9 @@ class Genome(object):
 
         chrmLensBin : array of int
             The lengths of chromosomes in bins.
+
+        chrmArmLensBin : array of int
+            The lengths of chromosomal arms in bins.
 
         chrmStartsBinCont : array of int
             The positions of the first bins of the chromosomes in the
@@ -491,6 +497,9 @@ class Genome(object):
         chrmLensBin : array of int
             The lengths of chromosomes in bins.
 
+        chrmArmLensBin : array of int
+            The lengths of chromosomal arms in bins.
+
         chrmStartsBinCont : array of int
             The positions of the first bins of the chromosomes in the
             concatenated genome.
@@ -533,7 +542,8 @@ class Genome(object):
         """
 
         if (resolution == -1) and hasattr(self, "resolution"):
-            for i in ["chrmLensBin", "chrmBordersBinCont",
+            for i in ["chrmLensBin", "chrmArmLensBin",
+                      "chrmBordersBinCont",
                       "chrmStartsBinCont",
                       "chrmEndsBinCont", "numBins",
                       "chrmIdxBinCont", "posBinCont",
@@ -572,6 +582,7 @@ class Genome(object):
         self.chrmArmBordersBinCont = numpy.zeros(self.chrmCount * 2 + 1, dtype=numpy.int)
         self.chrmArmBordersBinCont[1::2] = self.cntrMidsBinCont
         self.chrmArmBordersBinCont[2::2] = self.chrmEndsBinCont
+        self.chrmArmLensBin = self.chrmArmBordersBinCont[1:] - self.chrmArmBordersBinCont[:-1]
 
         # Bin GC content.
         self.GCBin = self.getGCBin(self.resolution)
