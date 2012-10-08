@@ -273,6 +273,9 @@ class Genome(object):
         chrmLens : list of int
             The lengths of chromosomes.
 
+        chrmArmLens : list of int
+            The lengths of chromosomal arms including the centromeric regions.
+
         maxChrmLen : int
             The length of the longest chromosome.
 
