@@ -658,11 +658,11 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
         "gaussian filter for masked data"
         mf = gaussian_filter(mask, value)
         mf.flat[antimask] = 1
-        mfDivided = matrix / mf
-        mfDivided.flat[antimask] = 0
-        gf = gaussian_filter(mfDivided, value)
+        #mfDivided = matrix / mf
+        #mfDivided.flat[antimask] = 0
+        gf = gaussian_filter(matrix, value)
         gf.flat[antimask] = 0
-        return gf
+        return gf / mf
 
     outMatrix = np.zeros_like(matrix)
     N = len(matrix)
@@ -675,7 +675,6 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
     #outMatrix[covered] += matrix[covered]
 
     for value in values:
-        p = parameter
         #finding normalization of a discrete gaussian filter
         test = np.zeros((8 * value, 8 * value), dtype=float)
         test[4 * value, 4 * value] = 1
@@ -685,6 +684,7 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
 
         smoothed = gaussian_filter(originalCounts, value) * norm
         smoothed -= alpha * originalCounts
+        assert smoothed.min() >= -1e-10
 
         #Indeces to smooth on that iteration
         new = (smoothed > parameter) * (covered != True) * nonZero
