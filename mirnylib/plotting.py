@@ -403,11 +403,11 @@ def plot_function(function, **kwargs):
         x = kwargs.pop('x')
     elif 'x_range' in kwargs:
         x_range = kwargs.pop('x_range')
-        x = numpy.arange(x_range[0], x_range[1], x_range[3])
+        x = numpy.arange(x_range[0], x_range[1], x_range[2])
 
     y = numpy.array([function(i) for i in x], dtype=float)
 
-    plot_type = kwargs.pop('plot_type')
+    plot_type = kwargs.pop('plot_type', 'line')
     if plot_type == 'line':
         plt.plot(x, y, **kwargs)
     elif plot_type == 'scatter':
