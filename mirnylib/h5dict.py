@@ -94,8 +94,8 @@ class h5dict(collections.MutableMapping):
             self._h5file.__delitem__(self.self_key)
 
         data = {'_types': self._types, '_dtypes': self._dtypes}
-        self._h5file.create_dataset(name=self.self_key,
-                                    data=cPickle.dumps(data, protocol= -1))
+        dsetData = cPickle.dumps(data, protocol=0)
+        self._h5file.create_dataset(name=self.self_key, data=dsetData)
 
     def __self_load__(self):
         if self.self_key in self._h5file.keys():
@@ -161,7 +161,7 @@ class h5dict(collections.MutableMapping):
             self._dtypes[key] = value.dtype
         else:
             self._h5file.create_dataset(name=key,
-                                        data=cPickle.dumps(value, protocol= -1))
+                                        data=cPickle.dumps(value, protocol=0))
             self._types[key] = type(value)
             self._dtypes[key] = None
 
