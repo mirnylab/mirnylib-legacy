@@ -378,6 +378,7 @@ class Genome(object):
         # Scan the folder and obtain the list of chromosomes.
         self._scanGenomeFolder()
 
+
         # Get the lengths of the chromosomes.
         self.chrmLens = self.getChrmLen()
         self.maxChrmLen = max(self.chrmLens)
