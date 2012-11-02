@@ -78,7 +78,7 @@ class h5dict(collections.MutableMapping):
                 self.path = tmppath
                 self.is_tmp = True
             else:
-                self.path = path
+                self.path = os.path.abspath(os.path.expanduser(path))
                 self.is_tmp = False
             if os.path.isfile(self.path):
                 if not os.access(self.path, os.R_OK):
