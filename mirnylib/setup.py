@@ -1,3 +1,4 @@
+#(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext

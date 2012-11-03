@@ -1,20 +1,6 @@
-# Copyright (C) 2010-2012 Leonid Mirny lab (mirnylab.mit.edu)
+#(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu)
 # Anton Goloborodko (golobor@mit.edu)
-# For questions regarding using and/or distributing this code
-# please contact Leonid Mirny (leonid@mit.edu)
-#
-# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
-# OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 Some nice plotting utilities from Max
@@ -375,7 +361,7 @@ def plot_matrix(matrix, **kwargs):
     clip_max = kwargs.pop('clip_max', numpy.inf)
     plt.imshow(
         numpy.clip(matrix, a_min=clip_min, a_max=clip_max),
-        interpolation = 'nearest',
+        interpolation='nearest',
         **kwargs)
     plt.colorbar()
 
@@ -491,7 +477,7 @@ def average_3d_data(x, y, z, nbins):
 
     x_min, x_max = min(x), max(x)
     y_min, y_max = min(y), max(y)
-    
+
     if (x_max - x_min) > (y_max - y_min):
         delta = (x_max - x_min) / nbins
         nbins_x = nbins + 1
@@ -506,7 +492,7 @@ def average_3d_data(x, y, z, nbins):
     y_min -= delta / 2.0
     x_max += delta / 2.0
     y_max += delta / 2.0
-        
+
     if not issubclass(numpy.ndarray, type(x)):
         x = numpy.array(x)
     if not issubclass(numpy.ndarray, type(y)):
@@ -518,16 +504,16 @@ def average_3d_data(x, y, z, nbins):
     for i in range(nbins_x):
         for j in range(nbins_y):
             lower_x = x_min + i * delta
-            upper_x = x_min + (i+1) * delta
+            upper_x = x_min + (i + 1) * delta
             lower_y = y_min + j * delta
-            upper_y = y_min + (j+1) * delta
+            upper_y = y_min + (j + 1) * delta
             mask = ((x >= lower_x) * (x < upper_x) * (y >= lower_y) * (y < upper_y))
             if numpy.any(mask):
                 matrix[i, j] = numpy.mean(z[mask])
             else:
                 matrix[i, j] = numpy.nan
     return matrix
-            
+
 def plot_average_3d(x, y, z, nbins, **kwargs):
     """Breaks the xy plane into square regions and plots an average for every
     region.

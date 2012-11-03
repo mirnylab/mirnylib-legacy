@@ -1,3 +1,5 @@
+#(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
+#Code written by Maksim Imakaev (imakaev@mit.edu)
 """
 Cythonised utilities from numutils 
 """
