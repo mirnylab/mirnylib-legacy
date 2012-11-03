@@ -351,7 +351,7 @@ class Genome(object):
             positions of rsiteIds and rsiteMidIds.
         '''
         # Set the main attributes of the class.
-        self.genomePath = os.path.abspath(genomePath)
+        self.genomePath = os.path.abspath(os.path.expanduser(genomePath))
         self.folderName = os.path.split(self.genomePath)[-1]
         self.readChrms = set(readChrms)
         self.gapFile = gapFile
@@ -363,6 +363,7 @@ class Genome(object):
 
         # Scan the folder and obtain the list of chromosomes.
         self._scanGenomeFolder()
+
 
         # Get the lengths of the chromosomes.
         self.chrmLens = self.getChrmLen()
