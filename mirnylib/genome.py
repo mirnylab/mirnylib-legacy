@@ -1,6 +1,7 @@
 #(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Anton Goloborodko (golobor@mit.edu),
 # Maksim Imakaev (imakaev@mit.edu)
+from mirnylib.systemutils import setExceptionHook
 
 
 '''A Genome object contains the cached properties of a genome.
@@ -409,7 +410,7 @@ class Genome(object):
         unmappedBasesBin = []
         for chrm in xrange(self.chrmCount):
             chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
-            unmappedBasesBin.append(numpy.ones(chrmSizeBin, dtype=numpy.int))
+            unmappedBasesBin.append(numpy.ones(chrmSizeBin, dtype=numpy.float))
             for j in xrange(chrmSizeBin):
                 unmappedBasesBin[chrm][j] = self.getUnmappedBases(
                     chrm, j * int(resolution), (j + 1) * int(resolution))
@@ -583,8 +584,8 @@ class Genome(object):
             cur = [self.resolution for _ in xrange(chromLen / self.resolution)]
             cur.append(chromLen % self.resolution)
             self.binSizesBp.append(numpy.array(cur))
-        self.mappedBasesBin = [i[0] - i[1] for i in zip(
-            self.binSizesBp, self.unmappedBasesBin)]
+        self.mappedBasesBin = [numpy.array(i[0] * (100. - i[1]) / 100, int)
+                for i in zip(self.binSizesBp, self.unmappedBasesBin)]
 
     def getUnmappedBases(self, chrmIdx, start, end):
         "Calculate the percentage of unmapped base pairs in a region."
