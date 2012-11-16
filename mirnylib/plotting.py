@@ -527,17 +527,24 @@ def histogram2d(x,y, bins=10):
 
     plot_matrix(hist, extent=extent, aspect='auto')
 
-#def bar_chart(y, labels, errors=None)
-#    """
-#
-#    This function is based on the code from 
-#    http://www.scipy.org/Cookbook/Matplotlib/BarCharts
-#    """
-#    xlocations = na.array(range(len(data)))+0.5
-#    width = 0.5
-#    plt.bar(xlocations, data, yerr=error, width=width)
-#    plt.xticks(xlocations + width/2, labels)
-#    plt.xlim(0, xlocations[-1]+width*2)
-#    plt.title("Average Ratings on the Training Set")
-#    plt.gca().get_xaxis().tick_bottom()
-#    plt.gca().get_yaxis().tick_left()
+def bar_chart(y, labels, yerr=None, **kwargs):
+    """
+    Show a categorical bar chart
+
+    This function is based on the code from 
+    http://www.scipy.org/Cookbook/Matplotlib/BarCharts
+    """
+    assert len(y) == len(labels), 'The lengths of dataset and labels do not match'
+
+    width = kwargs.pop('width', 0.4)
+    xlocs = numpy.array(range(len(y))) + 0.5
+    ecolor = kwargs.pop('ecolor', 'k')
+    elinewidth = kwargs.pop('elinewidth', 1.0)
+    plt.bar(xlocs, y, yerr=yerr, width=width, ecolor=ecolor, 
+            error_kw = {'elinewidth':elinewidth},
+            **kwargs)
+    plt.xticks(xlocs + width/2, labels)
+    plt.xlim(0, xlocs[-1] + width*2)
+    plt.ylim(0, max(y) + (max(y) - min(y)) * 0.10)
+    plt.gca().get_xaxis().tick_bottom()
+    plt.gca().get_yaxis().tick_left()
