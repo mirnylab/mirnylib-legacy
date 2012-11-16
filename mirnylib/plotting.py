@@ -57,7 +57,6 @@ def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1])
         cdict[key] = colorvector
     return matplotlib.colors.LinearSegmentedColormap('colormap', cdict, 1024)
 
-
 def showPolymerRasmol(x, y=None, z=None):
     """
     Shows the polymer using rasmol.
@@ -528,3 +527,17 @@ def histogram2d(x,y, bins=10):
 
     plot_matrix(hist, extent=extent, aspect='auto')
 
+#def bar_chart(y, labels, errors=None)
+#    """
+#
+#    This function is based on the code from 
+#    http://www.scipy.org/Cookbook/Matplotlib/BarCharts
+#    """
+#    xlocations = na.array(range(len(data)))+0.5
+#    width = 0.5
+#    plt.bar(xlocations, data, yerr=error, width=width)
+#    plt.xticks(xlocations + width/2, labels)
+#    plt.xlim(0, xlocations[-1]+width*2)
+#    plt.title("Average Ratings on the Training Set")
+#    plt.gca().get_xaxis().tick_bottom()
+#    plt.gca().get_yaxis().tick_left()
