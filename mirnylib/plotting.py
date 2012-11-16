@@ -521,3 +521,10 @@ def plot_average_3d(x, y, z, nbins, **kwargs):
 
     matrix = average_3d_data(x, y, z, nbins)
     plot_matrix_3d(matrix, **kwargs)
+
+def histogram2d(x,y, bins=10):
+    hist, xedges, yedges = numpy.histogram2d(x, y, bins=bins)
+    extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
+
+    plot_matrix(hist, extent=extent, aspect='auto')
+
