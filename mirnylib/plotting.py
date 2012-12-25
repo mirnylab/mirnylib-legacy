@@ -17,8 +17,10 @@ import matplotlib.pyplot as plt
 
 import pylab
 import numpy
+import scipy.stats as st
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
+from . import numutils
 
 def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1]):
     """ Applies function (which should operate on vectors of shape 3:
@@ -277,31 +279,64 @@ def scatter_trend(x, y, **kwargs):
     x, y : array_like of float
     plot_trend : bool, optional
         If True then plot a trendline. True by default.
+    skip_trend_points : (int,int), optional
+        Number of first and last points to skip when plotting a trend.
+    show_slope_sigma : bool, optional
+        If True then show the standard error of the slope coefficient.
+    show_sigma_prediction : bool, optional
+        If True then show the standard error of prediction.
     plot_sigmas : bool, optional
         If True then plot confidence intervals of the linear fit.
         False by default.
+    label : str, optional
+        Add a label for data series.
     title : str, optional
         The title. Empty by default.
     xlabel, ylabel : str, optional
         The axes labels. Empty by default.
     alpha : float, optional
-        Transparency of points. 1.0 by default
+        Transparency of points. 1.0 by default.
+    loc : str, optional
+        Location of a legend. 'best' by default.
     alpha_legend : float, optional
-        Legend box transparency. 1.0 by default
+        Legend box transparency. 0.7 by default.
     """
-    a, b, r, stderr = linear_regression(x, y)
+    x = numpy.asarray(x)
+    y = numpy.asarray(y)
+    (skip_first, skip_last) = kwargs.get('skip_trend_points', (0,None))
+    if not skip_last is None:
+        skip_last = -skip_last
+    a, b, r, p, slope_sigma = st.linregress(
+        x[skip_first:skip_last], 
+        y[skip_first:skip_last])
+    stderr = numpy.std(y - a*x - b)
     pylab.title(kwargs.get('title', ''))
     pylab.xlabel(kwargs.get('xlabel', ''))
     pylab.ylabel(kwargs.get('ylabel', ''))
     scat_plot = pylab.scatter(x, y,
                               c=kwargs.get('c', 'b'),
                               alpha=kwargs.get('alpha', 1.0))
-    scat_plot.set_label(
-        '$y\,=\,%.3fx\,+\,%.3f$, $R^2=\,%.3f$ \n$\sigma\,=\,%.3f$' % (
-            a, b, r * r, stderr))
-    legend = pylab.legend(loc='upper left')
+
+    if kwargs.get('show_slope_sigma'):
+        equation_label = '$y\,=\,({:.3f}\pm{:.3f})x\,+\,{:.3f}$'.format(a,2*slope_sigma, b)
+    else:
+        equation_label = '$y\,=\,{:.3f}x\,+\,{:.3f}$'.format(a, b)
+    r2_label = '$R^2=\,{:.3f}$'.format(r*r)
+    sigma_label = '$\sigma\,=\,{:.3f}$'.format(stderr)
+    label = ('{}, {}').format(equation_label, r2_label)
+    if 'label' in kwargs:
+        label = kwargs['label'] + '\n' + label
+    if kwargs.get('show_sigma_prediction', True):
+        label = label + '\n' + sigma_label
+
+    if skip_first or skip_last:
+        label += '\n$omit\,{}\,terminal\,points$'.format(
+            (skip_first,
+             - skip_last if skip_last else 0))
+    scat_plot.set_label(label)
+    legend = pylab.legend(loc=kwargs.get('loc', 'best'))
     legend_frame = legend.get_frame()
-    legend_frame.set_alpha(kwargs.get('alpha_legend', 1.0))
+    legend_frame.set_alpha(kwargs.get('alpha_legend', 0.7))
     if kwargs.get('plot_trend', True):
         pylab.plot([min(x), max(x)],
                    [a * min(x) + b, a * max(x) + b])
@@ -355,6 +390,8 @@ def plot_matrix(matrix, **kwargs):
         plotted as clip_min.
     clip_max : float, optional
         The upper clipping value. 
+    label : str, optional
+        Colorbar label
     """
     clip_min = kwargs.pop('clip_min', -numpy.inf)
     clip_max = kwargs.pop('clip_max', numpy.inf)
@@ -362,7 +399,10 @@ def plot_matrix(matrix, **kwargs):
         numpy.clip(matrix, a_min=clip_min, a_max=clip_max),
         interpolation='nearest',
         **kwargs)
-    plt.colorbar()
+    if 'label' not in kwargs:
+        plt.colorbar()
+    else:
+        plt.colorbar().set_label(kwargs['label'])
 
 def plot_function(function, **kwargs):
     """Plot the values of a 1-D function on a lattice
@@ -399,6 +439,16 @@ def plot_function(function, **kwargs):
         plt.scatter(x, y, **kwargs)
     else:
         raise Exception('An unknown type of plot: {0}'.format(plot_type))
+
+def plot_loglog_density(x, bins=10, **kwargs):
+    bins = numpy.asarray(numutils.logbins(1, max(x), N_in=bins))
+    binsizes = bins[1:] - bins[:-1]
+    binmids = bins[:-1] + binsizes / 2
+    # Calculate density so that it integrates to one.
+    avg_counts = numpy.histogram(x, bins=bins, density=True)[0]
+    binmids = binmids[avg_counts != 0]
+    avg_counts = avg_counts[avg_counts != 0]
+    scatter_trend(numpy.log10(binmids), numpy.log10(avg_counts), **kwargs)
 
 def plot_function_3d(x, y, function, **kwargs):
     """Plot values of a function of two variables in 3D.
@@ -527,14 +577,21 @@ def histogram2d(x,y, bins=10):
 
     plot_matrix(hist, extent=extent, aspect='auto')
 
-def bar_chart(y, labels, yerr=None, **kwargs):
+def bar_chart(y, labels=None, yerr=None, **kwargs):
     """
     Show a categorical bar chart
 
     This function is based on the code from 
     http://www.scipy.org/Cookbook/Matplotlib/BarCharts
     """
+    if hasattr(y, 'keys') and hasattr(y, 'values'):
+        items = list(y.iteritems())
+        items.sort(key=lambda x: x[0])
+        labels = [i[0] for i in items]
+        y = [i[1] for i in items]
     assert len(y) == len(labels), 'The lengths of dataset and labels do not match'
+
+    rotate_labels = kwargs.get('rotate_labels', True)
 
     width = kwargs.pop('width', 0.4)
     xlocs = numpy.array(range(len(y))) + 0.5
@@ -548,3 +605,6 @@ def bar_chart(y, labels, yerr=None, **kwargs):
     plt.ylim(0, max(y) + (max(y) - min(y)) * 0.10)
     plt.gca().get_xaxis().tick_bottom()
     plt.gca().get_yaxis().tick_left()
+    if rotate_labels:
+        plt.gcf().autofmt_xdate()
+
