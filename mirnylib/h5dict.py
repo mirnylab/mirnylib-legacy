@@ -162,6 +162,7 @@ class h5dict(collections.MutableMapping):
         return self._dtypes[key]
 
     def __del__(self):
+        self.flush()
         self._h5file.close()
         if self.is_tmp:
             os.remove(self.path)
