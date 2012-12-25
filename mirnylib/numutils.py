@@ -532,19 +532,34 @@ def corr2d(x):
     return np.real(np.fft.ifft2(t * np.conjugate(t)))
 
 
-def logbins(a, b, pace, N_in=0):
-    "create log-spaced bins"
+def logbins(a, b, pace=0, N_in=0):
+    """Create log-spaced bins.
+
+    Parameters
+    ----------
+    a, b : int
+        the range of the bins
+    pace : float
+        approximate multiplier for each bin. Specify this or `N_in`.
+    N_in : int
+        number of bins. Specify this or `pace`.
+        
+    """
     a = int(a)
     b = int(b)
     beg = log(a)
     end = log(b - 1)
-    pace = log(pace)
-    N = int((end - beg) / pace)
-    if N_in != 0:
+    if pace != 0:
+        pace = log(pace)
+        N = int((end - beg) / pace)
+        pace = (end - beg) / N
+    elif N_in != 0:
         N = N_in
+        pace = (end - beg) / N
+    else:
+        raise ValueError("Specify either pace or N_in")
     if N > (b - a):
         raise ValueError("Cannot create more bins than elements")
-    pace = (end - beg) / N
     mas = np.arange(beg, end + 0.000000001, pace)
     ret = np.exp(mas)
     surpass = np.arange(a, a + N)
