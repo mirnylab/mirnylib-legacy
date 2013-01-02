@@ -24,8 +24,6 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 from . import numutils
 
 
-
-
 def listToColormap(colorList, cmapName=None):
     NSeg = len(colorList) - 1
     colorList = np.array(colorList)
@@ -39,13 +37,13 @@ def listToColormap(colorList, cmapName=None):
     return matplotlib.colors.LinearSegmentedColormap.from_list(cmapName, colorList, 256)
 
 fallMap = listToColormap(
-                ((255, 255, 255), (255, 255, 204),
-                (255, 237, 160), (254, 217, 118),
-                 (254, 178, 76), (253, 141, 60),
-                 (252, 78, 42), (227, 26, 28),
-                 (189, 0, 38), (128, 0, 38), (0, 0, 0)),
-                              "fall"
-                              )
+    ((255, 255, 255), (255, 255, 204),
+     (255, 237, 160), (254, 217, 118),
+     (254, 178, 76), (253, 141, 60),
+     (252, 78, 42), (227, 26, 28),
+     (189, 0, 38), (128, 0, 38), (0, 0, 0)),
+    "fall"
+)
 matplotlib.cm.register_cmap("fall", fallMap)
 
 
@@ -85,6 +83,7 @@ def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1])
         colorvector.sort()
         cdict[key] = colorvector
     return matplotlib.colors.LinearSegmentedColormap('colormap', cdict, 1024)
+
 
 def showPolymerRasmol(x, y=None, z=None):
     """
@@ -164,6 +163,7 @@ def showPolymerRasmol(x, y=None, z=None):
         os.system("C:/RasWin/raswin.exe -xyz %s -script %s" % (
             towrite.name, rascript.name))
 
+
 def scatter3D(x, y, z, color='b'):
     """shows a scatterplot in 3D"""
 
@@ -189,6 +189,7 @@ def scatter3D(x, y, z, color='b'):
         ax.scatter(x, y, z, c=color)
     plt.show()
 
+
 def removeAxes(mode="normal", shift=0, ax=None):
     if ax is None:
         ax = plt.gca()
@@ -208,6 +209,7 @@ def removeAxes(mode="normal", shift=0, ax=None):
             else:
                 raise ValueError('unknown spine location: %s' % loc)
 
+
 def removeBorder(ax=None):
     removeAxes("all", 0, ax=ax)
     if ax is None:
@@ -218,6 +220,7 @@ def removeBorder(ax=None):
         ax = plt.axes()
     ax.set_xticklabels([])
     ax.set_yticklabels([])
+
 
 def niceShow(mytype=None, subplotAdjust=[0.08, 0.12, 0.95, 0.98]):
     if mytype == "log":
@@ -230,6 +233,7 @@ def niceShow(mytype=None, subplotAdjust=[0.08, 0.12, 0.95, 0.98]):
     removeAxes(shift=0)
     plt.gcf().subplots_adjust(*subplotAdjust)
     plt.show()
+
 
 def mat_img(a, cmap="jet", trunk=False, **kwargs):
     "shows an array using imshow with colorbar"
@@ -252,6 +256,7 @@ def mat_img(a, cmap="jet", trunk=False, **kwargs):
         plt.show()
     do_all()
 
+
 def plot_line(a, b, **kwargs):
     """Plot a line y = a * x + b.
 
@@ -264,6 +269,7 @@ def plot_line(a, b, **kwargs):
     pylab.plot([xlim[0], xlim[1]],
                [a * xlim[0] + b, a * xlim[1] + b],
                **kwargs)
+
 
 def linear_regression(x, y, a=None, b=None):
     """Calculate coefficients of a linear regression y = a * x + b.
@@ -298,6 +304,7 @@ def linear_regression(x, y, a=None, b=None):
 
     return (a, b, r, stderr)
 
+
 def scatter_trend(x, y, **kwargs):
     """Make a scatter plot with a linear regression.
 
@@ -330,13 +337,13 @@ def scatter_trend(x, y, **kwargs):
     """
     x = numpy.asarray(x)
     y = numpy.asarray(y)
-    (skip_first, skip_last) = kwargs.get('skip_trend_points', (0,None))
+    (skip_first, skip_last) = kwargs.get('skip_trend_points', (0, None))
     if not skip_last is None:
         skip_last = -skip_last
     a, b, r, p, slope_sigma = st.linregress(
-        x[skip_first:skip_last], 
+        x[skip_first:skip_last],
         y[skip_first:skip_last])
-    stderr = numpy.std(y - a*x - b)
+    stderr = numpy.std(y - a * x - b)
     pylab.title(kwargs.get('title', ''))
     pylab.xlabel(kwargs.get('xlabel', ''))
     pylab.ylabel(kwargs.get('ylabel', ''))
@@ -345,10 +352,11 @@ def scatter_trend(x, y, **kwargs):
                               alpha=kwargs.get('alpha', 1.0))
 
     if kwargs.get('show_slope_sigma'):
-        equation_label = '$y\,=\,({:.3f}\pm{:.3f})x\,+\,{:.3f}$'.format(a,2*slope_sigma, b)
+        equation_label = '$y\,=\,({:.3f}\pm{:.3f})x\,+\,{:.3f}$'.format(
+            a, 2 * slope_sigma, b)
     else:
         equation_label = '$y\,=\,{:.3f}x\,+\,{:.3f}$'.format(a, b)
-    r2_label = '$R^2=\,{:.3f}$'.format(r*r)
+    r2_label = '$R^2=\,{:.3f}$'.format(r * r)
     sigma_label = '$\sigma\,=\,{:.3f}$'.format(stderr)
     label = ('{}, {}').format(equation_label, r2_label)
     if 'label' in kwargs:
@@ -373,6 +381,7 @@ def scatter_trend(x, y, **kwargs):
                        [a * min(x) + b + i * stderr, a *
                            max(x) + b + i * stderr],
                        'r--')
+
 
 def plot_matrix_3d(matrix, **kwargs):
     import mpl_toolkits.mplot3d.axes3d as pylab3d
@@ -404,6 +413,7 @@ def plot_matrix_3d(matrix, **kwargs):
     ax.set_zlabel(kwargs.get('zlabel', ''))
     ax.set_title(kwargs.get('title', ''))
 
+
 def plot_matrix(matrix, **kwargs):
     """Plot a 2D array with a colorbar.
 
@@ -430,6 +440,7 @@ def plot_matrix(matrix, **kwargs):
         plt.colorbar()
     else:
         plt.colorbar().set_label(kwargs['label'])
+
 
 def plot_function(function, **kwargs):
     """Plot the values of a 1-D function on a lattice
@@ -467,6 +478,7 @@ def plot_function(function, **kwargs):
     else:
         raise Exception('An unknown type of plot: {0}'.format(plot_type))
 
+
 def plot_loglog_density(x, bins=10, **kwargs):
     bins = numpy.asarray(numutils.logbins(1, max(x), N_in=bins))
     binsizes = bins[1:] - bins[:-1]
@@ -476,6 +488,7 @@ def plot_loglog_density(x, bins=10, **kwargs):
     binmids = binmids[avg_counts != 0]
     avg_counts = avg_counts[avg_counts != 0]
     scatter_trend(numpy.log10(binmids), numpy.log10(avg_counts), **kwargs)
+
 
 def plot_function_3d(x, y, function, **kwargs):
     """Plot values of a function of two variables in 3D.
@@ -511,6 +524,7 @@ def plot_function_3d(x, y, function, **kwargs):
     Z = numpy.array(Z)
     plot_matrix_3d(Z, x=x, y=y, **kwargs)
 
+
 def plot_function_contour(x, y, function, **kwargs):
     """Make a contour plot of a function of two variables.
 
@@ -545,6 +559,7 @@ def plot_function_contour(x, y, function, **kwargs):
     pylab.xlabel(kwargs.get('xlabel', ''))
     pylab.ylabel(kwargs.get('ylabel', ''))
     pylab.title(kwargs.get('title', ''))
+
 
 def average_3d_data(x, y, z, nbins):
     """Breaks the xy plane into square regions and calculates an average for
@@ -583,12 +598,14 @@ def average_3d_data(x, y, z, nbins):
             upper_x = x_min + (i + 1) * delta
             lower_y = y_min + j * delta
             upper_y = y_min + (j + 1) * delta
-            mask = ((x >= lower_x) * (x < upper_x) * (y >= lower_y) * (y < upper_y))
+            mask = ((x >= lower_x) * (x < upper_x) * (
+                y >= lower_y) * (y < upper_y))
             if numpy.any(mask):
                 matrix[i, j] = numpy.mean(z[mask])
             else:
                 matrix[i, j] = numpy.nan
     return matrix
+
 
 def plot_average_3d(x, y, z, nbins, **kwargs):
     """Breaks the xy plane into square regions and plots an average for every
@@ -598,11 +615,13 @@ def plot_average_3d(x, y, z, nbins, **kwargs):
     matrix = average_3d_data(x, y, z, nbins)
     plot_matrix_3d(matrix, **kwargs)
 
+
 def histogram2d(x, y, bins=10):
     hist, xedges, yedges = numpy.histogram2d(x, y, bins=bins)
     extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
 
     plot_matrix(hist, extent=extent, aspect='auto')
+
 
 def bar_chart(y, labels=None, yerr=None, **kwargs):
     """
@@ -616,7 +635,8 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
         items.sort(key=lambda x: x[0])
         labels = [i[0] for i in items]
         y = [i[1] for i in items]
-    assert len(y) == len(labels), 'The lengths of dataset and labels do not match'
+    assert len(y) == len(
+        labels), 'The lengths of dataset and labels do not match'
 
     rotate_labels = kwargs.get('rotate_labels', True)
 
@@ -625,7 +645,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     ecolor = kwargs.pop('ecolor', 'k')
     elinewidth = kwargs.pop('elinewidth', 1.0)
     plt.bar(xlocs, y, yerr=yerr, width=width, ecolor=ecolor,
-            error_kw={'elinewidth':elinewidth},
+            error_kw={'elinewidth': elinewidth},
             **kwargs)
     plt.xticks(xlocs + width / 2, labels)
     plt.xlim(0, xlocs[-1] + width * 2)
@@ -634,4 +654,3 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     plt.gca().get_yaxis().tick_left()
     if rotate_labels:
         plt.gcf().autofmt_xdate()
-

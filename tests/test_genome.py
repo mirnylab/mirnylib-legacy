@@ -1,15 +1,17 @@
-import os, sys
+import os
+import sys
 sys.path.insert(0, os.path.abspath('../mirnylab'))
 
 import unittest
-import numpy 
+import numpy
 
 from mirnylib import genome
 
+
 class TestSequenceFunctions(unittest.TestCase):
     def setUp(self):
-        self.db = genome.Genome('./data/', gapFile = 'gap.txt',
-                                chrmFileTemplate = 'chr%s.fa')
+        self.db = genome.Genome('./data/', gapFile='gap.txt',
+                                chrmFileTemplate='chr%s.fa')
         self.db.clearCache()
 
     def test_init(self):
@@ -44,7 +46,7 @@ class TestSequenceFunctions(unittest.TestCase):
 
         self.assertTrue(numpy.all(numpy.equal(
             self.db.rsites[1],
-            [15300, 16051, 18134, 24994, 28072, 
+            [15300, 16051, 18134, 24994, 28072,
              28181, 36365, 39162, 39796, 40431,
              49950])))
         self.assertTrue(numpy.all(numpy.equal(

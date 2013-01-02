@@ -17,25 +17,26 @@
 
 
 """
-Saves mirnylab.h5dict.h5dict file to a folder with different datsets. 
+Saves mirnylab.h5dict.h5dict file to a folder with different datsets.
 
 Usage
 -----
 
 python h5dictToTxt.py in_hdf5_file out_folder
 
-out_folder may not exist, but may not be file. 
-Existing files will be overwritten. 
+out_folder may not exist, but may not be file.
+Existing files will be overwritten.
 
-Each key of the h5dict dataset is converted to a text file. 
-If key is an array, a matlab-compatible array is returned. 
-If key is not an array, python's repr command is used 
-to get an exact representation of an object.  
+Each key of the h5dict dataset is converted to a text file.
+If key is an array, a matlab-compatible array is returned.
+If key is not an array, python's repr command is used
+to get an exact representation of an object.
 """
 
 from mirnylib.h5dict import h5dict
 from mirnylib.numutils import generalizedDtype
-import os, sys
+import os
+import sys
 import numpy
 from scipy.io import savemat
 
@@ -67,7 +68,7 @@ for i in mydict.keys():
     if issubclass(type(data), numpy.ndarray):
         print "saving numpy array", i, "to", savefile
         if len(data.shape) > 0:
-            savemat(savefile, {i:data})
+            savemat(savefile, {i: data})
             continue
 
     if type(data) == str:
@@ -77,8 +78,3 @@ for i in mydict.keys():
     print "saving data", i, "to", savefile
     with open(savefile, 'w') as f:
         f.write(datarepr)
-
-
-
-
-

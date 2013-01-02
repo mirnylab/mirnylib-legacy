@@ -48,6 +48,7 @@ import numutils
 
 log = logging.getLogger(__name__)
 
+
 class Genome(object):
     """A class to compute and cache various properties of genomic sequences."""
 
@@ -131,8 +132,8 @@ class Genome(object):
 
         self.fastaNames = [os.path.join(self.genomePath, i)
                            for i in glob.glob(os.path.join(
-                                          self.genomePath,
-                                          self.chrmFileTemplate % ('*',)))]
+                                              self.genomePath,
+                                              self.chrmFileTemplate % ('*',)))]
         log.debug('Scan genome folder: {0}'.format(self.genomePath))
         log.debug('FASTA files are found: {0}'.format(self.fastaNames))
 
@@ -181,7 +182,8 @@ class Genome(object):
 
         # B. Convert non-numerical IDs. Give the priority to XYM over the rest.
         nonnum_ids = [i for i in self.chrmLabels if not i.isdigit()]
-        log.debug('The chromosomes with non-numerical IDs: {0}'.format(nonnum_ids))
+        log.debug('The chromosomes with non-numerical IDs: {0}'.format(
+            nonnum_ids))
         for i in ['M', 'Y', 'X']:
             if i in nonnum_ids:
                 nonnum_ids.pop(nonnum_ids.index(i))
@@ -365,7 +367,6 @@ class Genome(object):
         # Scan the folder and obtain the list of chromosomes.
         self._scanGenomeFolder()
 
-
         # Get the lengths of the chromosomes.
         self.chrmLens = self.getChrmLen()
         self.maxChrmLen = max(self.chrmLens)
@@ -479,7 +480,7 @@ class Genome(object):
         self._parseGapFile()
 
     def setResolution(self, resolution):
-        """Set the resolution of genome binning and calculate the following 
+        """Set the resolution of genome binning and calculate the following
         attributes:
 
         resolution : int
@@ -550,7 +551,8 @@ class Genome(object):
         # Bin chromosomes.
         self.chrmLensBin = self.chrmLens / self.resolution + 1
         self.chrmBordersBinCont = numpy.r_[0, numpy.cumsum(self.chrmLensBin)]
-        self.chrmStartsBinCont = numpy.r_[0, numpy.cumsum(self.chrmLensBin)[:-1]]
+        self.chrmStartsBinCont = numpy.r_[0, numpy.cumsum(
+            self.chrmLensBin)[:-1]]
         self.chrmEndsBinCont = numpy.cumsum(self.chrmLensBin)
         self.numBins = self.chrmEndsBinCont[-1]
 
@@ -570,10 +572,12 @@ class Genome(object):
         # Bin centromeres.
         self.cntrMidsBinCont = (self.chrmStartsBinCont
                                 + self.cntrMids / self.resolution)
-        self.chrmArmBordersBinCont = numpy.zeros(self.chrmCount * 2 + 1, dtype=numpy.int)
+        self.chrmArmBordersBinCont = numpy.zeros(
+            self.chrmCount * 2 + 1, dtype=numpy.int)
         self.chrmArmBordersBinCont[1::2] = self.cntrMidsBinCont
         self.chrmArmBordersBinCont[2::2] = self.chrmEndsBinCont
-        self.chrmArmLensBin = self.chrmArmBordersBinCont[1:] - self.chrmArmBordersBinCont[:-1]
+        self.chrmArmLensBin = self.chrmArmBordersBinCont[1:] - \
+            self.chrmArmBordersBinCont[:-1]
 
         # Bin GC content.
         self.GCBin = self.getGCBin(self.resolution)
@@ -616,7 +620,7 @@ class Genome(object):
             self._mymem.clear()
 
     def setEnzyme(self, enzymeName):
-        """Apply a specified restriction enzyme to the genomic sequences and 
+        """Apply a specified restriction enzyme to the genomic sequences and
         calculate the positions of restriction sites.
 
         The following attributes are set with this method:
@@ -692,14 +696,14 @@ class Genome(object):
 
         if isinstance(oldGenome, Genome):
             oldGenome = oldGenome.idx2label
-        if True in [i not in oldGenome.values() \
+        if True in [i not in oldGenome.values()
                     for i in self.idx2label.values()]:
             difference = [i for i in self.idx2label.values(
                 ) if i not in oldGenome.values()]
-            raise StandardError("Genome upgrade is not possible: " + \
-                            repr(difference) + " are chromosomes"\
+            raise StandardError("Genome upgrade is not possible: " +
+                            repr(difference) + " are chromosomes"
                             " that are missing in the old genome")
-        if False not in [oldGenome[i] == self.idx2label[i] \
+        if False not in [oldGenome[i] == self.idx2label[i]
                          for i in self.idx2label.keys()]:
             return None
         oldLabelToIdx = dict([(oldGenome[i], i) for i in oldGenome.keys()])
@@ -714,15 +718,15 @@ class Genome(object):
         """
         chromSet = set(chromosomes)
         if 0 not in chromSet:
-            warnings.warn("Chromosome zero not found! Are you using"\
+            warnings.warn("Chromosome zero not found! Are you using"
                           " zero-based chromosomes?", UserWarning)
         if max(chromSet) >= self.chrmCount:
             raise StandardError("Chromosome number %d exceeds expected"
-                                " chromosome count %d" % \
+                                " chromosome count %d" %
                                 (max(chromSet), self.chrmCount))
         if max(chromSet) < self.chrmCount - 1:
-            warnings.warn("More chromosomes in the genome (%d)  than we got"\
-                          " (%d) ! Are you using proper genome?" % \
+            warnings.warn("More chromosomes in the genome (%d)  than we got"
+                          " (%d) ! Are you using proper genome?" %
                           (self.chrmCount, max(chromSet) - 1))
         maxpositions = self.chrmLens[chromosomes]
         check = positions > maxpositions
@@ -730,7 +734,7 @@ class Genome(object):
             inds = numpy.nonzero(check)[0]
             inds = inds[::len(inds) / 10]
             for i in inds:
-                raise StandardError("Position %d on chrm %d exceeds "\
+                raise StandardError("Position %d on chrm %d exceeds "
                                     "maximum positions %d" % (
                         chromosomes[i], positions[i],
                         self.chrmLens[chromosomes[i]])
@@ -763,10 +767,10 @@ class Genome(object):
         assert (fragments2[::100] - self.rfragMidIds[f2ID[::100]]).sum() == 0
 
         fragment2Candidates = numpy.concatenate(
-            [f1ID + i for i in (range(-cutoffDistance, 0) + \
+            [f1ID + i for i in (range(-cutoffDistance, 0) +
                                 range(1, cutoffDistance + 1))])
         fragment1Candidates = numpy.concatenate(
-            [f1ID for i in (range(-cutoffDistance, 0) + \
+            [f1ID for i in (range(-cutoffDistance, 0) +
                             range(1, cutoffDistance + 1))])
         mask = numutils.arrayInArray(fragment2Candidates, f2ID)
 
@@ -871,7 +875,7 @@ class Genome(object):
         datas = [data[i * Mkb:(i + 1) * Mkb] for i in xrange(self.chrmCount)]
         for chrom, track in enumerate(datas):
             if track[self.chrmLens[chrom] / resolution + 1:].sum() != 0:
-                raise StandardError("Genome mismatch: entrees "\
+                raise StandardError("Genome mismatch: entrees "
                                     "in wig file after chromosome end!")
         datas = [numpy.array(i[:self.chrmLens[chrom] / resolution +
             1]) for chrom, i in enumerate(datas)]
@@ -922,7 +926,7 @@ class Genome(object):
                     stepValues[stepCounts == 0] = 0
                 values[beg:end] = stepValues
             if values.sum() == 0:
-                raise  StandardError("Chromosome {0} is absent in bigWig"\
+                raise  StandardError("Chromosome {0} is absent in bigWig"
                                      " file!".format(chrId))
             data.append(values)
 

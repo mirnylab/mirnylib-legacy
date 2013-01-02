@@ -19,6 +19,7 @@ import h5py
 
 log = logging.getLogger(__name__)
 
+
 class h5dict(collections.MutableMapping):
     self_key = '_self_key'
 
@@ -189,7 +190,7 @@ class h5dict(collections.MutableMapping):
 
     def array_keys(self):
         return [i for i in self._h5file.keys()
-                if i != self.self_key and \
+                if i != self.self_key and
                 issubclass(self._types[i], np.ndarray)]
 
     def get_dataset(self, key):

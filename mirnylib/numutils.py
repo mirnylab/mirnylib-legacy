@@ -5,12 +5,12 @@
 import numpy as np
 import warnings
 import mirnylib.systemutils
-from numutils_new import _arrayInArray #@UnresolvedImport @IgnorePep8
-from numutils_new import fasterBooleanIndexing #@UnresolvedImport @IgnorePep8
-from numutils_new import fakeCisImpl #@UnresolvedImport @IgnorePep8
-from numutils_new import _arraySumByArray #@UnresolvedImport @IgnorePep8
+from numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
+from numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
+from numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
+from numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
 from scipy.ndimage.filters import convolve, gaussian_filter
-from mirnylib.systemutils import setExceptionHook
+from mirnylib.systemutils import setExceptionHook, deprecate
 na = np.array
 import  scipy.sparse.linalg
 import scipy.stats
@@ -45,16 +45,34 @@ def generalizedDtype(inObject):
         inObject = np.dtype(inObject)
     if issubclass(type(inObject), np.ndarray):
         inObject = inObject.dtype
-    if np.issubdtype(inObject, np.complex) == True:
+    if type(inObject) is not np.dtype:
+        inObject = np.array(inObject).dtype
+    if np.issubdtype(inObject, np.complex):
         return np.complex
-    if np.issubdtype(inObject, np.float) == True:
-        return np.float
-    if np.issubdtype(inObject, np.int) == True:
+    if np.issubdtype(inObject, np.float):
+        return np.double
+    if np.issubdtype(inObject, np.int):
         return np.int
-    if np.issubdtype(inObject, np.bool) == True:
+    if np.issubdtype(inObject, np.bool):
         return np.int
 
-    raise ValueError("Data  type not known")
+    raise ValueError("Data  type not supported")
+
+
+def fastMatrixSTD(inMatrix):
+    "Estimates variance of the matrix"
+    inMatrix = np.asarray(inMatrix)
+
+    if len(inMatrix.flat) < 5:
+        return np.mean(inMatrix)
+
+    if len(inMatrix.flat) < 10000:
+        return  inMatrix.var()
+
+    else:
+        varvar = inMatrix.flat[::100].var() + inMatrix.flat[33::231].var()\
+            + inMatrix.flat[24::242].var() + inMatrix[55::413].var()
+    return np.sqrt(0.25 * varvar)
 
 
 def isInteger(inputData):
@@ -64,18 +82,62 @@ def isInteger(inputData):
         return True
 
     #checking if variance of the data is significantly less than 1
-    if np.prod(inputData.shape) < 10000:
-        varvar = inputData.var()
-    else:
-        varvar = inputData.flat[::100].var() + inputData.flat[33::231].var()\
-        + inputData.flat[24::242].var() + inputData[55::413].var()
-    varvar = np.sqrt(varvar)
+
+    varvar = fastMatrixSTD(inputData)
 
     mod = np.fmod(inputData, 1)
     minmod = np.minimum(mod, 1 - mod)
-    if minmod.mean() < 0.00001 * min(varvar, 1):
+    if minmod.max() < 0.00001 * min(varvar, 1):
         return True
     return False
+
+
+def isSymmetric(inMatrix):
+    """
+    Checks if the supplied matrix is symmetric.
+    """
+
+    M = inMatrix
+    varDif = np.abs(M - M.T).max()
+    return varDif < fastMatrixSTD(inMatrix) * 0.0000001
+
+
+def _testMatrixUtils():
+    print "Testing isSymmetric"
+    a = np.random.randint(0, 1000, (1000, 1000))
+    assert not isSymmetric(a)
+    b = a + a.T
+    assert isSymmetric(b)
+    b = (b ** 0.01) ** 100
+    assert isSymmetric(b)
+    b[0] += 0.001
+    assert not isSymmetric(b)
+    print "Finished testing isSymmetric, test successful"
+    print
+    print "Testing isInteger"
+    assert isInteger(1)
+    assert isInteger(True)
+    assert isInteger(1.)
+    assert isInteger(np.sqrt(3) ** 2)
+    assert isInteger([1, 2, 3, 4, 5])
+    assert isInteger(1.00000000000000000001)
+    myarray = np.random.randint(0, 10000, 1000000)
+    assert isInteger(myarray)
+    myarray = myarray * 1.
+    assert isInteger(myarray)
+    myarray = (myarray ** 0.01) ** 100
+    assert isInteger(myarray)
+    myarray[1] += 0.01
+    assert not isInteger(myarray)
+    print "finished testing isInteger"
+    print
+    print "testing generalizedDtype"
+    assert generalizedDtype([1, 2]) == np.int
+    assert generalizedDtype([1., 2.]) == np.double
+    assert generalizedDtype([True, False]) == np.int
+    assert generalizedDtype(np.float16) == np.double
+    assert generalizedDtype(np.int8) == np.int
+    print "All tests finished successfully!"
 
 
 def openmpSum(in_array):
@@ -143,8 +205,8 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
         print "Sorted using default sort"
         return
     elif chunkSize < 5 * sqrt(len(inDataset)):
-        warnings.warn("Chunk size should be big enough... you provide {0} "\
-        ", upscaled to {1}".format(chunkSize, 5 * int(sqrt(len(inDataset)))))
+        warnings.warn("Chunk size should be big enough... you provide {0} "
+                      ", upscaled to {1}".format(chunkSize, 5 * int(sqrt(len(inDataset)))))
         chunkSize = 5 * int(sqrt(len(inDataset)))
 
     N = len(inDataset)
@@ -193,7 +255,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
 
         currentMerge = np.concatenate([chunk[st:ed] for chunk, st,
                                        ed in zip(currentChunks,
-                                                  positions, limits)])
+                                                 positions, limits)])
         #Create a current array to merge
 
         positions = limits  # we've merged up to here
@@ -277,11 +339,11 @@ def chunkedUnique(data, chunksize=5000000, return_index=False):
     bins = range(0, len(data), chunksize) + [len(data)]
     bins = zip(bins[:-1], bins[1:])
     current = np.zeros(0, dtype=mytype)
-    if return_index == True:
+    if return_index:
         currentIndex = np.zeros(0, dtype=int)
     for start, end in bins:
         chunk = data[start:end]
-        if return_index == True:
+        if return_index:
             chunkUnique, chunkIndex = np.unique(chunk, return_index=True)
             chunkIndex += start
             current, extraIndex = np.unique(np.concatenate(
@@ -292,7 +354,7 @@ def chunkedUnique(data, chunksize=5000000, return_index=False):
             chunkUnique = np.unique(chunk)
             current = np.unique(np.concatenate([current, chunkUnique]))
 
-    if return_index == True:
+    if return_index:
         return current, currentIndex
     else:
         return current
@@ -358,7 +420,7 @@ def coarsegrain(array, size, extendEdge=False):
     truncates the unused squares"""
     array = np.asarray(array, dtype=generalizedDtype(array.dtype))
 
-    if extendEdge == False:
+    if not extendEdge:
         if len(array.shape) == 2:
             N = len(array) - len(array) % size
             array = array[:N, :N]
@@ -414,7 +476,6 @@ def robustPartialCorrelation(x, y, z, smeerSize=100,
     newX = smeer(x)
     newY = smeer(y)
     return corrFun(newX, newY), (newX, newY)
-
 
 
 "Array indexing-related utilities, written in np/c++"
@@ -486,8 +547,8 @@ def arraySumByArray(array, filterarray, meanarray):
         toreturn = np.zeros(len(filterarray), float)
         for i in xrange(len(bins) - 1):
             toreturn += _arraySumByArray(array[bins[i]:bins[i + 1]],
-                                          filterarray,
-                                          meanarray[bins[i]:bins[i + 1]])
+                                         filterarray,
+                                         meanarray[bins[i]:bins[i + 1]])
         return toreturn
     else:
         return _arraySumByArray(array, filterarray)
@@ -563,7 +624,7 @@ def logbins(a, b, pace=0, N_in=0):
         approximate multiplier for each bin. Specify this or `N_in`.
     N_in : int
         number of bins. Specify this or `pace`.
-        
+
     """
     a = int(a)
     b = int(b)
@@ -642,11 +703,11 @@ randomOnSphere = random_on_sphere
 #-------------Importing cytonized functions--------------
 
 observedOverExpected = \
-numutils_new.observedOverExpected #@UndefinedVariable @IgnorePep8
+    numutils_new.observedOverExpected  # @UndefinedVariable @IgnorePep8
 ultracorrectSymmetricByMask = \
-numutils_new.ultracorrectSymmetricByMask #@UndefinedVariable @IgnorePep8
+    numutils_new.ultracorrectSymmetricByMask  # @UndefinedVariable @IgnorePep8
 ultracorrectSymmetricWithVector = \
-numutils_new.ultracorrectSymmetricWithVector #@UndefinedVariable @IgnorePep8
+    numutils_new.ultracorrectSymmetricWithVector  # @UndefinedVariable @IgnorePep8
 
 
 def adaptiveSmoothing(matrix, parameter, alpha=0.5,
@@ -659,7 +720,7 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
     if originalCounts == "matrix":
         originalCounts = matrix
 
-    if mask == None:
+    if mask is None:
         mask = np.ones(matrix.shape, bool)
 
     elif mask == "auto":
@@ -772,7 +833,7 @@ def EIG(A, numPCs=3):
     """
     A = np.array(A, float)
     M = (A - np.mean(A))  # subtract the mean (along columns)
-    if (M - M.T).var() < np.var(M[::10, ::10]) * 0.000001:
+    if isSymmetric(A):
         [latent, coeff] = scipy.sparse.linalg.eigsh(M, numPCs)
     else:
         [latent, coeff] = scipy.sparse.linalg.eigs(M, numPCs)
@@ -789,17 +850,35 @@ def project(data, vector):
     return vector[:, None] * (dot / den)[None, :]
 
 
-def projectOnEigenvalues(data, N=1):
-    "projects symmetric data on the first N eigenvalues"
-    #TODO:(MI) rewrite properly for both symmetric and non-symmetric case
+def projectOnEigenvectors(data, N=1, forceSymmetrize=False):
+    "projects symmetric data on the first N eigenvalues of mean-centered data"
+
+    data = np.asarray(data)
+    if forceSymmetrize:
+        data = 0.5 (data + data.T)
+    if not isSymmetric(data):
+        raise ValueError("projections on eigenvectors only works for symmetric data")
+
     meanOfData = np.mean(data)
-    mdata = data - meanOfData
-    symData = 0.5 * (mdata + mdata.T)
-    values, vectors = scipy.linalg.eig(symData)
-    ndata = 0
+    vectors, values = EIG(data, N)
+
+    ndata = meanOfData
     for i in xrange(N):
-        ndata += values[i] * vectors[:, i][:, None] * vectors[:, i][None, :]
-    return ndata + meanOfData
+        ndata += values[i] * vectors[i][:, None] * vectors[i][None, :]
+    return ndata
+
+projectOnEigenvalues = deprecate(
+    projectOnEigenvectors, "projectOnEigenvectors")
+
+
+def _testProjectOnEigenvectors():
+    "for a smoothed matrix last eigenvector is essentially flat"
+    print "Testing projection on engenvalues"
+    a = np.random.random((100, 100))
+    a = gaussian_filter(a, 3)
+    sa = a + a.T
+    assert np.max(np.abs((projectOnEigenvectors(sa, 99) - sa))) < 0.00001
+    print "Test finished successfully!"
 
 
 def correct(y):
@@ -918,4 +997,6 @@ def create_regions(a):
 def _test():
     _testArayInArray()
     _testExternalSort()
-    _testArraySumByArray
+    _testArraySumByArray()
+    _testMatrixUtils()
+    _testProjectOnEigenvectors()
