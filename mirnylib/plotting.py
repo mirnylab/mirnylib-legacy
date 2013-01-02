@@ -17,10 +17,37 @@ import matplotlib.pyplot as plt
 
 import pylab
 import numpy
+np = numpy
 import scipy.stats as st
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from . import numutils
+
+
+
+
+def listToColormap(colorList, cmapName=None):
+    NSeg = len(colorList) - 1
+    colorList = np.array(colorList)
+    if colorList.min() < 0:
+        raise ValueError("Colors should be 0 to 1, or 0 to 255")
+    if colorList.max() > 1.:
+        if colorList.max() > 255:
+            raise ValueError("Colors should be 0 to 1 or 0 to 255")
+        else:
+            colorList = colorList / 255.
+    return matplotlib.colors.LinearSegmentedColormap.from_list(cmapName, colorList, 256)
+
+fallMap = listToColormap(
+                ((255, 255, 255), (255, 255, 204),
+                (255, 237, 160), (254, 217, 118),
+                 (254, 178, 76), (253, 141, 60),
+                 (252, 78, 42), (227, 26, 28),
+                 (189, 0, 38), (128, 0, 38), (0, 0, 0)),
+                              "fall"
+                              )
+matplotlib.cm.register_cmap("fall", fallMap)
+
 
 def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1]):
     """ Applies function (which should operate on vectors of shape 3:
@@ -389,7 +416,7 @@ def plot_matrix(matrix, **kwargs):
         The lower clipping value. If an element of a matrix is <clip_min, it is
         plotted as clip_min.
     clip_max : float, optional
-        The upper clipping value. 
+        The upper clipping value.
     label : str, optional
         Colorbar label
     """
@@ -571,7 +598,7 @@ def plot_average_3d(x, y, z, nbins, **kwargs):
     matrix = average_3d_data(x, y, z, nbins)
     plot_matrix_3d(matrix, **kwargs)
 
-def histogram2d(x,y, bins=10):
+def histogram2d(x, y, bins=10):
     hist, xedges, yedges = numpy.histogram2d(x, y, bins=bins)
     extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
 
@@ -581,7 +608,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     """
     Show a categorical bar chart
 
-    This function is based on the code from 
+    This function is based on the code from
     http://www.scipy.org/Cookbook/Matplotlib/BarCharts
     """
     if hasattr(y, 'keys') and hasattr(y, 'values'):
@@ -597,11 +624,11 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     xlocs = numpy.array(range(len(y))) + 0.5
     ecolor = kwargs.pop('ecolor', 'k')
     elinewidth = kwargs.pop('elinewidth', 1.0)
-    plt.bar(xlocs, y, yerr=yerr, width=width, ecolor=ecolor, 
-            error_kw = {'elinewidth':elinewidth},
+    plt.bar(xlocs, y, yerr=yerr, width=width, ecolor=ecolor,
+            error_kw={'elinewidth':elinewidth},
             **kwargs)
-    plt.xticks(xlocs + width/2, labels)
-    plt.xlim(0, xlocs[-1] + width*2)
+    plt.xticks(xlocs + width / 2, labels)
+    plt.xlim(0, xlocs[-1] + width * 2)
     plt.ylim(0, max(y) + (max(y) - min(y)) * 0.10)
     plt.gca().get_xaxis().tick_bottom()
     plt.gca().get_yaxis().tick_left()

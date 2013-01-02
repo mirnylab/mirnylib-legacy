@@ -21,7 +21,7 @@ import numutils_new
 "Mathematical & programming utilities first"
 #-----------------------------
 
-"np-related (programming) utilities"
+"numpy-related (programming) utilities"
 
 #----------Importing cytonised functions----------
 
@@ -396,6 +396,26 @@ def partialCorrelation(x, y, z,
                        corr=lambda x, y: scipy.stats.spearmanr(x, y)[0]):
     xy, xz, yz = corr(x, y), corr(x, z), corr(y, z)
     return (xy - xz * yz) / (sqrt(1 - xz ** 2) * sqrt(1 - yz ** 2))
+
+
+def robustPartialCorrelation(x, y, z, smeerSize=100,
+                             corrFun=lambda x, y: scipy.stats.spearmanr(x, y)[0]):
+
+    args = np.argsort(z)
+
+    def smeer(array):
+        "subtracts averages from bins in Z"
+        aSort = array[args]
+        smoothed = gaussian_filter(aSort, smeerSize)
+        aSort -= smoothed
+        newArray = np.zeros_like(array, dtype=float)
+        newArray[args] = aSort
+        return newArray
+    newX = smeer(x)
+    newY = smeer(y)
+    return corrFun(newX, newY), (newX, newY)
+
+
 
 "Array indexing-related utilities, written in np/c++"
 

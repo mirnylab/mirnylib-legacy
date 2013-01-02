@@ -44,9 +44,13 @@ def logbins(a, b, pace, N_in=0):
     end = log(b - 1)
     pace = log(pace)
     N = int((end - beg) / pace)     
+
     if N_in != 0: N = N_in
-    if N > (b-a):
+    if N_in > (b-a):
         raise ValueError("Cannot create more bins than elements")
+    else:
+        N = (b-a)
+
     pace = (end - beg) / N
     mas = np.arange(beg, end + 0.000000001, pace)    
     ret = np.exp(mas)
