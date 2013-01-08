@@ -103,7 +103,7 @@ class Genome(object):
 
         self.cntrMids = (self.cntrStarts + self.cntrEnds) / 2
         self.chrmArmLens = numpy.zeros(2 * self.chrmCount, int)
-        self.chrmArmLens[1::2] = self.cntrMids
+        self.chrmArmLens[0::2] = self.cntrMids
         self.chrmArmLens[1::2] = self.chrmLens - self.cntrMids
         lowarms = numpy.array(self.cntrStarts)
         higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
