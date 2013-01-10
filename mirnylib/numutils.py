@@ -9,12 +9,11 @@ from numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
 from numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
 from numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
 from numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
-from scipy.ndimage.filters import convolve, gaussian_filter
-from mirnylib.systemutils import setExceptionHook, deprecate
+from scipy.ndimage.filters import  gaussian_filter
+from mirnylib.systemutils import  deprecate
 na = np.array
 import  scipy.sparse.linalg
 import scipy.stats
-import scipy.linalg
 from math import cos, log, sin, sqrt
 import numutils_new
 #-----------------------------
@@ -747,7 +746,6 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
         return gf / mf
 
     outMatrix = np.zeros_like(matrix)
-    N = len(matrix)
     nonZero = matrix > 0
     nonZeroSum = nonZero.sum()
     values = np.r_[np.logspace(-1, 4, 50, 2)]

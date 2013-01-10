@@ -249,7 +249,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1,
         
         if M == 9999:
             if np.abs(s-1).max() < tolerance:
-                print "IC used {} iterations".format(iternum+1)
+                print "IC used {0} iterations".format(iternum+1)
                 break
 
                          
@@ -316,7 +316,7 @@ def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
         allsums *= sums        
         if M == 9999:
             if np.abs(sums-1).max() < tolerance:
-                print "IC used {} iterations".format(iteration+1)
+                print "IC used {0} iterations".format(iteration+1)
                 break
             
             

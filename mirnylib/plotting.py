@@ -13,6 +13,7 @@ These include:
 -niceShow  - nicer "plt.show"
 """
 import matplotlib
+import matplotlib.cm
 import matplotlib.pyplot as plt
 
 import pylab
