@@ -636,6 +636,9 @@ class Genome(object):
             The indices of the middle base pairs of restriction fragments
             in individual chromosomes.
 
+        rfragLens : list of arrays of int
+            The lengths of restriction fragments in bp.
+
         rsiteIds : array of int
             The position identifiers of the first base pairs of restriction
             fragments.
@@ -647,11 +650,26 @@ class Genome(object):
         rsiteChrms : array of int
             The indices of chromosomes for restriction sites in corresponding
             positions of rsiteIds and rsiteMidIds.
+
+        chrmStartsRfragCont : array of int
+            The indices of first restriction fragments in each chromosome.
+
+        chrmEndsRfragCont : array of int
+            The indices of last restriction fragments in each chromosome.
+
+        chrmBordersRfragCont : array of int
+            The indices of restriction fragments delimiting each chromosome.
         """
 
         self.enzymeName = enzymeName
 
         self.rsites, self.rfragMids = self.getRsites(enzymeName)
+
+        self.rfragLens = [
+            numpy.diff(numpy.r_[0, i]) for i in self.rsites]
+        self.chrmStartsRfragCont = numpy.cumsum([len(i) for i in self.rsites])
+        self.chrmBordersRfragCont = numpy.r_[0, self.chrmStartsRfragCont]
+        self.chrmEndsRfragCont = self.chrmBordersRfragCont[1:]
 
         self.rsiteIds = numpy.concatenate(
             [self.rsites[chrm] + chrm * self.fragIDmult
