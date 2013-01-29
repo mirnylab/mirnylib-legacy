@@ -71,7 +71,16 @@ class h5dict(collections.MutableMapping):
                     raise Exception('Cannot read {0}.'.format(self.path))
                 if not self.read_only and not os.access(self.path, os.W_OK):
                     raise Exception('The file {0} is read-only, set mode=\'r\'.'.format(self.path))
-            self._h5file = h5py.File(self.path, mode)
+            try:
+                self._h5file = h5py.File(self.path, mode)
+            except Exception as inst:
+                if os.path.isfile(self.path):
+                    raise Exception(
+                        ('The file {0} is likely to be '
+                         'used by other h5dict object.').format(self.path))
+                else:
+                    raise inst
+
             self.__self_load__()
             self.autoflush = autoflush
 

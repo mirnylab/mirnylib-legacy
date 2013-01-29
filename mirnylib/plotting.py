@@ -312,6 +312,8 @@ def scatter_trend(x, y, **kwargs):
     Parameters
     ----------
     x, y : array_like of float
+    plot_type : bool, optional
+        The type of a plot.
     plot_trend : bool, optional
         If True then plot a trendline. True by default.
     skip_trend_points : (int,int), optional
@@ -336,23 +338,18 @@ def scatter_trend(x, y, **kwargs):
     alpha_legend : float, optional
         Legend box transparency. 0.7 by default.
     """
-    x = numpy.asarray(x)
-    y = numpy.asarray(y)
-    (skip_first, skip_last) = kwargs.get('skip_trend_points', (0, None))
+    x, y = numpy.asarray(x), numpy.asarray(y)
+    mask = np.logical_not(numpy.isnan(x) + numpy.isnan(y) + np.isinf(x) + np.isinf(y))
+    x, y  = x[mask], y[mask]
+    (skip_first, skip_last) = kwargs.pop('skip_trend_points', (0, None))
     if not skip_last is None:
         skip_last = -skip_last
     a, b, r, p, slope_sigma = st.linregress(
         x[skip_first:skip_last],
         y[skip_first:skip_last])
     stderr = numpy.std(y - a * x - b)
-    pylab.title(kwargs.get('title', ''))
-    pylab.xlabel(kwargs.get('xlabel', ''))
-    pylab.ylabel(kwargs.get('ylabel', ''))
-    scat_plot = pylab.scatter(x, y,
-                              c=kwargs.get('c', 'b'),
-                              alpha=kwargs.get('alpha', 1.0))
 
-    if kwargs.get('show_slope_sigma'):
+    if kwargs.pop('show_slope_sigma', True):
         equation_label = '$y\,=\,({:.3f}\pm{:.3f})x\,+\,{:.3f}$'.format(
             a, 2 * slope_sigma, b)
     else:
@@ -362,39 +359,76 @@ def scatter_trend(x, y, **kwargs):
     label = ('{}, {}').format(equation_label, r2_label)
     if 'label' in kwargs:
         label = kwargs['label'] + '\n' + label
-    if kwargs.get('show_sigma_prediction', True):
+    if kwargs.pop('show_sigma_prediction', True):
         label = label + '\n' + sigma_label
 
     if skip_first or skip_last:
         label += '\n$omit\,{}\,terminal\,points$'.format(
             (skip_first,
              - skip_last if skip_last else 0))
-    scat_plot.set_label(label)
-    legend = pylab.legend(loc=kwargs.get('loc', 'best'))
+
+    plot_type = kwargs.get('plot_type', 'scatter')
+    color = kwargs.get('c', 'b')
+    if plot_type == 'scatter':
+        plt.scatter(x[skip_first:skip_last], 
+                    y[skip_first:skip_last],
+                    edgecolor=color,
+                    facecolor=color,
+                    alpha=kwargs.get('alpha', 1.0))
+    elif plot_type == 'line':
+        plt.plot(x[skip_first:skip_last], 
+                 y[skip_first:skip_last],
+                 color=color,
+                 alpha=kwargs.get('alpha', 1.0),
+                 marker='.',
+                 markersize=10.0)
+
+    if skip_first:
+        plt.scatter(x[0:skip_first], 
+                    y[0:skip_first],
+                    edgecolor=color,
+                    facecolor='w',
+                    alpha=kwargs.get('alpha', 1.0))
+    if skip_last:
+        plt.scatter(x[skip_last:],
+                    y[skip_last:],
+                    edgecolor=color,
+                    facecolor='w',
+                    alpha=kwargs.get('alpha', 1.0))
+
+    plt.title(kwargs.get('title', ''))
+    plt.xlabel(kwargs.get('xlabel', ''))
+    plt.ylabel(kwargs.get('ylabel', ''))
+    
+    if kwargs.get('plot_trend', True):
+        plt.plot([min(x), max(x)],
+                 [a * min(x) + b, a * max(x) + b],
+                 color=color,
+                 linestyle='--',
+                 label=label)
+    if kwargs.pop('plot_sigmas', False):
+        for i in [-3.0, -2.0, -1.0, 1.0, 2.0, 3.0]:
+            plt.plot([min(x), max(x)],
+                     [a * min(x) + b + i * stderr,
+                      a * max(x) + b + i * stderr],
+                     'r--')
+    legend = plt.legend(loc=kwargs.get('loc', 'best'))
     legend_frame = legend.get_frame()
     legend_frame.set_alpha(kwargs.get('alpha_legend', 0.7))
-    if kwargs.get('plot_trend', True):
-        pylab.plot([min(x), max(x)],
-                   [a * min(x) + b, a * max(x) + b])
-    if kwargs.get('plot_sigmas', False):
-        for i in [-3.0, -2.0, -1.0, 1.0, 2.0, 3.0]:
-            pylab.plot([min(x), max(x)],
-                       [a * min(x) + b + i * stderr, a *
-                           max(x) + b + i * stderr],
-                       'r--')
-
 
 def plot_matrix_3d(matrix, **kwargs):
     import mpl_toolkits.mplot3d.axes3d as pylab3d
     ax = pylab3d.Axes3D(pylab.gcf())
     x = kwargs.get('x', numpy.arange(matrix.shape[1]))
     y = kwargs.get('y', numpy.arange(matrix.shape[0]))
+    matrix = np.copy(matrix)
+    matrix[np.isnan(matrix)] = np.nanmin(matrix)
     X, Y = numpy.meshgrid(x, y)
 
     plot_type = kwargs.get('plot_type', 'surface')
     if plot_type == 'surface':
         ax.plot_surface(X, Y, matrix, rstride=1, cstride=1,
-                        cmap=pylab.cm.get_cmap("jet"))
+                        cmap=pylab.cm.get_cmap("jet"), antialiased=False)
     elif plot_type == 'wireframe':
         ax.plot_wireframe(X, Y, matrix, cmap=pylab.cm.get_cmap("jet"))
     elif plot_type == 'scatter':
