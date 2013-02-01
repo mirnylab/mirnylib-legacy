@@ -535,7 +535,7 @@ def _testArayInArray():
 
 
 def arraySumByArray(array, filterarray, meanarray):
-    """faster [sum(array == i) for i in filterarray]
+    """faster [sum(meanarray[array == i]) for i in filterarray]
     Current method is a wrapper that optimizes
     this method for speed and memory efficiency.
     """
@@ -905,6 +905,8 @@ def correctInPlace(x):
 def ultracorrect(x, M=20):
     "just iterative correction of symmetric matrix"
     x = np.array(x, float)
+    if x.sum() == 0:
+        return x
     print np.mean(x),
     newx = np.array(x)
     for _ in xrange(M):

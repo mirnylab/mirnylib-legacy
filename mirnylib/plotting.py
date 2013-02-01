@@ -86,7 +86,7 @@ def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1])
     return matplotlib.colors.LinearSegmentedColormap('colormap', cdict, 1024)
 
 
-def showPolymerRasmol(x, y=None, z=None):
+def showPolymerRasmol(x, y=None, z=None, color="auto"):
     """
     Shows the polymer using rasmol.
     Can't properly treat continuous chains (they will have linkers of 5 balls between chains)
@@ -136,8 +136,11 @@ def showPolymerRasmol(x, y=None, z=None):
 
     #creating the array, linearly chanhing from -225 to 225, to serve as an array of colors
     #(rasmol color space is -250 to 250, but it  still sets blue to the minimum color it found and red to the maximum).
-    colors = numpy.array([int(
-        (j * 450.) / (len(data))) - 225 for j in xrange(len(data))])
+    if color == "auto":
+        colors = numpy.array([int(
+            (j * 450.) / (len(data))) - 225 for j in xrange(len(data))])
+    else:
+        colors = color
 
     #creating spheres along the trajectory
     #for speedup I just create a Nx4 array, where first three columns are coordinates, and fourth is the color

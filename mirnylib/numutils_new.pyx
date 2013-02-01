@@ -218,8 +218,6 @@ def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1,
     totalBias = np.ones(len(x),float)    
     if v == None: v = np.zeros(len(x),float)  #single-sided reads    
     x = np.array(x,np.double,order = 'C')
-    if not  np.abs(x-x.T).mean() / (1. * np.abs(x.mean())) < 1e-10:
-        raise ValueError("Please provide symmetric matrix!")
     cdef np.ndarray[np.double_t, ndim = 2] _x = x
     cdef np.ndarray[np.double_t, ndim = 1] s 
     v = np.array(v,float,order = "C")        
