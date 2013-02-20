@@ -76,6 +76,16 @@ def fastMatrixSTD(inMatrix):
 
 def isInteger(inputData):
     """checks if input array consists of integers"""
+    try:
+        c = float(inputData)
+        mod = np.fmod(c, 1.)
+        minmod = min(mod, 1 - mod)
+        if minmod < 0.0001:
+            return True
+        return False
+    except:
+        pass
+
     inputData = np.asarray(inputData)
     if generalizedDtype(inputData) == np.int:
         return True
@@ -89,6 +99,7 @@ def isInteger(inputData):
     if minmod.max() < 0.00001 * min(varvar, 1):
         return True
     return False
+
 
 
 def isSymmetric(inMatrix):
@@ -764,7 +775,7 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
 
         smoothed = gaussian_filter(originalCounts, value) * norm
         smoothed -= alpha * originalCounts
-        assert smoothed.min() >= -1e-10
+        #assert smoothed.min() >= -1e-10
 
         #Indeces to smooth on that iteration
         new = (smoothed > parameter) * (covered != True) * nonZero
@@ -866,12 +877,12 @@ def projectOnEigenvectors(data, N=1, forceSymmetrize=False):
     return ndata
 
 projectOnEigenvalues = deprecate(
-    projectOnEigenvectors, "projectOnEigenvectors")
+    projectOnEigenvectors, "projectOnEigenvalues")
 
 
 def _testProjectOnEigenvectors():
     "for a smoothed matrix last eigenvector is essentially flat"
-    print "Testing projection on engenvalues"
+    print "Testing projection on eigenvectors"
     a = np.random.random((100, 100))
     a = gaussian_filter(a, 3)
     sa = a + a.T

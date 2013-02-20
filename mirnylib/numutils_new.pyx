@@ -447,4 +447,3 @@ def contactMC(in_matrix,repeats = 1):
     return retmat
 
 
-            
