@@ -23,8 +23,7 @@ log = logging.getLogger(__name__)
 class h5dict(collections.MutableMapping):
     self_key = '_self_key'
 
-    def __init__(self, path=None, mode='a', autoflush=True, in_memory=False,
-                 read_only=False):
+    def __init__(self, path=None, mode='a', autoflush=True, in_memory=False):
         '''A persistent dictionary with data stored in an HDF5 file.
 
         Parameters:

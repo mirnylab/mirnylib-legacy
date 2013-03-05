@@ -667,9 +667,11 @@ class Genome(object):
 
         self.rfragLens = [
             numpy.diff(numpy.r_[0, i]) for i in self.rsites]
-        self.chrmStartsRfragCont = numpy.cumsum([len(i) for i in self.rsites])
-        self.chrmBordersRfragCont = numpy.r_[0, self.chrmStartsRfragCont]
-        self.chrmEndsRfragCont = self.chrmBordersRfragCont[1:]
+        self.chrmEndsRfragCont = numpy.cumsum([len(i) for i in self.rsites])
+        self.chrmBordersRfragCont = numpy.r_[0, self.chrmEndsRfragCont]
+        self.chrmStartsRfragCont = self.chrmBordersRfragCont[:-1]
+
+        self.numRfrags = self.chrmEndsRfragCont[-1]
 
         self.rsiteIds = numpy.concatenate(
             [self.rsites[chrm] + chrm * self.fragIDmult
