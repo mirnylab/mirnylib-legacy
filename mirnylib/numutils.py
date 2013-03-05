@@ -623,6 +623,7 @@ def corr2d(x):
     return np.real(np.fft.ifft2(t * np.conjugate(t)))
 
 
+
 def logbins(a, b, pace=0, N_in=0):
     """Create log-spaced bins.
 
@@ -993,6 +994,30 @@ def smeerAlongDiagonal(inMatrix):
         diag = np.diagonal(inMatrix, i).mean()
         fillDiagonal(inMatrix, diag, i)
     return inMatrix
+
+
+def continuousRegions(a):
+    """
+    Returns regions of continuous values of a, and their values
+
+    Parameters
+    ----------
+    a : 1D array-like
+        Input array
+
+    Returns
+    -------
+    values,st, end : numpy arrays
+        3 arrays of equal length, recording values in each region, start and end positions
+    """
+    a = np.asarray(a)
+    assert len(a.shape) == 1
+    N = len(a)
+    points = np.r_[0, np.nonzero(a[:-1] != a[1:])[0] + 1, N]
+    start = points[:-1]
+    end = points[1:]
+    values = a[start]
+    return values, start, end
 
 
 def create_regions(a):
