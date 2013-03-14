@@ -40,7 +40,8 @@ class h5dict(collections.MutableMapping):
 
         in_memory : bool
             if True, than the object is stored in the memory and not saved
-            to the disk.
+            to the disk. If path is supplied, the dict is update with data from
+            supplied location.
         '''
         self.read_only = (mode == 'r')
 
@@ -54,6 +55,10 @@ class h5dict(collections.MutableMapping):
             self.__self_load__()
             self.autoflush = False
             self.is_tmp = False  # In-memory h5dict doesn't have any tmp files.
+            if path:
+                tmpH5dict = h5dict(path, mode='r')
+                self.update(tmpH5dict)
+                del tmpH5dict
 
         else:
             if path is None:
