@@ -93,13 +93,12 @@ def isInteger(inputData):
     #checking if variance of the data is significantly less than 1
 
     varvar = fastMatrixSTD(inputData)
-
+    varvar = max(varvar, 1e-5)
     mod = np.fmod(inputData, 1)
     minmod = np.minimum(mod, 1 - mod)
     if minmod.max() < 0.00001 * min(varvar, 1):
         return True
     return False
-
 
 
 def isSymmetric(inMatrix):
@@ -126,6 +125,10 @@ def _testMatrixUtils():
     print
     print "Testing isInteger"
     assert isInteger(1)
+    assert isInteger(0)
+    assert isInteger(np.zeros(100, int))
+    assert isInteger(np.zeros(100, float))
+    assert isInteger(np.zeros(100, float) + np.random.random(100) * 1e-10)
     assert isInteger(True)
     assert isInteger(1.)
     assert isInteger(np.sqrt(3) ** 2)
@@ -472,6 +475,18 @@ def partialCorrelation(x, y, z,
 
 def robustPartialCorrelation(x, y, z, smeerSize=100,
                              corrFun=lambda x, y: scipy.stats.spearmanr(x, y)[0]):
+    """
+    Performs correlation of X and Y, stratified by Z in a special way.
+    First it orders X and Y by the value of Z.
+    Second, it calculates deviation of X and Y, smeered by smeerSize.
+    By doing so, it effectively only compares X and Y for the same value of Z,
+    effectively doing so in bins of smeerSize.
+
+    I could have just binned all Z valies in bins of smeerSize, and subtracted
+    mean values of X and Y in each bin, but this would be discrete.
+    This method is a continuous generalization of that.
+
+    """
 
     args = np.argsort(z)
 
@@ -561,7 +576,7 @@ def arraySumByArray(array, filterarray, meanarray):
                                          meanarray[bins[i]:bins[i + 1]])
         return toreturn
     else:
-        return _arraySumByArray(array, filterarray)
+        return _arraySumByArray(array, filterarray, meanarray)
 
 
 def _testArraySumByArray():
@@ -621,7 +636,6 @@ def corr2d(x):
     x = np.array(x)
     t = np.fft.fft2(x)
     return np.real(np.fft.ifft2(t * np.conjugate(t)))
-
 
 
 def logbins(a, b, pace=0, N_in=0):
@@ -760,13 +774,14 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
     outMatrix = np.zeros_like(matrix)
     nonZero = matrix > 0
     nonZeroSum = nonZero.sum()
-    values = np.r_[np.logspace(-1, 4, 50, 2)]
+    values = np.r_[np.logspace(-0.4, 4, 25, 2)]
     values = values[values * 2 * np.pi > 1]
     #print values
     covered = np.zeros(matrix.shape, dtype=bool)
     #outMatrix[covered] += matrix[covered]
 
     for value in values:
+        print value,
         #finding normalization of a discrete gaussian filter
         test = np.zeros((8 * value, 8 * value), dtype=float)
         test[4 * value, 4 * value] = 1
@@ -774,9 +789,9 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
         stest /= stest[4 * value, 4 * value]
         norm = stest.sum()
 
-        smoothed = gaussian_filter(originalCounts, value) * norm
+        smoothed = gaussian_filter(1. * originalCounts, value) * norm
         smoothed -= alpha * originalCounts
-        #assert smoothed.min() >= -1e-10
+        assert smoothed.min() >= -1e-10
 
         #Indeces to smooth on that iteration
         new = (smoothed > parameter) * (covered != True) * nonZero
