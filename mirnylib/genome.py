@@ -652,10 +652,20 @@ class Genome(object):
             positions of rsiteIds and rsiteMidIds.
 
         chrmStartsRfragCont : array of int
-            The indices of first restriction fragments in each chromosome.
+            The absolute indices of first restriction fragments in each 
+            chromosome.
 
         chrmEndsRfragCont : array of int
-            The indices of last restriction fragments in each chromosome.
+            The absolute indices of last restriction fragments in each 
+            chromosome.
+
+        cntrMidsRfrag : array of int
+            The relative indices of restriction fragments containing the 
+            centromere midpoint.
+
+        cntrMidsRfragCont : array of int
+            The absolute indices of restriction fragments containing the 
+            centromere midpoint.
 
         chrmBordersRfragCont : array of int
             The indices of restriction fragments delimiting each chromosome.
@@ -670,6 +680,10 @@ class Genome(object):
         self.chrmEndsRfragCont = numpy.cumsum([len(i) for i in self.rsites])
         self.chrmBordersRfragCont = numpy.r_[0, self.chrmEndsRfragCont]
         self.chrmStartsRfragCont = self.chrmBordersRfragCont[:-1]
+        self.cntrMidsRfrag = [
+            numpy.searchsorted(self.rsites[i], self.cntrMids[i])-1
+            for i in range(self.chrmCount)]
+        self.cntrMidsRfragCont = self.cntrMidsRfrag + self.chrmStartsRfragCont
 
         self.numRfrags = self.chrmEndsRfragCont[-1]
 
