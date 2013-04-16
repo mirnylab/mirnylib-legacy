@@ -56,9 +56,10 @@ class h5dict(collections.MutableMapping):
             self.autoflush = False
             self.is_tmp = False  # In-memory h5dict doesn't have any tmp files.
             if path:
-                tmpH5dict = h5dict(path, mode='r')
-                self.update(tmpH5dict)
-                del tmpH5dict
+                if os.path.exists(path):
+                    tmpH5dict = h5dict(path, mode='r')
+                    self.update(tmpH5dict)
+                    del tmpH5dict
 
         else:
             if path is None:
