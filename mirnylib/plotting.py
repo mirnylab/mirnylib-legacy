@@ -45,7 +45,41 @@ fallMap = listToColormap(
      (189, 0, 38), (128, 0, 38), (0, 0, 0)),
     "fall"
 )
+
+bluesMap = listToColormap(
+((255, 255, 255),
+#255,247,251
+#236,231,242
+#208,209,230
+(180, 204, 225),
+(116, 169, 207),
+(54, 144, 192),
+(5, 112, 176),
+(4, 87, 135),
+(3, 65, 100),
+(2, 40, 66),
+(1, 20, 30),
+(0, 0, 0)),
+    "blues")
+
+
+acidBluesMap = listToColormap(
+(
+(255, 255, 255) ,
+(162, 192, 222) ,
+(140, 137, 187) ,
+(140, 87, 167) ,
+(140, 45, 143) ,
+(120, 20, 120) ,
+(90, 15, 90) ,
+(60, 10, 60) ,
+(30, 5, 30) ,
+(0, 0, 0)),
+"acidblues")
+
 matplotlib.cm.register_cmap("fall", fallMap)
+matplotlib.cm.register_cmap("blues", bluesMap)
+matplotlib.cm.register_cmap("acidblues", acidBluesMap)
 
 
 def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1]):
@@ -343,7 +377,7 @@ def scatter_trend(x, y, **kwargs):
     """
     x, y = numpy.asarray(x), numpy.asarray(y)
     mask = np.logical_not(numpy.isnan(x) + numpy.isnan(y) + np.isinf(x) + np.isinf(y))
-    x, y  = x[mask], y[mask]
+    x, y = x[mask], y[mask]
     (skip_first, skip_last) = kwargs.pop('skip_trend_points', (0, None))
     if not skip_last is None:
         skip_last = -skip_last
@@ -373,13 +407,13 @@ def scatter_trend(x, y, **kwargs):
     plot_type = kwargs.get('plot_type', 'scatter')
     color = kwargs.get('c', 'b')
     if plot_type == 'scatter':
-        plt.scatter(x[skip_first:skip_last], 
+        plt.scatter(x[skip_first:skip_last],
                     y[skip_first:skip_last],
                     edgecolor=color,
                     facecolor=color,
                     alpha=kwargs.get('alpha', 1.0))
     elif plot_type == 'line':
-        plt.plot(x[skip_first:skip_last], 
+        plt.plot(x[skip_first:skip_last],
                  y[skip_first:skip_last],
                  color=color,
                  alpha=kwargs.get('alpha', 1.0),
@@ -387,7 +421,7 @@ def scatter_trend(x, y, **kwargs):
                  markersize=10.0)
 
     if skip_first:
-        plt.scatter(x[0:skip_first], 
+        plt.scatter(x[0:skip_first],
                     y[0:skip_first],
                     edgecolor=color,
                     facecolor='w',
@@ -402,7 +436,7 @@ def scatter_trend(x, y, **kwargs):
     plt.title(kwargs.get('title', ''))
     plt.xlabel(kwargs.get('xlabel', ''))
     plt.ylabel(kwargs.get('ylabel', ''))
-    
+
     if kwargs.get('plot_trend', True):
         plt.plot([min(x), max(x)],
                  [a * min(x) + b, a * max(x) + b],

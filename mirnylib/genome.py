@@ -883,7 +883,6 @@ class Genome(object):
               if ((chrom == 0) || (chrom > chromCount)) skip = true;
               if (skip == true) printf("Skipping chromosome %s\n", chromNum);
 
-              cout << "working on chromosome  " << chrom << endl;
               continue;
               }
             if (skip == false)

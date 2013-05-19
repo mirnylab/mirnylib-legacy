@@ -735,19 +735,25 @@ ultracorrectSymmetricWithVector = \
     numutils_new.ultracorrectSymmetricWithVector  # @UndefinedVariable @IgnorePep8
 
 
-def adaptiveSmoothing(matrix, parameter, alpha=0.5,
+def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
                       mask="auto", originalCounts="matrix"):
     """This is a super-cool method to smooth a heatmap.
     Smoothes each point into a gaussian, encoumpassing parameter
     raw reads, taked from originalCounts data, or from matrix if not provided
     """
-    matrix = np.asarray(matrix, dtype=np.double)
+    matrix = np.array(matrix, dtype=np.double)
     if originalCounts == "matrix":
-        originalCounts = matrix
+        originalCounts = matrix.copy()
+    originalCounts[originalCounts > 0.5 * cutoff] = 0.5 * cutoff
+
+    head = matrix.copy()
+    head -= 0.5 * cutoff
+    head[head < 0] = 0
+
+    matrix[matrix > 0.5 * cutoff] = 0.5 * cutoff
 
     if mask is None:
         mask = np.ones(matrix.shape, bool)
-
     elif mask == "auto":
         sum1 = np.sum(matrix, axis=0) > 0
         sum0 = np.sum(matrix, axis=1) > 0
@@ -774,7 +780,7 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
     outMatrix = np.zeros_like(matrix)
     nonZero = matrix > 0
     nonZeroSum = nonZero.sum()
-    values = np.r_[np.logspace(-0.4, 4, 25, 2)]
+    values = np.r_[np.logspace(-0.4, 4, 50, 2)]
     values = values[values * 2 * np.pi > 1]
     #print values
     covered = np.zeros(matrix.shape, dtype=bool)
@@ -790,11 +796,10 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
         norm = stest.sum()
 
         smoothed = gaussian_filter(1. * originalCounts, value) * norm
-        smoothed -= alpha * originalCounts
         assert smoothed.min() >= -1e-10
 
         #Indeces to smooth on that iteration
-        new = (smoothed > parameter) * (covered != True) * nonZero
+        new = (smoothed > cutoff) * (covered != True) * nonZero
         newInds = np.nonzero(new.flat)[0]
 
         #newReads = originalCounts.flat[newInds]
@@ -813,7 +818,7 @@ def adaptiveSmoothing(matrix, parameter, alpha=0.5,
         if covered.sum() == nonZeroSum:
             break
     #print matrix.sum(), outMatrix.sum()
-    return outMatrix
+    return outMatrix + head
 
 
 def maskPCA(A, mask):
