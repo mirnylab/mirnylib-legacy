@@ -37,49 +37,35 @@ def listToColormap(colorList, cmapName=None):
             colorList = colorList / 255.
     return matplotlib.colors.LinearSegmentedColormap.from_list(cmapName, colorList, 256)
 
-fallMap = listToColormap(
-    ((255, 255, 255), (255, 255, 204),
+fallList = ((255, 255, 255), (255, 255, 204),
      (255, 237, 160), (254, 217, 118),
      (254, 178, 76), (253, 141, 60),
      (252, 78, 42), (227, 26, 28),
-     (189, 0, 38), (128, 0, 38), (0, 0, 0)),
-    "fall"
-)
+     (189, 0, 38), (128, 0, 38), (0, 0, 0))
 
-bluesMap = listToColormap(
-((255, 255, 255),
-#255,247,251
-#236,231,242
-#208,209,230
-(180, 204, 225),
-(116, 169, 207),
-(54, 144, 192),
-(5, 112, 176),
-(4, 87, 135),
-(3, 65, 100),
-(2, 40, 66),
-(1, 20, 30),
-(0, 0, 0)),
-    "blues")
+bluesList = ((255, 255, 255), (180, 204, 225),
+             (116, 169, 207), (54, 144, 192),
+             (5, 112, 176), (4, 87, 135),
+             (3, 65, 100), (2, 40, 66),
+             (1, 20, 30), (0, 0, 0))
 
 
-acidBluesMap = listToColormap(
-(
-(255, 255, 255) ,
-(162, 192, 222) ,
-(140, 137, 187) ,
-(140, 87, 167) ,
-(140, 45, 143) ,
-(120, 20, 120) ,
-(90, 15, 90) ,
-(60, 10, 60) ,
-(30, 5, 30) ,
-(0, 0, 0)),
-"acidblues")
+acidBluesList = ((255, 255, 255), (162, 192, 222),
+                 (140, 137, 187), (140, 87, 167),
+                 (140, 45, 143), (120, 20, 120),
+                 (90, 15, 90), (60, 10, 60),
+                 (30, 5, 30), (0, 0, 0))
 
-matplotlib.cm.register_cmap("fall", fallMap)
-matplotlib.cm.register_cmap("blues", bluesMap)
-matplotlib.cm.register_cmap("acidblues", acidBluesMap)
+
+def registerList(mylist, name):
+    mymap = listToColormap(mylist, name)
+    mymapR = listToColormap(mylist[::-1], name + "_r")
+    matplotlib.cm.register_cmap(name, mymap)
+    matplotlib.cm.register_cmap(name + "_r", mymapR)
+
+registerList(fallList, "fall")
+registerList(bluesList, "blues")
+registerList(acidBluesList, "acidblues")
 
 
 def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1]):
@@ -231,6 +217,8 @@ def scatter3D(x, y, z, color='b'):
 def removeAxes(mode="normal", shift=0, ax=None):
     if ax is None:
         ax = plt.gca()
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
     for loc, spine in ax.spines.iteritems():
         if mode == "normal":
             if loc in ['left', 'bottom']:

@@ -333,7 +333,7 @@ def observedOverExpected(matrix):
     N = _data.shape[0]
     
     cdef np.ndarray[np.double_t, ndim = 2] data = _data 
-    _bins = logbins(1,N,1.1)
+    _bins = logbins(1,N,1.05)
     _bins = [(0,1)] + [(_bins[i],_bins[i+1]) for i in xrange(len(_bins)-1)]
     _bins = np.array(_bins,dtype = np.int64, order = "C")
     cdef np.ndarray[np.int64_t, ndim = 2] bins = _bins

@@ -727,10 +727,44 @@ randomOnSphere = random_on_sphere
 
 #-------------Importing cytonized functions--------------
 
-observedOverExpected = \
-    numutils_new.observedOverExpected  # @UndefinedVariable @IgnorePep8
-ultracorrectSymmetricByMask = \
-    numutils_new.ultracorrectSymmetricByMask  # @UndefinedVariable @IgnorePep8
+def observedOverExpected(matrix):
+    """
+    Parameters
+    ----------
+    matrix : a symmetric contactmap
+        A Hi-C contactmap to calculate observed over expected.
+
+    Returns
+    -------
+        matrix : a symmetric corrected contactmap
+
+    .. note:: This function does not work in place; it returns a copy.
+
+    It divides each diagonal of a Hi-C contact map by its' mean.
+    It also does it in a smart way: it calculates averages
+    over stripes from X to X*1.05, and divides each stripe by its mean.
+
+    It allows to avoid divergence far from the main diagonal with a very few reads.
+    """
+    return numutils_new.observedOverExpected(matrix)
+
+def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
+    """
+    Parameters
+    ----------
+    x : a symmetric matrix
+        A symmetric matrix to be corrected
+    mask : a x-shaped matrix
+        Array of elements which to include into iterative correction
+    M : int or None
+        Number of iterations to perform
+    tolerance : float
+        Maximum relative error for convergence.
+
+    M has priority over tolerance
+    """
+    return numutils_new.ultracorrectSymmetricByMask(x, mask, M, tolerance)
+
 ultracorrectSymmetricWithVector = \
     numutils_new.ultracorrectSymmetricWithVector  # @UndefinedVariable @IgnorePep8
 

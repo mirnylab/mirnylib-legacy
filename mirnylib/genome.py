@@ -1,7 +1,7 @@
 #(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Anton Goloborodko (golobor@mit.edu),
 # Maksim Imakaev (imakaev@mit.edu)
-from mirnylib.systemutils import setExceptionHook
+
 
 
 '''A Genome object contains the cached properties of a genome.
@@ -36,6 +36,7 @@ import os
 import glob
 import re
 import numpy
+np = numpy
 import warnings
 import Bio.SeqIO
 import Bio.SeqUtils
@@ -45,7 +46,6 @@ import joblib
 from scipy import weave
 import logging
 import numutils
-
 log = logging.getLogger(__name__)
 
 
@@ -652,19 +652,19 @@ class Genome(object):
             positions of rsiteIds and rsiteMidIds.
 
         chrmStartsRfragCont : array of int
-            The absolute indices of first restriction fragments in each 
+            The absolute indices of first restriction fragments in each
             chromosome.
 
         chrmEndsRfragCont : array of int
-            The absolute indices of last restriction fragments in each 
+            The absolute indices of last restriction fragments in each
             chromosome.
 
         cntrMidsRfrag : array of int
-            The relative indices of restriction fragments containing the 
+            The relative indices of restriction fragments containing the
             centromere midpoint.
 
         cntrMidsRfragCont : array of int
-            The absolute indices of restriction fragments containing the 
+            The absolute indices of restriction fragments containing the
             centromere midpoint.
 
         chrmBordersRfragCont : array of int
@@ -681,7 +681,7 @@ class Genome(object):
         self.chrmBordersRfragCont = numpy.r_[0, self.chrmEndsRfragCont]
         self.chrmStartsRfragCont = self.chrmBordersRfragCont[:-1]
         self.cntrMidsRfrag = [
-            numpy.searchsorted(self.rsites[i], self.cntrMids[i])-1
+            numpy.searchsorted(self.rsites[i], self.cntrMids[i]) - 1
             for i in range(self.chrmCount)]
         self.cntrMidsRfragCont = self.cntrMidsRfrag + self.chrmStartsRfragCont
 
@@ -813,9 +813,11 @@ class Genome(object):
         return  (self.rfragMidIds[fragment1Real],
                  self.rfragMidIds[fragment2Real])
 
-    def _parseFixedStepWigAtKbResolution(self, filename, resolution):
+    def _parseFixedStepWigAtSmallResolution(self, filename, resolution):
         """Internal method for parsing fixedStep wig file
         and averaging it over every kb"""
+        if resolution > 10000:
+            raise ValueError("Please use parseWigFile instead for resolutions >10 kb")
         myfilename = filename
         if os.path.exists(filename) == False:
             raise StandardError("File not found!")
@@ -914,17 +916,20 @@ class Genome(object):
             1]) for chrom, i in enumerate(datas)]
         return datas
 
-    def parseFixedStepWigAtKbResolution(self, filename, resolution=5000):
+    def parseFixedStepWigAtSmallResolution(self, filename, resolution=5000):
         "Returns averages of a fixedStepWigFile for all chromosomes"
         # At the first call the function rewrites itself with a memoized
         # private function.
-        self.parseFixedStepWigAtKbResolution = self._memoize(
-            '_parseFixedStepWigAtKbResolution')
-        return self.parseFixedStepWigAtKbResolution(filename,
+        self.parseFixedStepWigAtSmallResolution = self._memoize(
+            '_parseFixedStepWigAtSmallResolution')
+        return self.parseFixedStepWigAtSmallResolution(filename,
                                                     resolution=resolution)
 
     def _parseBigWigFile(self, filename, resolution=5000,
                          divideByValidCounts=False):
+
+        if resolution > 10000:
+            raise ValueError("Please use parseWigFile instead for resolutions >10 kb")
         import bx.bbi.bigwig_file
         from bx.bbi.bigwig_file import BigWigFile
 
@@ -965,7 +970,7 @@ class Genome(object):
 
         return data
 
-    def parseBigWigFile(self, filename, resolution=5000,
+    def parseBigWigFileAtSmallResolution(self, filename, resolution=5000,
                         divideByValidCounts=False):
         """
         Parses bigWig file using bxPython build-in method "summary".
@@ -996,3 +1001,166 @@ class Genome(object):
         self.parseBigWigFile = self._memoize('_parseBigWigFile')
         return self.parseBigWigFile(filename,
                                     resolution, divideByValidCounts)
+    def parseAnyWigFile(self, filenames, control=None,
+                    wigFileType="Auto", functionToAverage=np.log, internalResolution=5000):
+        """
+        1. Calculates total value of a track over internalResolution (5kb) sized subbins
+
+        2. If multiple files are given, aggregates them at this level by taking a sum
+
+        3. Aggregated reads are divided by control within each subbin
+
+        4. We take functionToAverage (by default - log) of all non-zero subbins in the bin
+
+        5. We takes an average of all non-zero subbins within a bin
+
+        6. We divide each track by the median of the track
+
+        Parameters
+        ----------
+
+        filenames : str or list of str
+            list of filenames to aggregate data from
+        control : str or None
+            Control track
+        wigFileType : "bigwig", "wig" or "auto"
+            Is suppled file bigwig, or fixed step wig
+        functionToAverage : function
+            Averages f(1kb values in a bin) over current resolution bin
+        internalResolution : int, divider of self.resolution, multiple of 1kb
+            Internal resolution to summarize a bigwig or wig file over
+
+        Returns
+        -------
+
+        List of by chromosome averages of a track at self.resolution resolution
+
+
+
+        Only fixed-step wig files and bigWig files are supported!!!
+        Import from fixedStep wig files is very fast,
+        however is not the most reliable.
+
+        for VariableStep files use wigToBigWig utility to convert
+        them to bigWig format first.
+        To use it you will also need to have fetchChromSizes script.
+
+        Then you just run
+        $bash fetchChromSizes hg18 > hg18.chrom.sizes
+        $./wigToBigWig myWig.wig hg18.chrom.sizes myWig.bigWig
+
+        And you enjoy your favourite bigWig.
+
+        BigWig import is implemented using bx-python module.
+        It is normally very fast; however, it has a bug at low resolutions.
+        I have an ugly workaround for it (chopping the quiery
+        into many smaller pieces), but I hope
+        that they actually fix this bug.
+
+        Anyways, check their repo on BitBucket, maybe they've
+        fixed my issue # 39 :)
+        https://bitbucket.org/james_taylor/bx-python/overview
+        """
+
+        if type(filenames) == str:
+            filenames = [filenames]
+        filenames = [os.path.abspath(i) for i in filenames]
+        wigFileType = wigFileType.lower()
+
+        def loadFile(name, wigFileType=wigFileType):
+            """Choosing right method to load wigfile"""
+
+            if os.path.exists(name) == False:
+                raise IOError("\n Wig file not found : %s " %
+                    (os.path.abspath(name)))
+
+            if wigFileType == "auto":
+                ext = os.path.splitext(name)[1]
+                if ext == "":
+                    raise StandardError("Wig file has no extension. \
+                    Please specify it's type")
+                elif ext.lower() == ".wig":
+                    if open(name).readline()[:2] != "fi":
+                        raise StandardError("Cannot read non variable-step wig \
+                        files! Please use wigToBigWig utility. See docstring \
+                        of this method.")
+                    wigFileType = "wig"
+                elif ext.lower() == ".bigwig":
+                    wigFileType = "bigwig"
+                else:
+                    raise StandardError("Unknown extension of wig file: %s" %
+                        ext)
+
+            if wigFileType == "wig":
+                data = self.parseFixedStepWigAtSmallResolution(
+                    name, resolution=internalResolution)
+            elif wigFileType == "bigwig":
+                data = self.parseBigWigFileAtSmallResolution(name, resolution=internalResolution,
+                    divideByValidCounts=True)
+            else:
+                raise StandardError("Wrong type of wig file : %s" %
+                    wigFileType)
+            return data
+
+        "1. Calculates total value of a track over internalResolution (5kb) sized subbins"
+        data = [loadFile(i) for i in filenames]
+
+        "2. If multiple files are given, aggregates them at this level by taking a sum"
+        for otherdata in data[1:]:
+            for i in xrange(len(otherdata)):
+                data[0][i] += otherdata[i]
+        data = data[0]
+
+        "3. loading control"
+        if control is not None:
+            controlData = loadFile(control)
+
+        if self.resolution % internalResolution != 0:
+            raise StandardError("Cannot parse wig file at resolution \
+            that is not a multiply of internal resolution ({0})".format(internalResolution))
+
+        resultByChromosome = []
+        for chrom, value in enumerate(data):
+            value = np.array(value)
+            if control is not None:
+                chromControl = np.asarray(controlData[chrom])
+                vmask = value != 0
+                cmask = chromControl != 0
+                keepmask = vmask * cmask  # keeping only bins with non-zero reads in data/control
+                vmasksum, cmasksum = vmask.sum(), cmask.sum()
+                #Comparing number of non-zero bins in a control and non-control group
+                if max(vmasksum, cmasksum) / (1. * min(vmasksum, cmasksum)) \
+                > 1.3:
+                    warnings.warn("\nBig deviation: number of non-zero \
+                    data points: %s, control points:%s."
+                    % (vmasksum, cmasksum))
+                value[-keepmask] = 0
+                "3. Aggregated reads are divided by control within each subbin"
+                value[keepmask] = value[keepmask] / chromControl[keepmask]
+
+            #Making a linear array into a matrix (rows - bins, columns - subbins within a bin)
+            #possibly appending some extra zeros at the end
+            value.resize(self.chrmLensBin[chrom] * (
+                self.resolution / 5000))
+
+            value.shape = (-1, self.resolution / 5000)
+            if value.mean() == 0:
+                raise StandardError("Chromosome {0} contains zero data in wig \
+                file(s) {1}".format(self.idx2label[chrom], filenames))
+
+            "4. We take functionToAverage (by default - log) of all non-zero subbins in the bin"
+            mask = value == 0
+            value[-mask] = functionToAverage(value[-mask])
+
+            valuesum = np.sum(value, axis=1)
+            masksum = np.sum(mask == False, axis=1)
+            "5. We takes an average of all non-zero subbins within a bin"
+            valuesum[masksum == 0] = 0
+            vmask = valuesum != 0
+            valuesum[vmask] /= masksum[vmask]
+            valuesum[-vmask] = np.median(valuesum[vmask])
+            # setting all unknown points to the median of known points
+            resultByChromosome.append(valuesum)
+        return resultByChromosome
+
+
