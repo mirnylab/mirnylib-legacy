@@ -166,10 +166,10 @@ def _arrayInArray(np.ndarray array,np.ndarray filterarray):
     "Actual implementation of arrayInArray"
     cdef np.ndarray[np.uint8_t,cast = True,ndim = 1] mask = np.zeros(len(array),'bool')       
     cdef np.ndarray[np.int64_t,ndim = 1] args = np.argsort(array)  
-    arsort = array.take(args,axis = 0)    
+    arsort = array.take(args,axis = 0)     
     cdef np.ndarray[np.int64_t,ndim = 1] diffs = np.r_[0,np.nonzero(np.diff(arsort) )[0]+1,len(arsort)]  #places where sorted values of an array are changing
-    values = arsort.take(diffs[:-1])  #values at that places    
-    cdef np.ndarray[np.int64_t,ndim = 1] allinds = np.searchsorted(values[:-1],filterarray)   
+    values = arsort.take(diffs[:len(diffs)-1])  #values at that places    
+    cdef np.ndarray[np.int64_t,ndim = 1] allinds = np.searchsorted(values[:len(values)-1],filterarray)
     cdef np.ndarray[np.uint8_t,cast = True,ndim = 1] exist = values.take(allinds) == filterarray                 #check that value in filterarray exists in array    
     cdef int N = len(allinds)
     cdef int i,j     
@@ -192,8 +192,8 @@ def _arraySumByArray(array,filterarray,weightarray):
     cdef np.ndarray[np.int64_t,ndim = 1] args = np.argsort(array)
     arsort = array.take(args)
     cdef np.ndarray[np.int64_t,ndim = 1] diffs = np.r_[0,np.nonzero(np.diff(arsort) > 0.5)[0]+1,len(arsort)]
-    values = arsort.take(diffs[:-1])
-    cdef np.ndarray[np.int64_t,ndim = 1] allinds = np.searchsorted(values[:-1],filterarray)
+    values = arsort.take(diffs[:len(diffs)-1])
+    cdef np.ndarray[np.int64_t,ndim = 1] allinds = np.searchsorted(values[:len(values)-1],filterarray)
     cdef np.ndarray[np.uint8_t,cast = True,ndim = 1] exist = values.take(allinds) == filterarray    
     cdef int i,j,N
     N = len(allinds)

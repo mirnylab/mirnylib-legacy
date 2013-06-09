@@ -1090,3 +1090,4 @@ def _test():
     _testArraySumByArray()
     _testMatrixUtils()
     _testProjectOnEigenvectors()
+_test()
