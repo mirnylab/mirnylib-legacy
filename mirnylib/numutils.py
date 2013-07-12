@@ -688,7 +688,6 @@ def autocorr(x):
     result = np.correlate(x, x, mode='full')
     return result[result.size / 2:]
 
-
 def rotationMatrix(theta):
     "Calculates 3D rotation matrix based on angles"
     tx, ty, tz = theta
@@ -697,6 +696,14 @@ def rotationMatrix(theta):
     Rz = np.array([[cos(tz), -sin(tz), 0], [sin(tz), cos(tz), 0], [0, 0, 1]])
     return np.dot(Rx, np.dot(Ry, Rz))
 
+def rotationMatrix2(u, theta):
+    "Calculates 3D matrix of a rotation around a vector u on angle theta"
+    u = np.array(u) / (sum(i**2 for i in u)**0.5)
+    ux, uy, uz = u
+    R = (np.cos(theta) * np.identity(3)
+         + np.sin(theta) * np.array([[0,-uz,uy],[uz,0,-ux],[-uy,ux,0]])
+         + (1.0 - np.cos(theta)) * np.outer(u,u))
+    return R
 
 def random_on_sphere(r=1):
     while True:
@@ -711,6 +718,13 @@ def random_on_sphere(r=1):
         z = r * (1 - 2 * (x1 ** 2 + x2 ** 2))
         return (x, y, z)
 
+def random_on_sphere2(N=1, r=1.0):
+    theta = 2.0 * np.pi * np.random.random(N)
+    u = 2.0 * np.random.random(N) - 1.0
+    x = r * np.sqrt(1. - u*u) * np.cos( theta )
+    y = r * np.sqrt(1. - u*u) * np.sin( theta )
+    z = r * u
+    return np.vstack([x,y,z]).T
 
 def random_in_sphere(r=1):
     while True:
