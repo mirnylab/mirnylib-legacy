@@ -724,7 +724,8 @@ def random_on_sphere2(N=1, r=1.0):
     x = r * np.sqrt(1. - u*u) * np.cos( theta )
     y = r * np.sqrt(1. - u*u) * np.sin( theta )
     z = r * u
-    return np.vstack([x,y,z]).T
+    r = np.vstack([x,y,z]).T
+    return r[0] if N==1 else r
 
 def random_in_sphere(r=1):
     while True:
