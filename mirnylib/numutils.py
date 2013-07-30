@@ -718,11 +718,11 @@ def random_on_sphere(r=1):
         z = r * (1 - 2 * (x1 ** 2 + x2 ** 2))
         return (x, y, z)
 
-def random_on_sphere2(N=1, r=1.0):
-    theta = 2.0 * np.pi * np.random.random(N)
-    u = 2.0 * np.random.random(N) - 1.0
-    x = r * np.sqrt(1. - u*u) * np.cos( theta )
-    y = r * np.sqrt(1. - u*u) * np.sin( theta )
+def random_on_sphere2(N=1, r=1.0, polar_range=(-1,1)):
+    phi = 2.0 * np.pi * np.random.random(N)
+    u = (polar_range[1] - polar_range[0]) * np.random.random(N) + polar_range[0]
+    x = r * np.sqrt(1. - u*u) * np.cos( phi )
+    y = r * np.sqrt(1. - u*u) * np.sin( phi )
     z = r * u
     r = np.vstack([x,y,z]).T
     return r[0] if N==1 else r
@@ -894,14 +894,15 @@ def maskPCA(A, mask):
     return coeff
 
 
-def PCA(A, numPCs=6):
+def PCA(A, numPCs=6, verbose=False):
     """performs PCA analysis, and returns 6 best principal components
     result[0] is the first PC, etc"""
     A = np.array(A, float)
     M = (A - np.mean(A.T, axis=1)).T
     covM = np.dot(M, M.T)
     [latent, coeff] = scipy.sparse.linalg.eigsh(covM, numPCs)
-    print "Eigenvalues are:", latent
+    if verbose:
+        print "Eigenvalues are:", latent
     return (np.transpose(coeff[:, ::-1]), latent[::-1])
 
 
