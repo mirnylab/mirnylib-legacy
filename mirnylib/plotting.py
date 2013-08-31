@@ -248,12 +248,12 @@ def removeBorder(ax=None):
     ax.set_yticklabels([])
 
 
-def niceShow(mytype=None, subplotAdjust=[0.08, 0.12, 0.95, 0.98]):
+def niceShow(mytype=None, subplotAdjust=[0.12, 0.12, 0.97, 0.98]):
     if mytype == "log":
         plt.xscale("log")
         plt.yscale("log")
 
-    legend = plt.legend(loc=0, prop={"size": 15})
+    legend = plt.legend(loc=0, prop={"size": 10})
     if legend is not None:
         legend.draw_frame(False)
     removeAxes(shift=0)
@@ -277,7 +277,7 @@ def mat_img(a, cmap="jet", trunk=False, **kwargs):
     #cbar = fig.colorbar(cax)
 
     def do_all():
-        plt.imshow(a, interpolation='nearest', cmap=cmap, **kwargs)
+        plt.imshow(a, interpolation='none', cmap=cmap, **kwargs)
         plt.colorbar()
         plt.show()
     do_all()

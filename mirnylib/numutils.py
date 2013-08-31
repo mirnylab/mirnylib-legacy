@@ -191,6 +191,18 @@ def rank(x):
     tmp = np.argsort(x)
     return na(np.arange(len(x)), float).take(tmp.argsort())
 
+def zerorank(x):
+    x = np.asarray(x)
+    mask = x != 0
+    ret = np.zeros(len(x), dtype=int)
+    ret[mask] = rank(x[mask])
+    xsort = np.sort(x)
+    zerorank = np.searchsorted(xsort, 0)
+    ret[-mask] = zerorank
+    return ret
+
+
+
 
 def trunc(x, low=0.005, high=0.005):
     "Truncates top 'low' fraction and top 'high' fraction of an array "

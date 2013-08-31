@@ -909,7 +909,7 @@ class Genome(object):
 
         datas = [data[i * Mkb:(i + 1) * Mkb] for i in xrange(self.chrmCount)]
         for chrom, track in enumerate(datas):
-            if track[self.chrmLens[chrom] / resolution + 1:].sum() != 0:
+            if track[self.chrmLens[chrom] / resolution + 2:].sum() != 0:
                 raise StandardError("Genome mismatch: entrees "
                                     "in wig file after chromosome end!")
         datas = [numpy.array(i[:self.chrmLens[chrom] / resolution +
@@ -1080,7 +1080,8 @@ class Genome(object):
                     raise StandardError("Wig file has no extension. \
                     Please specify it's type")
                 elif ext.lower() == ".wig":
-                    if open(name).readline()[:2] != "fi":
+                    op = open(name)
+                    if "fi" not in [op.readline()[:2] for _ in range(5)]:
                         raise StandardError("Cannot read non variable-step wig \
                         files! Please use wigToBigWig utility. See docstring \
                         of this method.")
@@ -1158,7 +1159,7 @@ class Genome(object):
             valuesum[masksum == 0] = 0
             vmask = valuesum != 0
             valuesum[vmask] /= masksum[vmask]
-            valuesum[-vmask] = np.median(valuesum[vmask])
+            valuesum[-vmask] = 0
             # setting all unknown points to the median of known points
             resultByChromosome.append(valuesum)
         return resultByChromosome

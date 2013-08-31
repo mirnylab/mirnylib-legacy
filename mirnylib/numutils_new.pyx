@@ -209,7 +209,7 @@ def _arraySumByArray(array,filterarray,weightarray):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def ultracorrectSymmetricWithVector(x,v = None,M=50,diag = -1, 
+def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1, 
                                     tolerance=1e-5):
     """Main method for correcting DS and SS read data. Possibly excludes diagonal.
     By default does iterative correction, but can perform an M-time correction"""
