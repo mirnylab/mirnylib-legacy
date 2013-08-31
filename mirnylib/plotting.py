@@ -14,7 +14,7 @@ These include:
 """
 import matplotlib
 import matplotlib.cm
-import matplotlib.pyplot as plt
+
 
 import pylab
 import numpy
@@ -68,12 +68,16 @@ registerList(bluesList, "blues")
 registerList(acidBluesList, "acidblues")
 
 
-def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1]):
+def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
     """ Applies function (which should operate on vectors of shape 3:
     [r, g, b], on colormap cmap. This routine will break any discontinuous     points in a colormap.
 
     Also trims the "range[0]:range[1]" fragment from the colormap - use this to cut the part of the "jet" colormap!
     """
+    import matplotlib.pyplot as plt
+    if type(cmap) == str:
+        cmap = plt.cm.get_cmap(cmap)
+
     cdict = cmap._segmentdata
 
     for key in cdict.keys():
@@ -190,6 +194,7 @@ def showPolymerRasmol(x, y=None, z=None, color="auto"):
 
 def scatter3D(x, y, z, color='b'):
     """shows a scatterplot in 3D"""
+    import matplotlib.pyplot as plt
 
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -215,6 +220,7 @@ def scatter3D(x, y, z, color='b'):
 
 
 def removeAxes(mode="normal", shift=0, ax=None):
+    import matplotlib.pyplot as plt
     if ax is None:
         ax = plt.gca()
     ax.xaxis.set_ticks_position('bottom')
@@ -237,6 +243,7 @@ def removeAxes(mode="normal", shift=0, ax=None):
 
 
 def removeBorder(ax=None):
+    import matplotlib.pyplot as plt
     removeAxes("all", 0, ax=ax)
     if ax is None:
         ax = plt.gca()
@@ -249,6 +256,7 @@ def removeBorder(ax=None):
 
 
 def niceShow(mytype=None, subplotAdjust=[0.12, 0.12, 0.97, 0.98]):
+    import matplotlib.pyplot as plt
     if mytype == "log":
         plt.xscale("log")
         plt.yscale("log")
@@ -262,6 +270,7 @@ def niceShow(mytype=None, subplotAdjust=[0.12, 0.12, 0.97, 0.98]):
 
 
 def mat_img(a, cmap="jet", trunk=False, **kwargs):
+    import matplotlib.pyplot as plt
     "shows an array using imshow with colorbar"
     a = numpy.array(a, float)
     if trunk != False:
@@ -363,6 +372,7 @@ def scatter_trend(x, y, **kwargs):
     alpha_legend : float, optional
         Legend box transparency. 0.7 by default.
     """
+    import matplotlib.pyplot as plt
     x, y = numpy.asarray(x), numpy.asarray(y)
     mask = np.logical_not(numpy.isnan(x) + numpy.isnan(y) + np.isinf(x) + np.isinf(y))
     x, y = x[mask], y[mask]
@@ -490,6 +500,7 @@ def plot_matrix(matrix, **kwargs):
     label : str, optional
         Colorbar label
     """
+    import matplotlib.pyplot as plt
     clip_min = kwargs.pop('clip_min', -numpy.inf)
     clip_max = kwargs.pop('clip_max', numpy.inf)
     plt.imshow(
@@ -518,7 +529,7 @@ def plot_function(function, **kwargs):
     plot_type : {'line', 'scatter'}
         The type of plot, a continuous line or a scatter plot. 'line' by default.
     """
-
+    import matplotlib.pyplot as plt
     if 'x' in kwargs and 'x_range' in kwargs:
         raise Exception('Please supply either x or x_range, but not both')
 
@@ -690,6 +701,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     This function is based on the code from
     http://www.scipy.org/Cookbook/Matplotlib/BarCharts
     """
+    import matplotlib.pyplot as plt
     if hasattr(y, 'keys') and hasattr(y, 'values'):
         items = list(y.iteritems())
         items.sort(key=lambda x: x[0])
