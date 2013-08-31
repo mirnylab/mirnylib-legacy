@@ -348,7 +348,7 @@ def observedOverExpected(matrix):
             for j in range(0,N-offset):
                 ss += data[offset+j, j]
                 count += 1
-        print start, end, count
+        #print start, end, count
         meanss = ss / count
         if meanss != 0: 
             for offset in range(start,end):
