@@ -1,6 +1,7 @@
 #(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu)
 # Anton Goloborodko (golobor@mit.edu)
+from scipy.ndimage.filters import gaussian_filter1d
 
 """
 Some nice plotting utilities from Max
@@ -22,7 +23,8 @@ np = numpy
 import scipy.stats as st
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
-from . import numutils
+#from . import numutils
+import numutils
 
 
 def listToColormap(colorList, cmapName=None):
@@ -66,6 +68,33 @@ def registerList(mylist, name):
 registerList(fallList, "fall")
 registerList(bluesList, "blues")
 registerList(acidBluesList, "acidblues")
+
+
+def setLongColorCycle(ax=None):
+    """
+    Call this function to set a 22 color long color cycle
+     for the current axis, or for a specified axis.
+    """
+    import matplotlib.pyplot as plt
+    if ax == None:
+        ax = plt.gca()
+    maximumContrastOld = [[0, 117, 220], [153, 63, 0], [43, 206, 72],
+                          [157, 204, 0], [194, 0, 136], [255, 0, 16],
+                          [240, 163, 255], [255, 164, 5], [94, 241, 242],
+                          [116, 10, 255], [255, 255, 0],
+                          [76, 0, 92], [255, 204, 153],
+                          [148, 255, 181], [143, 124, 0],
+                           [0, 51, 128],
+                          [255, 168, 187], [66, 102, 0],
+                           [0, 153, 143], [224, 255, 102],
+                           [153, 0, 0], [255, 80, 5]]
+    maximumContrast = [[i / 255. for i in j] for j in maximumContrastOld]
+    #for i, j in zip(maximumContrast, maximumContrastOld):
+    #    plt.plot(gaussian_filter1d(np.random.random(500), 10), color=i, label=repr(j), linewidth=2)
+    #plt.legend()
+    #plt.show()
+
+    ax.set_color_cycle(maximumContrast)
 
 
 def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
@@ -255,17 +284,38 @@ def removeBorder(ax=None):
     ax.set_yticklabels([])
 
 
-def niceShow(mytype=None, subplotAdjust=[0.12, 0.12, 0.97, 0.98]):
+def nicePlot(fs=8, show=True):
+    """
+    replaces obsolete "niceShow" command, packs it with new features
+    """
     import matplotlib.pyplot as plt
+    matplotlib.rcParams.update({'font.size': fs})
+
+    legend = plt.legend(loc=0, prop={"size": fs + 1})
+    if legend is not None:
+        legend.draw_frame(False)
+    removeAxes(shift=0)
+
+    plt.tight_layout(pad=0.3)
+    if show:
+        plt.show()
+
+
+def niceShow(mytype=None, subplotAdjust="auto", fs=8):
+    import matplotlib.pyplot as plt
+    matplotlib.rcParams.update({'font.size': fs})
     if mytype == "log":
         plt.xscale("log")
         plt.yscale("log")
 
-    legend = plt.legend(loc=0, prop={"size": 10})
+    legend = plt.legend(loc=0, prop={"size": fs + 1})
     if legend is not None:
         legend.draw_frame(False)
     removeAxes(shift=0)
-    plt.gcf().subplots_adjust(*subplotAdjust)
+    if subplotAdjust != "auto":
+        plt.gcf().subplots_adjust(*subplotAdjust)
+    else:
+        plt.tight_layout(pad=0.5)
     plt.show()
 
 
