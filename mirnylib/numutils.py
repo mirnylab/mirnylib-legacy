@@ -527,7 +527,7 @@ def arraySearch(array, tosearch):
     return inds[newinds]
 
 
-def arrayInArray(array, filterarray, chunkSize="auto"):
+def arrayInArray(array, filterarray, chunkSize="auto", assumeUnique=False):
     """gives you boolean array of indices of elements in array,
     that are contained in filterarray
     a faster version of  [(i in filterarray) for i in array]
@@ -538,7 +538,8 @@ def arrayInArray(array, filterarray, chunkSize="auto"):
     for large array and short filterarray!\n
     Actual implementation is in the _arrayInArray"""  # sorted array
     array = np.asarray(array)
-    filterarray = np.unique(filterarray)
+    if not assumeUnique:
+        filterarray = np.unique(filterarray)
     if chunkSize == "auto":
         chunkSize = max(4 * len(filterarray), 50000)
     if len(array) < 2.5 * chunkSize:
@@ -608,8 +609,10 @@ def _testArraySumByArray():
 
 def _sumByArray(array, filterarray, dtype="int64"):
     "actual implementation of sumByArray"
+    array = np.asarray(array)
+    filterarray = np.asarray(filterarray)
     arsort = np.sort(array)
-    diffs = np.r_[0, np.nonzero(np.diff(arsort) > 0.5)[0] + 1, len(arsort)]
+    diffs = np.r_[0, np.nonzero(np.diff(arsort) > 0)[0] + 1, len(arsort)]
     if dtype is not None:
         diffs = np.array(diffs, dtype=dtype)
     values = arsort.take(diffs[:-1])
@@ -627,6 +630,13 @@ def sumByArray(array, filterarray, dtype="int64"):
     Current method is a wrapper that
     optimizes this method for speed and memory efficiency.
     """
+    array = np.asarray(array)
+    filterarray = np.asarray(filterarray)
+    if array.dtype > filterarray.dtype:
+        array = np.asarray(array, dtype=filterarray.dtype)
+    else:
+        filterarray = np.asarray(filterarray, dtype=array.dtype)
+
     if (len(array) / len(filterarray) > 2) and (len(array) > 20000000):
         M = len(array) / len(filterarray) + 1
         chunkSize = min(len(filterarray) * M, 10000000)
@@ -710,11 +720,11 @@ def rotationMatrix(theta):
 
 def rotationMatrix2(u, theta):
     "Calculates 3D matrix of a rotation around a vector u on angle theta"
-    u = np.array(u) / (sum(i**2 for i in u)**0.5)
+    u = np.array(u) / (sum(i ** 2 for i in u) ** 0.5)
     ux, uy, uz = u
     R = (np.cos(theta) * np.identity(3)
-         + np.sin(theta) * np.array([[0,-uz,uy],[uz,0,-ux],[-uy,ux,0]])
-         + (1.0 - np.cos(theta)) * np.outer(u,u))
+         + np.sin(theta) * np.array([[0, -uz, uy], [uz, 0, -ux], [-uy, ux, 0]])
+         + (1.0 - np.cos(theta)) * np.outer(u, u))
     return R
 
 def random_on_sphere(r=1):
@@ -730,14 +740,14 @@ def random_on_sphere(r=1):
         z = r * (1 - 2 * (x1 ** 2 + x2 ** 2))
         return (x, y, z)
 
-def random_on_sphere2(N=1, r=1.0, polar_range=(-1,1)):
+def random_on_sphere2(N=1, r=1.0, polar_range=(-1, 1)):
     phi = 2.0 * np.pi * np.random.random(N)
     u = (polar_range[1] - polar_range[0]) * np.random.random(N) + polar_range[0]
-    x = r * np.sqrt(1. - u*u) * np.cos( phi )
-    y = r * np.sqrt(1. - u*u) * np.sin( phi )
+    x = r * np.sqrt(1. - u * u) * np.cos(phi)
+    y = r * np.sqrt(1. - u * u) * np.sin(phi)
     z = r * u
-    r = np.vstack([x,y,z]).T
-    return r[0] if N==1 else r
+    r = np.vstack([x, y, z]).T
+    return r[0] if N == 1 else r
 
 def random_in_sphere(r=1):
     while True:
