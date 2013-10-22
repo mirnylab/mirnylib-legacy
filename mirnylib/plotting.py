@@ -1,6 +1,7 @@
 #(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu)
 # Anton Goloborodko (golobor@mit.edu)
+from scipy.ndimage.filters import gaussian_filter1d
 
 """
 Some nice plotting utilities from Max
@@ -14,7 +15,7 @@ These include:
 """
 import matplotlib
 import matplotlib.cm
-import matplotlib.pyplot as plt
+
 
 import pylab
 import numpy
@@ -22,7 +23,8 @@ np = numpy
 import scipy.stats as st
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
-from . import numutils
+#from . import numutils
+import numutils
 
 
 def listToColormap(colorList, cmapName=None):
@@ -68,12 +70,43 @@ registerList(bluesList, "blues")
 registerList(acidBluesList, "acidblues")
 
 
-def cmap_map(function=lambda x: x, cmap=plt.cm.get_cmap("jet"), mapRange=[0, 1]):
+def setLongColorCycle(ax=None):
+    """
+    Call this function to set a 22 color long color cycle
+     for the current axis, or for a specified axis.
+    """
+    import matplotlib.pyplot as plt
+    if ax == None:
+        ax = plt.gca()
+    maximumContrastOld = [[0, 117, 220], [153, 63, 0], [43, 206, 72],
+                          [157, 204, 0], [194, 0, 136], [255, 0, 16],
+                          [240, 163, 255], [255, 164, 5], [94, 241, 242],
+                          [116, 10, 255], [255, 255, 0],
+                          [76, 0, 92], [255, 204, 153],
+                          [148, 255, 181], [143, 124, 0],
+                           [0, 51, 128],
+                          [255, 168, 187], [66, 102, 0],
+                           [0, 153, 143], [224, 255, 102],
+                           [153, 0, 0], [255, 80, 5]]
+    maximumContrast = [[i / 255. for i in j] for j in maximumContrastOld]
+    #for i, j in zip(maximumContrast, maximumContrastOld):
+    #    plt.plot(gaussian_filter1d(np.random.random(500), 10), color=i, label=repr(j), linewidth=2)
+    #plt.legend()
+    #plt.show()
+
+    ax.set_color_cycle(maximumContrast)
+
+
+def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
     """ Applies function (which should operate on vectors of shape 3:
     [r, g, b], on colormap cmap. This routine will break any discontinuous     points in a colormap.
 
     Also trims the "range[0]:range[1]" fragment from the colormap - use this to cut the part of the "jet" colormap!
     """
+    import matplotlib.pyplot as plt
+    if type(cmap) == str:
+        cmap = plt.cm.get_cmap(cmap)
+
     cdict = cmap._segmentdata
 
     for key in cdict.keys():
@@ -190,6 +223,7 @@ def showPolymerRasmol(x, y=None, z=None, color="auto"):
 
 def scatter3D(x, y, z, color='b'):
     """shows a scatterplot in 3D"""
+    import matplotlib.pyplot as plt
 
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -215,6 +249,7 @@ def scatter3D(x, y, z, color='b'):
 
 
 def removeAxes(mode="normal", shift=0, ax=None):
+    import matplotlib.pyplot as plt
     if ax is None:
         ax = plt.gca()
     ax.xaxis.set_ticks_position('bottom')
@@ -237,6 +272,7 @@ def removeAxes(mode="normal", shift=0, ax=None):
 
 
 def removeBorder(ax=None):
+    import matplotlib.pyplot as plt
     removeAxes("all", 0, ax=ax)
     if ax is None:
         ax = plt.gca()
@@ -248,20 +284,43 @@ def removeBorder(ax=None):
     ax.set_yticklabels([])
 
 
-def niceShow(mytype=None, subplotAdjust=[0.08, 0.12, 0.95, 0.98]):
+def nicePlot(fs=8, show=True):
+    """
+    replaces obsolete "niceShow" command, packs it with new features
+    """
+    import matplotlib.pyplot as plt
+    matplotlib.rcParams.update({'font.size': fs})
+
+    legend = plt.legend(loc=0, prop={"size": fs + 1})
+    if legend is not None:
+        legend.draw_frame(False)
+    removeAxes(shift=0)
+
+    plt.tight_layout(pad=0.3)
+    if show:
+        plt.show()
+
+
+def niceShow(mytype=None, subplotAdjust="auto", fs=8):
+    import matplotlib.pyplot as plt
+    matplotlib.rcParams.update({'font.size': fs})
     if mytype == "log":
         plt.xscale("log")
         plt.yscale("log")
 
-    legend = plt.legend(loc=0, prop={"size": 15})
+    legend = plt.legend(loc=0, prop={"size": fs + 1})
     if legend is not None:
         legend.draw_frame(False)
     removeAxes(shift=0)
-    plt.gcf().subplots_adjust(*subplotAdjust)
+    if subplotAdjust != "auto":
+        plt.gcf().subplots_adjust(*subplotAdjust)
+    else:
+        plt.tight_layout(pad=0.5)
     plt.show()
 
 
 def mat_img(a, cmap="jet", trunk=False, **kwargs):
+    import matplotlib.pyplot as plt
     "shows an array using imshow with colorbar"
     a = numpy.array(a, float)
     if trunk != False:
@@ -277,7 +336,7 @@ def mat_img(a, cmap="jet", trunk=False, **kwargs):
     #cbar = fig.colorbar(cax)
 
     def do_all():
-        plt.imshow(a, interpolation='nearest', cmap=cmap, **kwargs)
+        plt.imshow(a, interpolation='none', cmap=cmap, **kwargs)
         plt.colorbar()
         plt.show()
     do_all()
@@ -363,6 +422,7 @@ def scatter_trend(x, y, **kwargs):
     alpha_legend : float, optional
         Legend box transparency. 0.7 by default.
     """
+    import matplotlib.pyplot as plt
     x, y = numpy.asarray(x), numpy.asarray(y)
     mask = np.logical_not(numpy.isnan(x) + numpy.isnan(y) + np.isinf(x) + np.isinf(y))
     x, y = x[mask], y[mask]
@@ -494,6 +554,7 @@ def plot_matrix(matrix, **kwargs):
     ticklabels2 : list, optional
         Custom tick labels for the second dimension of the matrix.
     """
+    import matplotlib.pyplot as plt
     clip_min = kwargs.pop('clip_min', -numpy.inf)
     clip_max = kwargs.pop('clip_max', numpy.inf)
 
@@ -532,7 +593,7 @@ def plot_function(function, **kwargs):
     plot_type : {'line', 'scatter'}
         The type of plot, a continuous line or a scatter plot. 'line' by default.
     """
-
+    import matplotlib.pyplot as plt
     if 'x' in kwargs and 'x_range' in kwargs:
         raise Exception('Please supply either x or x_range, but not both')
 
@@ -704,6 +765,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     This function is based on the code from
     http://www.scipy.org/Cookbook/Matplotlib/BarCharts
     """
+    import matplotlib.pyplot as plt
     if hasattr(y, 'keys') and hasattr(y, 'values'):
         items = list(y.iteritems())
         items.sort(key=lambda x: x[0])
