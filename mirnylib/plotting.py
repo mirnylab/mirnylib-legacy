@@ -732,10 +732,23 @@ def plot_matrix(matrix, **kwargs):
         The upper clipping value.
     label : str, optional
         Colorbar label
+    ticklabels1 : list, optional
+        Custom tick labels for the first dimension of the matrix.
+    ticklabels2 : list, optional
+        Custom tick labels for the second dimension of the matrix.
     """
     import matplotlib.pyplot as plt
     clip_min = kwargs.pop('clip_min', -numpy.inf)
     clip_max = kwargs.pop('clip_max', numpy.inf)
+
+    if 'ticklabels1' in kwargs:
+        plt.yticks(range(matrix.shape[0]))
+        plt.gca().set_yticklabels(kwargs.pop('ticklabels1'))
+
+    if 'ticklabels2' in kwargs:
+        plt.xticks(range(matrix.shape[1]))
+        plt.gca().set_xticklabels(kwargs.pop('ticklabels2'))
+
     plt.imshow(
         numpy.clip(matrix, a_min=clip_min, a_max=clip_max),
         interpolation='nearest',
@@ -744,6 +757,7 @@ def plot_matrix(matrix, **kwargs):
         plt.colorbar()
     else:
         plt.colorbar().set_label(kwargs['label'])
+
 
 
 def plot_function(function, **kwargs):
