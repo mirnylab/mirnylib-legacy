@@ -162,6 +162,7 @@ def fasterBooleanIndexing(np.ndarray array, np.ndarray indexes,output = None,out
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.nonecheck(False)
 def _arrayInArray(np.ndarray array,np.ndarray filterarray):    
     "Actual implementation of arrayInArray"
     cdef np.ndarray[np.uint8_t,cast = True,ndim = 1] mask = np.zeros(len(array),'bool')       
@@ -183,6 +184,7 @@ def _arrayInArray(np.ndarray array,np.ndarray filterarray):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+@cython.nonecheck(False)
 @cython.cdivision(True)
 def _arraySumByArray(array,filterarray,weightarray):
     "faster [sum(weightarray [array == i]) for i in filterarray]"
@@ -209,6 +211,7 @@ def _arraySumByArray(array,filterarray,weightarray):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
+@cython.nonecheck(False)
 def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1, 
                                     tolerance=1e-5):
     """Main method for correcting DS and SS read data. Possibly excludes diagonal.
@@ -260,6 +263,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1,
     return x, v/totalBias, totalBias
 
 @cython.boundscheck(False)
+@cython.nonecheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
 def ultracorrectAny(x,v = None,M=None,diag = -1, attemptInPlace=True,  
@@ -319,6 +323,7 @@ def ultracorrectAny(x,v = None,M=None,diag = -1, attemptInPlace=True,
 
 
 @cython.boundscheck(False)
+@cython.nonecheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
 def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
@@ -384,6 +389,7 @@ def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
 
 
 @cython.boundscheck(False)
+@cython.nonecheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
 def observedOverExpected(matrix):
@@ -422,6 +428,7 @@ def observedOverExpected(matrix):
           
 
 @cython.boundscheck(False)
+@cython.nonecheck(False)
 @cython.wraparound(False)                                
 def fakeCisImpl(np.ndarray[np.double_t, ndim = 2] data, np.ndarray[np.int64_t,ndim = 2] mask):
     cdef int N
