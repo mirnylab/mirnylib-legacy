@@ -17,6 +17,7 @@ import pdb
 import traceback
 import warnings
 import ctypes
+import numpy as np
 from copy import copy
 
 
@@ -146,11 +147,9 @@ def fmap(f, *a, **kw):
             try:
                 try:
                     if len(a) == 1:
-                        obj = builtin_map(f, L[i * len(L) // n:
-                                               (i + 1) * len(L) // n])
+                        obj = builtin_map(f, L[i::n])
                     else:
-                        obj = [f(*x) for x in L[i * len(L) // n:
-                                                (i + 1) * len(L) // n]]
+                        obj = [f(*x) for x in L[i::n]]
                 except Exception, obj:
                     pass
                 writeobj(pipes[i][1], obj)
@@ -162,15 +161,15 @@ def fmap(f, *a, **kw):
             try:
 
                 if len(a) == 1:
-                    ans[i * len(L) // n:] = builtin_map(f, L[i * len(L) // n:])
+                    ans[i::n] = builtin_map(f, L[i::n])
                 else:
-                    ans[i * len(L) // n:] = [f(
-                        *x) for x in L[i * len(L) // n:]]
+                    ans[i::n] = [f(
+                        *x) for x in L[i::n]]
                 for k in range(n - 1):
                     obj = readobj(pipes[k][0])
                     if isinstance(obj, Exception):
                         raise obj
-                    ans[k * len(L) // n:(k + 1) * len(L) // n] = obj
+                    ans[k::n] = obj
             finally:
                 for j in range(n - 1):
                     os.close(pipes[j][0])
@@ -178,6 +177,15 @@ def fmap(f, *a, **kw):
                     os.wait()
     return ans
 
+
+def _testFmap():
+
+    for i in range(1, 300):
+        print i
+        a = range(i)
+        for j in range(1, 10):
+            b = fmap(lambda x:x, a, n=j)
+            assert (np.array(a) == np.array(b)).all()
 
 def _fmapredcount(function, data, reduction=lambda x, y: x + y, n=4, exceptionList=[IOError]):
     """fork-map-reduce

@@ -15,7 +15,7 @@ These include:
 """
 import matplotlib
 import matplotlib.cm
-
+import warnings
 
 import pylab
 import numpy
@@ -139,7 +139,7 @@ def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
     return matplotlib.colors.LinearSegmentedColormap('colormap', cdict, 1024)
 
 
-def showPolymerRasmol(x, y=None, z=None, color="auto"):
+def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6, 0.8], rescale=True):
     """
     Shows the polymer using rasmol.
     Can't properly treat continuous chains (they will have linkers of 5 balls between chains)
@@ -160,7 +160,6 @@ def showPolymerRasmol(x, y=None, z=None, color="auto"):
     import tempfile
     #if you want to change positions of the spheres along each segment, change these numbers
     #e.g. [0,.1, .2 ...  .9] will draw 10 spheres, and this will look better
-    shifts = [0., 0.2, 0.4, 0.6, 0.8]
 
     if y is None:
         data = numpy.array(x)
@@ -176,7 +175,8 @@ def showPolymerRasmol(x, y=None, z=None, color="auto"):
     meandist = numpy.percentile(numpy.sqrt(
         numpy.sum(numpy.diff(data, axis=0) ** 2, axis=1)), 95)
     #rescaling the data, so that bonds are of the order of 1. This is because rasmol spheres are of the fixed diameter.
-    data /= meandist
+    if rescale:
+        data /= meandist
 
     #writing the rasmol script. Spacefill controls radius of the sphere.
     rascript = tempfile.NamedTemporaryFile()
@@ -340,6 +340,189 @@ def mat_img(a, cmap="jet", trunk=False, **kwargs):
         plt.colorbar()
         plt.show()
     do_all()
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import turtle
+
+
+def hilbert_curve(n):
+    ''' Generate Hilbert curve indexing for (n, n) array. 'n' must be a power of two. '''
+    # recursion base
+    if n == 1:
+        return np.zeros((1, 1), np.int32)
+    # make (n/2, n/2) index
+    t = hilbert_curve(n // 2)
+    # flip it four times and add index offsets
+    a = np.flipud(np.rot90(t))
+    b = t + t.size
+    c = t + t.size * 2
+    d = np.flipud(np.rot90(t, -1)) + t.size * 3
+    # and stack four tiles into resulting array
+    return np.vstack(map(np.hstack, [[a, b], [d, c]]))
+
+
+def matToImage(matrix, saveto, vmin=None, vmax=None, cmap="jet"):
+    """saves matrix to an image with a given colormap
+    Alternative to imshow, but faster, and actually by-pixel.
+    Image type autodetected, but use .png"""
+    import matplotlib.cm as cm
+    import Image
+    matrix = np.asarray(matrix, dtype=float)
+    if vmin == None:
+        vmin = matrix.min()
+    if vmax == None:
+        vmax = matrix.max()
+    assert len(matrix.shape) == 2
+    matrix -= vmin
+
+    matrix /= (vmax - vmin)
+    print matrix.min(), matrix.max()
+    image = cm.get_cmap(cmap)(matrix)[:, :, :3]
+    image = np.array(image[:, :, :3] * 255, dtype=np.uint8)
+
+    img = Image.fromarray(image, "RGB")
+    img.save(saveto)
+
+def vectorToHilbert(data, fillEmpty=np.NAN, crop=True,
+                    highlight=None, highlightAx="gca", highlightKwargs={}):
+    """
+    Plots the data on a hilbert curve. Optionally,
+    Parameters
+    ----------
+    data : array
+        an 1D array of data to be plotted
+    fillEmpty : number (optional)
+        A number to fill missing regions in the heatmap (not all heatmap will be filled)
+        By default, is np.NAN
+    crop : bool (optional)
+        Crop the matrix from the 2**M x 2**M default size
+    highlight : int or None (optional)
+        Highlight boundaries if elements across the boundary are separated by more than
+        "highlight" along the chain.
+        If you set this to 1, it will draw a full hilert curve "labyrinth".
+        If you set this to 10, it will draw a "major" outline of a hilbert curve.
+        It will actually put this on the matplotlib plot.
+    highlight ax : plt.axes (optional)
+        Axes to plot labyrinth on
+    highlightKwargs : dict (optional)
+        Arguments to pass to plt.hlines and plt.vlines
+
+    Returns
+    -------
+        a matrix containing hilbert curve representation of the data
+
+    """
+    data = np.asarray(data)
+    M = len(data)
+
+    N = 2 ** int(np.ceil(0.5 * np.log2(M)))
+    assert N ** 2 > M
+
+    result = np.zeros((N, N))
+    result[:, :] = fillEmpty
+
+    curve = hilbert_curve(N)
+    inds = np.argsort(curve.flat)
+    x = inds % N
+    y = inds / N
+    x = x[:M]
+    y = y[:M]
+    result[x, y] = data
+
+    if crop:
+        mask = np.zeros((N, N), np.bool)
+        mask[x, y] = True
+        maskx = np.sum(mask, axis=0)
+        masky = np.sum(mask, axis=1)
+
+        maxx = np.argmax(np.nonzero(maskx)[0]) + 1
+        maxy = np.argmax(np.nonzero(masky)[0]) + 1
+        result = result[:maxy, :maxx]
+    if highlight is not None:
+        indMask = np.zeros((N, N), np.int) - 10 * M
+        indMask[x, y] = range(len(x))
+        diffx = indMask[1:, :] - indMask[:-1, :]
+        diffy = indMask[:, 1:] - indMask[:, :-1]
+        diffx, diffy = np.abs(diffx), np.abs(diffy)
+        print diffx
+        choosex = (diffx > highlight) * (diffx < M)
+        choosey = (diffy > highlight) * (diffy < M)
+        if highlightAx == "gca":
+            ax = plt.gca()
+
+        for i, j in zip(*np.nonzero(choosex)):
+            ax.hlines(i + 0.5, j - 0.5, j + 0.5, **highlightKwargs)
+        for i, j in zip(*np.nonzero(choosey)):
+            ax.vlines(j + 0.5, i - 0.5, i + 0.5, **highlightKwargs)
+
+    return result
+
+def exampleHilbert():
+    mat = vectorToHilbert(range(257), crop=True, highlight=3)
+    plt.imshow(mat, interpolation="none")  #important to show boundaries
+    plt.show()
+
+
+def dotSizeScatter(x, y, weights=None,
+                   maxSize=50, useColor=True,
+                   useSize=True, percentiles=(1, 99),
+                   sizeFunction=np.sqrt,
+                   ** kwargs):
+    """
+    Plots scatter of points, showing repeated points by size of the scatter dot.
+    Parameters
+    ----------
+    x,y : arrays
+        Arrays to plot scatter of
+    maxSize : number or None
+        If number, renormalize the sizes so that maximum size is maxSize
+        If None, ignore it (just use output of sizeFunction)
+    sizeFunction : function
+        A function (count -> size) to use.
+    """
+
+    import pandas as pd
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+    if weights != None:
+        weights = np.asarray(weights)
+    else:
+        weights = np.ones_like(x, dtype=float)
+    assert len(x.shape) == 1
+    assert len(y.shape) == 1
+    if len(np.unique(x)) > 0.5 * len(x):
+        warnings.warn(RuntimeWarning("Array X does not contain many repeated elements"))
+    if len(np.unique(y)) > 0.5 * len(y):
+        warnings.warn(RuntimeWarning("Array Y does not contain many repeated elements"))
+    if len(x) != len(y):
+        raise ValueError("Arrays are of different lengths: {0}, {1}".format(len(x), len(y)))
+    if len(x) != len(weights):
+        raise ValueError("Length of weights array should be the same as data ")
+
+
+    fr = pd.DataFrame({"x":x, "y":y, "weights":weights})
+    grouped = fr.groupby(["x", "y"])
+    gr = grouped.sum()
+    xes, ys, sizes = [], [], []
+    for (x, y), count in zip(gr.index.values, gr["weights"].values):
+        xes.append(x)
+        ys.append(y)
+        sizes.append(sizeFunction(count))
+    sizes = np.array(sizes, dtype=float)
+    sizes = np.clip(sizes, *np.percentile(sizes, percentiles))
+    if maxSize is not None:
+        sizes *= maxSize / sizes.max()
+
+    if useColor:
+        kwargs["c"] = sizes
+    if useSize:
+        kwargs["s"] = sizes
+    plt.scatter(xes, ys, **kwargs)
+
+
 
 
 def plot_line(a, b, **kwargs):

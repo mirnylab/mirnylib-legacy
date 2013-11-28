@@ -710,6 +710,9 @@ def autocorr(x):
     result = np.correlate(x, x, mode='full')
     return result[result.size / 2:]
 
+"""set of rotation matrices"""
+unit = lambda x: x / np.sqrt(1. * (np.array(x) ** 2).sum())
+
 def rotationMatrix(theta):
     "Calculates 3D rotation matrix based on angles"
     tx, ty, tz = theta
@@ -726,6 +729,25 @@ def rotationMatrix2(u, theta):
          + np.sin(theta) * np.array([[0, -uz, uy], [uz, 0, -ux], [-uy, ux, 0]])
          + (1.0 - np.cos(theta)) * np.outer(u, u))
     return R
+
+def rotationMatrix3(alpha, vec):
+    vec = np.array(vec, dtype=float)
+    vec = unit(vec)
+
+    x, y, z = vec
+    return np.diag(np.array([1, 1, 1])) * np.cos(alpha) + \
+        np.array([[0, -z, y], [z, 0, -x], [-y, x, 0]]) * np.sin(alpha) + \
+        (1 - np.cos(alpha)) * vec[:, None] * vec[None, :]
+
+
+def rotateToVector(vec1, vec2=[0, 0, 1]):
+    vec2 = unit(vec2)
+    vec1 = unit(vec1)
+
+    cross = np.cross(vec1, vec2)
+    angle = np.arccos((unit(vec1) * unit(vec2)).sum())
+    return rotationMatrix3(-angle, cross)
+
 
 def random_on_sphere(r=1):
     while True:
@@ -982,6 +1004,56 @@ def _testProjectOnEigenvectors():
     assert np.max(np.abs((projectOnEigenvectors(sa, 99) - sa))) < 0.00001
     print "Test finished successfully!"
 
+def padFragmentList(fragid1, fragid2):
+    """
+    Adds a fake interaction between any pair of fragments
+    """
+    fragid1, fragid2 = np.asarray(fragid1), np.asarray(fragid2)
+    fragUnique = np.unique(np.concatenate([fragid1, fragid2]))
+    M = len(fragUnique)
+    if len(fragUnique) > 30000:
+        warnings.warn(RuntimeWarning("You have more than 30000 unique fragments... thats a lot"))
+    if len(fragUnique) > 150000:
+        raise (RuntimeError("You have more than 150000 unique fragments... thats a lot"))
+    extra1 = fragUnique[:, None] * np.ones(M)[None, :]
+    extra2 = fragUnique[None, :] * np.ones(M)[:, None]
+    print extra1
+    print extra2
+    mask = extra1 > extra2
+    extra1, extra2 = extra1[mask], extra2[mask]
+    fragid1 = np.concatenate([fragid1, extra1.flat])
+    fragid2 = np.concatenate([fragid2, extra2.flat])
+    return fragid1, fragid2
+
+
+def ultracorrectFragmentList(fragid1, fragid2, maxNum=30, tolerance=1e-5):
+    from time import sleep
+    fragid1, fragid2 = np.concatenate([fragid1, fragid2]), np.concatenate([fragid2, fragid1])
+    while True:
+        fragUnique = np.unique(fragid1)
+        fragSum = sumByArray(fragid1, fragUnique)
+        fragMask = fragSum > maxNum
+        print "removing low count fragments: {0} out of {1}".format(sum(-fragMask), len(fragMask))
+        if sum(-fragMask) == 0:
+            break
+        fragKeep = fragUnique[fragMask]
+        mask = arrayInArray(fragid1, fragKeep) * arrayInArray(fragid2, fragKeep)
+
+        fragid1 = fragid1[mask]
+        fragid2 = fragid2[mask]
+    weights = np.ones(len(fragid1), dtype=float)
+    m1 = arraySearch(fragUnique, fragid1)
+    m2 = arraySearch(fragUnique, fragid2)
+    while True:
+        print "IC step",
+        fragSum = arraySumByArray(fragid1, fragUnique, weights)
+        fragSum /= fragSum.mean()
+        weights /= fragSum[m1]
+        weights /= fragSum[m2]
+        print fragSum.var(), fragSum.mean()
+        if fragSum.var() < tolerance:
+            return fragid1, fragid2, weights
+
 
 def correct(y):
     "Correct non-symmetric or symmetirc data once"
@@ -994,6 +1066,13 @@ def correct(y):
     s2[s2 == 0] = 1
     return x / (s2[None, :] * s[:, None])
 
+def correctBias(y):
+    "performs single correction and returns data + bias"
+    x = np.asarray(y, dtype=float)
+    s = np.sum(x, axis=1)
+    s /= np.mean(s[s != 0])
+    s[s == 0] = 1
+    return x / (s[None, :] * s[:, None]), s
 
 def correctInPlace(x):
     "works for non-symmetric and symmetric data"
@@ -1006,8 +1085,10 @@ def correctInPlace(x):
     x /= (s2[None, :] * s[:, None])
 
 
-def ultracorrect(x, M=20):
+def ultracorrect(x, M="auto", tolerance=1e-6):
     "just iterative correction of symmetric matrix"
+    if M == "auto":
+        M = 50
     x = np.array(x, float)
     if x.sum() == 0:
         return x
@@ -1015,19 +1096,14 @@ def ultracorrect(x, M=20):
     newx = np.array(x)
     for _ in xrange(M):
         correctInPlace(newx)
+
     print np.mean(newx),
     newx /= (1. * np.mean(newx) / np.mean(x))
     print np.mean(newx)
     return newx
 
 
-def correctBias(y):
-    "performs single correction and returns data + bias"
-    x = np.asarray(y, dtype=float)
-    s = np.sum(x, axis=1)
-    s /= np.mean(s[s != 0])
-    s[s == 0] = 1
-    return x / (s[None, :] * s[:, None]), s
+
 
 
 def ultracorrectBiasReturn(x, M=20):
