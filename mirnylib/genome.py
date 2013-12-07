@@ -45,7 +45,6 @@ Bio.Restriction  # To shut up Eclipse warning
 import joblib
 from scipy import weave
 import logging
-import numutils
 log = logging.getLogger(__name__)
 
 
@@ -790,6 +789,7 @@ class Genome(object):
 
     def getPairsLessThanDistance(self, fragments1, fragments2,
                                  cutoffDistance, enzymeName):
+        import numutils
         """returns all possible pairs (fragment1,fragment2)
         with fragment distance less-or-equal than cutoff"""
         if not hasattr(self, "rfragMidIds"):
@@ -925,7 +925,7 @@ class Genome(object):
         return self.parseFixedStepWigAtSmallResolution(filename,
                                                     resolution=resolution)
 
-    def _parseBigWigFile(self, filename, resolution=5000,
+    def _parseBigWigFile(self, filename, resolution=1000,
                          divideByValidCounts=False):
 
         if resolution > 10000:
@@ -970,7 +970,7 @@ class Genome(object):
 
         return data
 
-    def parseBigWigFileAtSmallResolution(self, filename, resolution=5000,
+    def parseBigWigFileAtSmallResolution(self, filename, resolution=1000,
                         divideByValidCounts=False):
         """
         Parses bigWig file using bxPython build-in method "summary".
@@ -1002,7 +1002,7 @@ class Genome(object):
         return self.parseBigWigFile(filename,
                                     resolution, divideByValidCounts)
     def parseAnyWigFile(self, filenames, control=None,
-                    wigFileType="Auto", functionToAverage=np.log, internalResolution=5000):
+                    wigFileType="Auto", functionToAverage=np.log, internalResolution=1000):
         """
         1. Calculates total value of a track over internalResolution (5kb) sized subbins
 
@@ -1142,9 +1142,9 @@ class Genome(object):
             #Making a linear array into a matrix (rows - bins, columns - subbins within a bin)
             #possibly appending some extra zeros at the end
             value.resize(self.chrmLensBin[chrom] * (
-                self.resolution / 5000))
+                self.resolution / internalResolution))
 
-            value.shape = (-1, self.resolution / 5000)
+            value.shape = (-1, self.resolution / internalResolution)
             if value.mean() == 0:
                 raise StandardError("Chromosome {0} contains zero data in wig \
                 file(s) {1}".format(self.idx2label[chrom], filenames))
