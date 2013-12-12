@@ -773,6 +773,32 @@ class Genome(object):
                         self.chrmLens[chromosomes[i]])
                                     )
 
+    def getRfragAbsIdxs(self, rfragIds):
+        """Convert restriction fragment IDs to absolute fragment indices.
+
+        Parameters
+        ----------
+        rfragIds: array of int
+            IDs of fragments, calculated as
+            fragIDmult * chromosome + fragment midpoint
+
+        Returns
+        -------
+        rfragAbsIdxs: array of int
+            absolute indices of restriction fragments in a concatenated
+            genome.
+        """
+
+        if not self.hasEnzyme():
+            raise Exception('Please set the restriction enzyme first.')
+
+        rfragAbsIdxs = numpy.searchsorted(self.rfragMidIds, rfragIds)
+        # map the fragment absolute indices back to the relative indices and
+        # check every 100th for correctness
+        assert (rfragIds[::100] - self.rfragMidIds[rfragAbsIdxs[::100]]).sum() == 0
+
+        return rfragAbsIdxs
+
     def getFragmentDistance(self, fragments1, fragments2, enzymeName):
         """returns distance between fragments
         measured in... fragments. (neighbors = 1, etc. )"""
