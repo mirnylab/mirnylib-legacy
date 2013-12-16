@@ -11,6 +11,7 @@ from numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
 from numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
 from scipy.ndimage.filters import  gaussian_filter
 from mirnylib.systemutils import  deprecate
+from scipy.stats.stats import spearmanr, pearsonr
 na = np.array
 import  scipy.sparse.linalg
 import scipy.stats
@@ -713,6 +714,7 @@ def autocorr(x):
 """set of rotation matrices"""
 unit = lambda x: x / np.sqrt(1. * (np.array(x) ** 2).sum())
 
+
 def rotationMatrix(theta):
     "Calculates 3D rotation matrix based on angles"
     tx, ty, tz = theta
@@ -720,6 +722,7 @@ def rotationMatrix(theta):
     Ry = np.array([[cos(ty), 0, -sin(ty)], [0, 1, 0], [sin(ty), 0, cos(ty)]])
     Rz = np.array([[cos(tz), -sin(tz), 0], [sin(tz), cos(tz), 0], [0, 0, 1]])
     return np.dot(Rx, np.dot(Ry, Rz))
+
 
 def rotationMatrix2(u, theta):
     "Calculates 3D matrix of a rotation around a vector u on angle theta"
@@ -729,6 +732,7 @@ def rotationMatrix2(u, theta):
          + np.sin(theta) * np.array([[0, -uz, uy], [uz, 0, -ux], [-uy, ux, 0]])
          + (1.0 - np.cos(theta)) * np.outer(u, u))
     return R
+
 
 def rotationMatrix3(alpha, vec):
     vec = np.array(vec, dtype=float)
@@ -806,6 +810,7 @@ def observedOverExpected(matrix):
     It allows to avoid divergence far from the main diagonal with a very few reads.
     """
     return numutils_new.observedOverExpected(matrix)
+
 
 def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
     """
@@ -1004,6 +1009,7 @@ def _testProjectOnEigenvectors():
     assert np.max(np.abs((projectOnEigenvectors(sa, 99) - sa))) < 0.00001
     print "Test finished successfully!"
 
+
 def padFragmentList(fragid1, fragid2):
     """
     Adds a fake interaction between any pair of fragments
@@ -1103,9 +1109,6 @@ def ultracorrect(x, M="auto", tolerance=1e-6):
     return newx
 
 
-
-
-
 def ultracorrectBiasReturn(x, M=20):
     "performs iterative correction and returns bias"
     x = np.array(x, float)
@@ -1196,6 +1199,59 @@ def create_regions(a):
     a1 = np.nonzero(a[1:] * (1 - a[:-1]))[0]
     a2 = np.nonzero(a[:-1] * (1 - a[1:]))[0]
     return np.transpose(np.array([a1, a2]))
+
+def eigenvalue_function(mat, func="default", delta=0.1):
+    """
+    This script can be used to transform eigenvalues of a matrix.
+    It can be used, for example, to cap them using a square root...
+
+    By default, it applies the function from the
+    """
+    lam, eig = np.linalg.eigh(mat)
+    if func == "default":
+        def func(x):
+            #print x.min(), x.max()
+            xmin, xmax = x.min(), x.max()
+            beta = 1. - delta  # foloowing paper here
+            alpha = min(beta / ((1 - beta) * (xmax)),
+                        - beta / ((1 + beta) * (xmin)))
+            toreturn = x / ((1 / alpha) + x)
+            print toreturn.min(), toreturn.max()
+            return toreturn
+
+
+
+    mat = np.dot(np.dot(eig, np.diag(func(lam))), eig.T)
+    fillDiagonal(mat, np.median(mat), 0)
+    return mat
+
+
+def test_eigenvalue_functions():
+    a = 1. * (np.random.random((400, 400)) > 0.97)
+    #vec = np.arange(0, 200)
+    #dif = 1. / ((np.abs(vec[:, None] - vec[None, :]) + 1))
+    #a = np.random.poisson(1 * dif)
+    b = a + a.T
+    import matplotlib.pyplot as plt
+    plt.subplot(2, 4, 1)
+    vmin, vmax = np.percentile(b, (0.3, 99.7))
+    plt.imshow(b, interpolation="none", vmin=vmin, vmax=vmax)
+
+    for j, delta in enumerate([0.99, 0.5, 0.1, 0.03, 0.01, 0.001, 0.0000000001]):
+        plt.subplot(2 , 4 , j + 2)
+
+        c = eigenvalue_function(b, delta=delta)
+        plt.title("delta = {0}, corr={1:.4f}".format(delta, pearsonr(b.flat, c.flat)[0]))
+        vmin, vmax = np.percentile(c, (0.3, 99.7))
+        plt.imshow(c, interpolation="none", vmin=vmin, vmax=vmax)
+    plt.show()
+
+#stest_eigenvalue_functions()
+
+
+
+
+
 
 
 def _test():

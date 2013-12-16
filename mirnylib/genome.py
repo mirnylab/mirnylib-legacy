@@ -1030,7 +1030,7 @@ class Genome(object):
     def parseAnyWigFile(self, filenames, control=None,
                     wigFileType="Auto", functionToAverage=np.log, internalResolution=1000):
         """
-        1. Calculates total value of a track over internalResolution (5kb) sized subbins
+        1. Calculates total value of a track over internalResolution (1kb) sized subbins
 
         2. If multiple files are given, aggregates them at this level by taking a sum
 

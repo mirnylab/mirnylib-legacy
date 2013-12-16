@@ -1,7 +1,8 @@
-#(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
+#(c) 2013 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu)
 # Anton Goloborodko (golobor@mit.edu)
 from scipy.ndimage.filters import gaussian_filter1d
+import os
 
 """
 Some nice plotting utilities from Max
@@ -14,6 +15,10 @@ These include:
 -niceShow  - nicer "plt.show"
 """
 import matplotlib
+r = os.system('python -c "import matplotlib.pyplot as plt;plt.figure()"')
+if r != 0:
+    matplotlib.use('Agg')
+
 import matplotlib.cm
 import warnings
 
