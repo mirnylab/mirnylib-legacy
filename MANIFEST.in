@@ -1,2 +1,4 @@
 include MANIFEST.in
 recursive-include mirnylib *.pyx *.c
+recursive-include doc *
+recursive-include tests *
