@@ -84,22 +84,21 @@ def deprecate(newFunction, oldFunctionName=None):
 
 
 def _nprocessors():
-    try:
+    if sys.platform == 'darwin':
         try:
-            # Mac OS
-            libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('libc'))
-            v = ctypes.c_int(0)
-            size = ctypes.c_size_t(ctypes.sizeof(v))
-            libc.sysctlbyname('hw.ncpu', ctypes.c_voidp(ctypes.addressof(
-                v)), ctypes.addressof(size), None, 0)
-            return v.value
-        except:
-            # Cygwin (Windows) and Linuxes
-            # Could try sysconf(_SC_NPROCESSORS_ONLN) (LSB) next.  Instead, count processors in cpuinfo.
+            from multiprocessing import cpu_count
+            return cpu_count()
+        except NotImplementedError:
+            pass
+    else:
+        # Cygwin (Windows) and Linuxes
+        # Could try sysconf(_SC_NPROCESSORS_ONLN) (LSB) next.  Instead, count processors in cpuinfo.
+        try:
             s = open('/proc/cpuinfo', 'r').read()
             return s.replace(' ', '').replace('\t', '').count('processor:')
-    except:
-        return 1
+        except:
+            pass
+    return 1
 
 nproc = _nprocessors()
 
