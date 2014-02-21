@@ -558,7 +558,19 @@ def linear_regression(x, y, a=None, b=None):
     """
 
     x,y = np.array(x), np.array(y)
-    slope, intercept, r, prob2, _ = st.linregress(x, y)
+    if not ((a is None) or (b is None)):
+        raise Exception('you cannot set both a and b')
+    elif not (a is None):
+        slope = a
+        intercept = (y - slope*x).mean()
+        r, prob2 = st.pearsonr(slope*x + intercept, y)
+    elif not (b is None):
+        intercept = b
+        slope = np.linalg.lstsq(x[:,None],y-intercept)[0][0]
+        r, prob2 = st.pearsonr(slope*x + intercept, y)
+    else:
+        slope, intercept, r, prob2, _ = st.linregress(x, y)
+
     sse = ((y-slope*x-intercept)**2).sum()
     sigma_e = np.sqrt(sse/(x.size-2.0))
     mx = x.mean()
