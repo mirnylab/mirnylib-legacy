@@ -29,7 +29,6 @@ setup(
     ext_modules=ext_modules,
     cmdclass=cmdclass,
     install_requires=[
-        'cython>=0.16',
         'biopython',
         'pysam',
         'joblib>=0.6.3',

@@ -16,11 +16,12 @@ It is probably a good idea to upgrade to the latest version of setuptools and pi
 
 Required:
 
+Getting the basic Scientific Python stack (numpy/scipy/matplotlib) can be trickier on some platforms than others. For more details, see the [instructions on scipy.org](http://www.scipy.org/install.html). You should already have these dependencies installed and running correctly before attempting to install this package.
+
 - numpy (1.6+)
 - scipy
 - matplotlib
 
-Getting the basic Scientific Python stack (numpy/scipy/matplotlib) can be trickier on some platforms than others. For more details, see the [instructions on scipy.org](http://www.scipy.org/install.html). It is recommended that you already have these dependencies installed and running correctly before attempting to install this package.
 
 The following dependencies are automatically installed by setuptools if missing:
 
