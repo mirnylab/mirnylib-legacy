@@ -66,7 +66,7 @@ def run_in_separate_process(func, *args, **kwds):
         os._exit(0)
 
 
-def deprecate(newFunction, oldFunctionName=None):
+def deprecate(newFunction, oldFunctionName=None, message=None):
     """If you rename your function, you can use this to issue deprecation warning for the old name
     Juse use   newFunction = deprecate(oldFunction)"""
     try:
@@ -75,10 +75,12 @@ def deprecate(newFunction, oldFunctionName=None):
         newName = "_UndeterminedName_"
     if oldFunctionName is None:
         oldFunctionName = "_UnspecifiedName_"
+    if message == None:
+        message = "Function %s was renamed to %s" % (
+            oldFunctionName, newName)
 
     def oldFunction(*args, **kwargs):
-        warnings.warn("Function %s was renamed to %s" % (
-            oldFunctionName, newName))
+        warnings.warn(message)
         return newFunction(*args, **kwargs)
     return oldFunction
 

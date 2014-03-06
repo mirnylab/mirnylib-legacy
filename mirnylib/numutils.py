@@ -9,6 +9,7 @@ from numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
 from numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
 from numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
 from numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
+from numutils_new import  ultracorrectSymmetricWithVector  # @UnresolvedImport @IgnorePep8
 from scipy.ndimage.filters import  gaussian_filter
 from mirnylib.systemutils import  deprecate
 from scipy.stats.stats import spearmanr, pearsonr
@@ -1073,7 +1074,7 @@ def correct(y):
     return x / (s2[None, :] * s[:, None])
 
 def correctBias(y):
-    "performs single correction and returns data + bias"
+    "performs single correction of a symmetric matrix and returns data + bias"
     x = np.asarray(y, dtype=float)
     s = np.sum(x, axis=1)
     s /= np.mean(s[s != 0])
@@ -1090,9 +1091,8 @@ def correctInPlace(x):
     s2[s2 == 0] = 1
     x /= (s2[None, :] * s[:, None])
 
-
-def ultracorrect(x, M="auto", tolerance=1e-6):
-    "just iterative correction of symmetric matrix"
+def ultracorrectAssymetric(x, M="auto", tolerance=1e-6):
+    "just iterative correction of an assymetric matrix"
     if M == "auto":
         M = 50
     x = np.array(x, float)
@@ -1108,21 +1108,41 @@ def ultracorrect(x, M="auto", tolerance=1e-6):
     print np.mean(newx)
     return newx
 
+def iterativeCorrection(x, M="auto", tolerance=1e-6,
+                        symmetric="auto",
+                        skipDiags= -1):
+    "A wrapper for iterative correction of any matrix"
+    x = np.asarray(x, dtype=float)
 
-def ultracorrectBiasReturn(x, M=20):
-    "performs iterative correction and returns bias"
-    x = np.array(x, float)
-    print np.mean(x),
-    newx = np.array(x)
-    ball = np.ones(len(x), float)
-    for _ in xrange(M):
-        newx, b = correctBias(newx)
-        ball *= b
-    print np.mean(newx),
-    newx /= (1. * np.mean(newx) / np.mean(x))
-    print np.mean(newx)
-    return newx, ball
+    if len(x.shape) != 2:
+        raise ValueError("Only 2D matrices are allowed!")
+    if x.shape[0] != x.shape[1]:
+        symmetric = False
+    elif symmetric.lower() == "auto":
+        symmetric = isSymmetric(x)
 
+    if not symmetric:
+        if M == "auto":
+            M = 50
+        print "Matrix is not symmetric, doing {0} iterations of IC".format(M)
+        return ultracorrectAssymetric(x, M), 1
+    if M == "auto":
+        M = None  # default of ultracorrectSymmetricWithVector
+    else:
+        try:
+            M = int(M)
+        except:
+            raise ValueError("Please provide integer for M; {0} provided".format(M))
+    corrected, dummy, bias = ultracorrectSymmetricWithVector(x, M=M, tolerance=tolerance,
+                                                             diag=skipDiags)
+    return corrected, bias
+
+def ultracorrect(*args, **kwargs):
+    return iterativeCorrection(*args, **kwargs)[0]
+ultracorrect = deprecate(ultracorrect,
+     message="Please use iterativeCorrection instead of ultracorrect")
+
+ultracorrectBiasReturn = deprecate(iterativeCorrection, "ultracorrectBiasReturn")
 
 def fillDiagonal(inArray, diag, offset=0):
     "Puts diag in the offset's diagonal of inArray"
@@ -1226,7 +1246,7 @@ def eigenvalue_function(mat, func="default", delta=0.1):
     return mat
 
 
-def test_eigenvalue_functions():
+def _test_eigenvalue_functions():
     a = 1. * (np.random.random((400, 400)) > 0.97)
     #vec = np.arange(0, 200)
     #dif = 1. / ((np.abs(vec[:, None] - vec[None, :]) + 1))
@@ -1246,12 +1266,19 @@ def test_eigenvalue_functions():
         plt.imshow(c, interpolation="none", vmin=vmin, vmax=vmax)
     plt.show()
 
-#stest_eigenvalue_functions()
 
+def _testAdaptiveSmoothing():
+    import matplotlib.pyplot as plt
+    N = 300
+    a = np.zeros((N, N))
+    fillDiagonal(a, 1)
+    for _ in range(5):
+        t1, t2 = np.random.randint(0, N, 2)
+        a[t1, t2] = 1
 
-
-
-
+    b = adaptiveSmoothing(a, 4)
+    plt.imshow(np.log(b))
+    plt.show()
 
 
 def _test():

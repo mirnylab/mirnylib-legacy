@@ -516,6 +516,7 @@ def dotSizeScatter(x, y, weights=None,
         xes.append(x)
         ys.append(y)
         sizes.append(sizeFunction(count))
+
     sizes = np.array(sizes, dtype=float)
     sizes = np.clip(sizes, *np.percentile(sizes, percentiles))
     if maxSize is not None:
@@ -557,7 +558,7 @@ def linear_regression(x, y, a=None, b=None):
 
     """
 
-    x,y = np.array(x), np.array(y)
+    x, y = np.array(x), np.array(y)
     if not ((a is None) or (b is None)):
         raise Exception('you cannot set both a and b')
     elif not (a is None):
@@ -571,11 +572,11 @@ def linear_regression(x, y, a=None, b=None):
     else:
         slope, intercept, r, prob2, _ = st.linregress(x, y)
 
-    sse = ((y-slope*x-intercept)**2).sum()
-    sigma_e = np.sqrt(sse/(x.size-2.0))
+    sse = ((y - slope * x - intercept) ** 2).sum()
+    sigma_e = np.sqrt(sse / (x.size - 2.0))
     mx = x.mean()
-    sx2 = ((x-mx)**2).sum()
-    sd_intercept = sigma_e * np.sqrt(1.0/x.size + mx*mx/sx2)
+    sx2 = ((x - mx) ** 2).sum()
+    sd_intercept = sigma_e * np.sqrt(1.0 / x.size + mx * mx / sx2)
     sd_slope = sigma_e / np.sqrt(sx2)
     return (slope, intercept, r, sigma_e, prob2, sd_slope, sd_intercept)
 
@@ -611,7 +612,7 @@ def scatter_trend(x, y, **kwargs):
     x, y = numpy.asarray(x), numpy.asarray(y)
     mask = np.logical_not(numpy.isnan(x) + numpy.isnan(y) + np.isinf(x) + np.isinf(y))
     x, y = x[mask], y[mask]
-    a, b, r, stderr, p, sd_slope, sd_intercept = linear_regression(x,y)
+    a, b, r, stderr, p, sd_slope, sd_intercept = linear_regression(x, y)
 
     if kwargs.pop('show_sigma_estimates', True):
         equation_label = '$y\,=\,({:.3f}\pm{:.3f})x\,+\,{:.3f}\pm{:.3f}$'.format(
@@ -629,7 +630,7 @@ def scatter_trend(x, y, **kwargs):
     plot_type = kwargs.get('plot_type', 'scatter')
     color = kwargs.get('c', 'b')
     if plot_type == 'scatter':
-        plt.scatter(x,y,
+        plt.scatter(x, y,
                     edgecolor=color,
                     facecolor=color,
                     alpha=kwargs.get('alpha', 1.0))
