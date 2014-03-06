@@ -30,9 +30,6 @@ setup(
     cmdclass=cmdclass,
     install_requires=[
         'cython>=0.16',
-        'numpy>=1.6',
-        'scipy',
-        'matplotlib',
         'biopython',
         'pysam',
         'joblib>=0.6.3',
