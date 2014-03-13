@@ -217,7 +217,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1,
     """Main method for correcting DS and SS read data. Possibly excludes diagonal.
     By default does iterative correction, but can perform an M-time correction"""
     if M == None:
-        M = 9999
+        M = 599
     totalBias = np.ones(len(x),float)    
     if v == None: v = np.zeros(len(x),float)  #single-sided reads    
     x = np.array(x,np.double,order = 'C')
@@ -251,7 +251,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1,
             for j in range(N):
                 _x[i,j] = _x[i,j] / (s[i] * s[j])
         
-        if M == 9999:
+        if M == 599:
             if np.abs(s-1).max() < tolerance:
                 print "IC used {0} iterations".format(iternum+1)
                 break
@@ -271,7 +271,7 @@ def ultracorrectAny(x,v = None,M=None,diag = -1, attemptInPlace=True,
     """Main method for correcting DS and SS read data. Possibly excludes diagonal.
     By default does iterative correction, but can perform an M-time correction"""
     if M == None:
-        M = 9999
+        M = 599
     
     totalBias1 = np.ones(len(x),float)    
     if v == None: v = np.zeros(len(x),float)  #single-sided reads    
@@ -310,7 +310,7 @@ def ultracorrectAny(x,v = None,M=None,diag = -1, attemptInPlace=True,
             for j in range(N):
                 _x[i,j] = _x[i,j] / (s[i] * s[j])
         
-        if M == 9999:
+        if M == 599:
             if np.abs(s-1).max() < tolerance:
                 print "IC used {0} iterations".format(iternum+1)
                 break

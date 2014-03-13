@@ -33,6 +33,7 @@ os.chdir("mirnylib")
 for name in ["numutils_new.so", "numutils_new.c"]:
     if os.path.exists(name):
         os.remove(name)
+os.chdir("..")
 print "Building cython modules.."
 print "If it does not work, check cython version (need 0.16+)"
 os.system("python setup.py build_ext --inplace")
