@@ -89,6 +89,20 @@ cdef my_type[:] _boolIndex (my_type[:] array, uchar[:] indexes, my_type[:] outpu
                 j += 1
     return output
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def createRWCython(N, Ndim=2):    
+    cdef np.ndarray[np.int64_t,cast = True,ndim = 2] offsets = np.zeros((N, Ndim), dtype=int)
+    cdef np.ndarray[np.int64_t,cast=True,ndim=1] rand1 = np.random.randint(0,Ndim,N)
+    cdef np.ndarray[np.int64_t,cast=True,ndim=1] rand2 = np.random.randint(0,2,N) 
+    cdef int i
+    for i in xrange(N):
+        offsets[i,rand1[i]] = rand2[i] * 2 - 1
+    return np.cumsum(offsets, axis=0)
+
+
 def fasterBooleanIndexing(np.ndarray array, np.ndarray indexes,output = None,outLen = None, bounds = True):
     """
     A faster way of writing "output = a[my_boolean_array]"

@@ -63,6 +63,10 @@ acidBluesList = ((255, 255, 255), (162, 192, 222),
                  (90, 15, 90), (60, 10, 60),
                  (30, 5, 30), (0, 0, 0))
 
+nMethList = ((236, 250, 255), (148, 189, 217),
+             (118, 169, 68), (131, 111, 43), (122, 47, 25),
+             (41, 0, 20))
+
 
 def registerList(mylist, name):
     mymap = listToColormap(mylist, name)
@@ -73,6 +77,7 @@ def registerList(mylist, name):
 registerList(fallList, "fall")
 registerList(bluesList, "blues")
 registerList(acidBluesList, "acidblues")
+registerList(nMethList, "nmeth")
 
 
 def setLongColorCycle(ax=None):
@@ -563,12 +568,12 @@ def linear_regression(x, y, a=None, b=None):
         raise Exception('you cannot set both a and b')
     elif not (a is None):
         slope = a
-        intercept = (y - slope*x).mean()
-        r, prob2 = st.pearsonr(slope*x + intercept, y)
+        intercept = (y - slope * x).mean()
+        r, prob2 = st.pearsonr(slope * x + intercept, y)
     elif not (b is None):
         intercept = b
-        slope = np.linalg.lstsq(x[:,None],y-intercept)[0][0]
-        r, prob2 = st.pearsonr(slope*x + intercept, y)
+        slope = np.linalg.lstsq(x[:, None], y - intercept)[0][0]
+        r, prob2 = st.pearsonr(slope * x + intercept, y)
     else:
         slope, intercept, r, prob2, _ = st.linregress(x, y)
 
@@ -945,3 +950,26 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     plt.gca().get_yaxis().tick_left()
     if rotate_labels:
         plt.gcf().autofmt_xdate()
+
+
+def printlogo(pwm, filename, alphabet="ACGT"):
+    myAlphabet = {"A":0, "C":1, "G":2, "T":3}
+    translate = np.array([myAlphabet[i] for i in alphabet])
+    pwm = pwm[:, translate]
+    "Prints logo from nucleotides as a pdf"
+    import cPickle
+    cPickle.dump(pwm, open(filename + ".pkl", 'wb'), -1)
+    import weblogolib as wl
+    PWMdata = np.array(pwm)
+    data = wl.LogoData.from_counts(wl.std_alphabets["dna"], PWMdata)
+    options = wl.LogoOptions(resolution=300)
+    options.title = filename
+    options.color_scheme = wl.colorscheme.nucleotide
+    format = wl.LogoFormat(data, options)
+    fout = open(filename + ".pdf", 'w')
+    wl.pdf_formatter(data, format, fout)
+    fout.close()
+
+
+
+
