@@ -952,7 +952,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
         plt.gcf().autofmt_xdate()
 
 
-def printlogo(pwm, filename, alphabet="ACGT"):
+def printlogo(pwm, filename, alphabet="ACGT", mode = "pdf"):
     myAlphabet = {"A":0, "C":1, "G":2, "T":3}
     translate = np.array([myAlphabet[i] for i in alphabet])
     pwm = pwm[:, translate]
@@ -966,8 +966,16 @@ def printlogo(pwm, filename, alphabet="ACGT"):
     options.title = filename
     options.color_scheme = wl.colorscheme.nucleotide
     format = wl.LogoFormat(data, options)
-    fout = open(filename + ".pdf", 'w')
-    wl.pdf_formatter(data, format, fout)
+    if mode == "pdf":
+        fout = open(filename + ".pdf", 'wb')
+        wl.pdf_formatter(data, format, fout)
+    elif mode == "png":
+        fout = open(filename + ".png", 'wb')
+        wl.png_formatter(data, format, fout)
+    else:
+        fout = open(filename + ".{0}".format(mode), 'wb')
+        exec("""wl.{0}_formatter(data, format, fout)""".format(mode))
+        
     fout.close()
 
 

@@ -834,6 +834,28 @@ ultracorrectSymmetricWithVector = \
     numutils_new.ultracorrectSymmetricWithVector  # @UndefinedVariable @IgnorePep8
 
 
+def completeIC(hm, returnBias=False):
+    """Makes a safe iterative correction 
+    (i.e. with removing low-coverage regions and diagonals)
+    for a symmetric heatmap"""
+    assert isSymmetric(hm)
+    hm = np.asarray(hm, dtype=float)
+    
+    hmc = hm.copy()  #to remove diagonals safely 
+    removeDiagonals(hmc, 1)
+    mask = np.sum(hmc, axis=0) > 40
+    num = min(len(hmc) / 5, 30)
+    mask = mask * (np.sum(hmc > 0, axis=0) > num)
+    
+    hm[-mask] = 0
+    hm[:, -mask] = 0
+    hm,bias = iterativeCorrection(hm, skipDiags = 1)
+    if returnBias: 
+        return hm,bias
+    return hm
+
+
+
 def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
                       mask="auto", originalCounts="matrix"):
     """This is a super-cool method to smooth a heatmap.
@@ -1009,6 +1031,7 @@ def _testProjectOnEigenvectors():
     sa = a + a.T
     assert np.max(np.abs((projectOnEigenvectors(sa, 99) - sa))) < 0.00001
     print "Test finished successfully!"
+    
 
 
 def padFragmentList(fragid1, fragid2):

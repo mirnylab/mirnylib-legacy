@@ -10,6 +10,7 @@ cimport cython
 from math import log 
 
 
+
 ctypedef unsigned long ulong
 ctypedef unsigned int uint
 ctypedef unsigned short ushort
@@ -250,10 +251,9 @@ def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1,
             if dd == 0:
                 s -= np.diagonal(_x)
             else:
-                dia = np.diagonal(_x,dd)
-                #print dia
+                dia = np.array(np.diagonal(_x,dd))                
                 s[dd:] = s[dd:] -  dia
-                s[:-dd] = s[:-dd] - dia 
+                s[:len(s)-dd] = s[:len(s)-dd] - dia 
         s = s / np.mean(s[s0!=0])        
         s[s0==0] = 1
         s -= 1
@@ -310,7 +310,7 @@ def ultracorrectAny(x,v = None,M=None,diag = -1, attemptInPlace=True,
                 s -= np.diagonal(_x)
             else:
                 dia = np.diagonal(_x,dd)
-                #print dia
+                print dia
                 s[dd:] = s[dd:] -  dia
                 s[:-dd] = s[:-dd] - dia 
         s = s / np.mean(s[s0!=0])        
