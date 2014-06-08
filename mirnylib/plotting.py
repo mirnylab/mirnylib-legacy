@@ -15,9 +15,9 @@ These include:
 -niceShow  - nicer "plt.show"
 """
 import matplotlib
-r = os.system('python -c "import matplotlib.pyplot as plt;plt.figure()"')
-if r != 0:
-    matplotlib.use('Agg')
+#r = os.system('python -c "import matplotlib.pyplot as plt;plt.figure()"')
+#if r != 0:
+#    matplotlib.use('Agg')
 
 import matplotlib.cm
 import warnings

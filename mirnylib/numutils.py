@@ -11,7 +11,7 @@ from numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
 from numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
 from numutils_new import  ultracorrectSymmetricWithVector  # @UnresolvedImport @IgnorePep8
 from scipy.ndimage.filters import  gaussian_filter
-from mirnylib.systemutils import  deprecate
+from mirnylib.systemutils import  deprecate, setExceptionHook
 from scipy.stats.stats import spearmanr, pearsonr
 na = np.array
 import  scipy.sparse.linalg
@@ -700,6 +700,29 @@ def logbins(a, b, pace=0, N_in=0):
     return list(ret)
 
 
+def logbinsnew(a,b, ratio=0, N=0):
+    a = int(a)
+    b = int(b)
+    a10, b10 = np.log10([a,b])
+    if ratio !=0:
+        if N != 0:
+            raise ValueError("Please specify N or ratio")        
+        N = np.log(b/a) / np.log(ratio)
+    elif N==0:
+        raise ValueError("Please specify N or ratio")
+    data10 = np.logspace(a10,b10,N)
+    data10 = np.array(np.rint(data10), dtype=int)
+    data10 = np.sort(np.unique(data10))
+    assert data10[0] == a
+    assert data10[-1] == b
+    return data10
+
+
+    
+    
+    
+
+
 def rescale(data):
     "rescales array to zero mean unit variance"
     data = np.asarray(data, dtype=float)
@@ -1267,6 +1290,8 @@ def eigenvalue_function(mat, func="default", delta=0.1):
     mat = np.dot(np.dot(eig, np.diag(func(lam))), eig.T)
     fillDiagonal(mat, np.median(mat), 0)
     return mat
+
+ 
 
 
 def _test_eigenvalue_functions():
