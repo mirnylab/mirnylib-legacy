@@ -25,7 +25,7 @@ setup(
     name='mirnylib',
     url='https://bitbucket.org/mirnylab/mirnylib/',
     description=('Libraries, shared between different mirnylab projects.'),
-    packages=['mirnylib'],
+    packages=['mirnylib',"mirnylib/h5dictUtils"],
     ext_modules=ext_modules,
     cmdclass=cmdclass,
     install_requires=[
