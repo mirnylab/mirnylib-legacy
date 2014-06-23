@@ -1,7 +1,7 @@
-#(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
+# (c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu),
 # Anton Goloborodko (golobor@mit.edu)
-
+import pandas as pd
 import numpy as np
 import warnings
 import mirnylib.systemutils
@@ -92,7 +92,7 @@ def isInteger(inputData):
     if generalizedDtype(inputData) == np.int:
         return True
 
-    #checking if variance of the data is significantly less than 1
+    # checking if variance of the data is significantly less than 1
 
     varvar = fastMatrixSTD(inputData)
     varvar = max(varvar, 1e-5)
@@ -241,16 +241,16 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
     bins = zip(bins[:-1], bins[1:])  # "big chunks" of chunkSize each
     print "Sorting using %d chunks" % (len(bins),)
 
-    #Initial pre-sorting inDataset - tempDataset
+    # Initial pre-sorting inDataset - tempDataset
     for start, stop in bins:
         chunk = inDataset[start:stop]
         chunk.sort()
         tempDataset[start:stop] = chunk
 
-    #Determining smaller merge chunk sizes and positions
-    #each chunk is separated into chunkSize/numChunks smaller chunks
-    #Smaller chunks are called "merge chunks"
-    #Further they will be merged one by one
+    # Determining smaller merge chunk sizes and positions
+    # each chunk is separated into chunkSize/numChunks smaller chunks
+    # Smaller chunks are called "merge chunks"
+    # Further they will be merged one by one
     M = len(bins)
     mergeChunkSize = chunkSize / M
     chunkLocations = []
@@ -258,7 +258,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
         chunkBins = range(start, stop, mergeChunkSize) + [stop]
         chunkBins = zip(chunkBins[:-1], chunkBins[1:])
         chunkLocations.append(chunkBins[::-1])
-            #first chunk is last, as we use pop() later
+            # first chunk is last, as we use pop() later
     outputPosition = 0  # location in the output file, inDataset now
 
     currentChunks = []  # a set of smaller merge-chunks for each big chunk.
@@ -266,24 +266,24 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
         start, end = chunk.pop()
         currentChunks.append(tempDataset[start:end])
     maxes = [i.max() for i in currentChunks]
-        #A set of maximum values of working chunks
+        # A set of maximum values of working chunks
     positions = [0 for _ in currentChunks]
-        #A set of current positions in working chunks
+        # A set of current positions in working chunks
 
     while True:
         chInd = np.argmin(maxes)
         # An index of a chunk that has minimum maximum value right now
-        #We can't merge beyound this value,
-        #we need to update this chunk before doing this
+        # We can't merge beyound this value,
+        # we need to update this chunk before doing this
 
         limits = [np.searchsorted(chunk, maxes[chInd],
                                   side="right") for chunk in currentChunks]
-        #Up to where can we merge each chunk now? Find it using searchsorted
+        # Up to where can we merge each chunk now? Find it using searchsorted
 
         currentMerge = np.concatenate([chunk[st:ed] for chunk, st,
                                        ed in zip(currentChunks,
                                                  positions, limits)])
-        #Create a current array to merge
+        # Create a current array to merge
 
         positions = limits  # we've merged up to here
         currentMerge.sort()  # Poor man's merge
@@ -328,7 +328,7 @@ def _testExternalSort():
     assert dif.sum() == 0
     print "Test finished successfully!"
 
-#_testExternalSort()
+# _testExternalSort()
 
 
 def uniqueIndex(data):
@@ -606,7 +606,7 @@ def _testArraySumByArray():
     print "Difference is {0}, should be less than 1e-10".format(dif)
     assert dif < 1e-10
 
-#_testArraySumByArray()
+# _testArraySumByArray()
 
 
 def _sumByArray(array, filterarray, dtype="int64"):
@@ -700,17 +700,17 @@ def logbins(a, b, pace=0, N_in=0):
     return list(ret)
 
 
-def logbinsnew(a,b, ratio=0, N=0):
+def logbinsnew(a, b, ratio=0, N=0):
     a = int(a)
     b = int(b)
-    a10, b10 = np.log10([a,b])
-    if ratio !=0:
+    a10, b10 = np.log10([a, b])
+    if ratio != 0:
         if N != 0:
-            raise ValueError("Please specify N or ratio")        
-        N = np.log(b/a) / np.log(ratio)
-    elif N==0:
+            raise ValueError("Please specify N or ratio")
+        N = np.log(b / a) / np.log(ratio)
+    elif N == 0:
         raise ValueError("Please specify N or ratio")
-    data10 = np.logspace(a10,b10,N)
+    data10 = np.logspace(a10, b10, N)
     data10 = np.array(np.rint(data10), dtype=int)
     data10 = np.sort(np.unique(data10))
     assert data10[0] == a
@@ -718,9 +718,9 @@ def logbinsnew(a,b, ratio=0, N=0):
     return data10
 
 
-    
-    
-    
+
+
+
 
 
 def rescale(data):
@@ -814,6 +814,26 @@ randomOnSphere = random_on_sphere
 
 #-------------Importing cytonized functions--------------
 
+def fillDiagonal(inArray, diag, offset=0):
+    "Puts diag in the offset's diagonal of inArray"
+    N = inArray.shape[0]
+    assert inArray.shape[1] == N
+    if offset >= 0:
+        inArray.flat[offset:N * (N - offset):N + 1] = diag
+    else:
+        inArray.flat[(-offset * N)::N + 1] = diag
+
+
+def removeDiagonals(inArray, m):
+    """removes up to mth diagonal in array
+    m = 0: main
+    m = 1: 3 diagonals, etc.
+    """
+    for i in xrange(-m, m + 1):
+        fillDiagonal(inArray, 0, i)
+
+
+
 def observedOverExpected(matrix):
     """
     Parameters
@@ -857,25 +877,6 @@ ultracorrectSymmetricWithVector = \
     numutils_new.ultracorrectSymmetricWithVector  # @UndefinedVariable @IgnorePep8
 
 
-def completeIC(hm, returnBias=False):
-    """Makes a safe iterative correction 
-    (i.e. with removing low-coverage regions and diagonals)
-    for a symmetric heatmap"""
-    assert isSymmetric(hm)
-    hm = np.asarray(hm, dtype=float)
-    
-    hmc = hm.copy()  #to remove diagonals safely 
-    removeDiagonals(hmc, 1)
-    mask = np.sum(hmc, axis=0) > 40
-    num = min(len(hmc) / 5, 30)
-    mask = mask * (np.sum(hmc > 0, axis=0) > num)
-    
-    hm[-mask] = 0
-    hm[:, -mask] = 0
-    hm,bias = iterativeCorrection(hm, skipDiags = 1)
-    if returnBias: 
-        return hm,bias
-    return hm
 
 
 
@@ -907,7 +908,7 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
     antimask = np.nonzero(mask.flat == False)[0]
     assert mask.shape == matrix.shape
 
-    #Getting sure that there are no reads in masked regions
+    # Getting sure that there are no reads in masked regions
     originalCounts.flat[antimask] = 0
     matrix.flat[antimask] = 0
 
@@ -915,8 +916,8 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
         "gaussian filter for masked data"
         mf = gaussian_filter(mask, value)
         mf.flat[antimask] = 1
-        #mfDivided = matrix / mf
-        #mfDivided.flat[antimask] = 0
+        # mfDivided = matrix / mf
+        # mfDivided.flat[antimask] = 0
         gf = gaussian_filter(matrix, value)
         gf.flat[antimask] = 0
         return gf / mf
@@ -926,13 +927,12 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
     nonZeroSum = nonZero.sum()
     values = np.r_[np.logspace(-0.4, 4, 50, 2)]
     values = values[values * 2 * np.pi > 1]
-    #print values
+    # print values
     covered = np.zeros(matrix.shape, dtype=bool)
-    #outMatrix[covered] += matrix[covered]
+    # outMatrix[covered] += matrix[covered]
 
     for value in values:
-        print value,
-        #finding normalization of a discrete gaussian filter
+        # finding normalization of a discrete gaussian filter
         test = np.zeros((8 * value, 8 * value), dtype=float)
         test[4 * value, 4 * value] = 1
         stest = gaussian_filter(test, value)
@@ -942,26 +942,26 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
         smoothed = gaussian_filter(1. * originalCounts, value) * norm
         assert smoothed.min() >= -1e-10
 
-        #Indeces to smooth on that iteration
+        # Indeces to smooth on that iteration
         new = (smoothed > cutoff) * (covered != True) * nonZero
         newInds = np.nonzero(new.flat)[0]
 
-        #newReads = originalCounts.flat[newInds]
-        #directPercent = (newReads - p) / (1. * p)
-        #directPercent[newReads <= p] = 0
-        #directPercent[newReads >= 2 * p] = 1
+        # newReads = originalCounts.flat[newInds]
+        # directPercent = (newReads - p) / (1. * p)
+        # directPercent[newReads <= p] = 0
+        # directPercent[newReads >= 2 * p] = 1
 
         newMatrix = np.zeros_like(matrix, dtype=np.double)
         newMatrix.flat[newInds] = matrix.flat[newInds]
-        #newMatrix.flat[newInds] = matrix.flat[newInds] * (1. - directPercent)
-        #outMatrix.flat[newInds] += matrix.flat[newInds] * directPercent
+        # newMatrix.flat[newInds] = matrix.flat[newInds] * (1. - directPercent)
+        # outMatrix.flat[newInds] += matrix.flat[newInds] * directPercent
 
         outMatrix += coolFilter(newMatrix, value)
         covered[new] = True
 
         if covered.sum() == nonZeroSum:
             break
-    #print matrix.sum(), outMatrix.sum()
+    # print matrix.sum(), outMatrix.sum()
     return outMatrix + head
 
 
@@ -1054,7 +1054,7 @@ def _testProjectOnEigenvectors():
     sa = a + a.T
     assert np.max(np.abs((projectOnEigenvectors(sa, 99) - sa))) < 0.00001
     print "Test finished successfully!"
-    
+
 
 
 def padFragmentList(fragid1, fragid2):
@@ -1079,7 +1079,28 @@ def padFragmentList(fragid1, fragid2):
     return fragid1, fragid2
 
 
-def ultracorrectFragmentList(fragid1, fragid2, maxNum=30, tolerance=1e-5):
+def pairBincount(x, y, weights=None):
+    """counts number of unique pairs of (fragid1, fragid2) with weights"""
+
+    xuniq = np.sort(np.unique(x))
+    yuniq = np.sort(np.unique(y))
+    ind1 = np.searchsorted(xuniq, x)
+    ind2 = np.searchsorted(yuniq, y)
+    indMult = np.max(ind2) + 1
+    ind = ind1 * indMult + ind2
+    count = np.bincount(ind, weights=weights)
+    countRaw = np.bincount(ind)
+    inds = np.nonzero(countRaw)[0]
+    count = count[inds]
+    frag1 = xuniq[inds / indMult]
+    frag2 = yuniq[inds % indMult]
+    return frag1, frag2, count
+
+
+
+
+def ultracorrectFragmentList(fragid1, fragid2, maxNum=30, tolerance=1e-5, weights=None):
+
     from time import sleep
     fragid1, fragid2 = np.concatenate([fragid1, fragid2]), np.concatenate([fragid2, fragid1])
     while True:
@@ -1094,7 +1115,11 @@ def ultracorrectFragmentList(fragid1, fragid2, maxNum=30, tolerance=1e-5):
 
         fragid1 = fragid1[mask]
         fragid2 = fragid2[mask]
-    weights = np.ones(len(fragid1), dtype=float)
+
+
+    fragid1, fragid2, weights = pairBincount(fragid1, fragid2, weights)
+    weights = weights * 1.
+    counts = weights.copy()
     m1 = arraySearch(fragUnique, fragid1)
     m2 = arraySearch(fragUnique, fragid2)
     while True:
@@ -1105,7 +1130,7 @@ def ultracorrectFragmentList(fragid1, fragid2, maxNum=30, tolerance=1e-5):
         weights /= fragSum[m2]
         print fragSum.var(), fragSum.mean()
         if fragSum.var() < tolerance:
-            return fragid1, fragid2, weights
+            return fragid1, fragid2, weights, counts
 
 
 def correct(y):
@@ -1137,6 +1162,9 @@ def correctInPlace(x):
     s2[s2 == 0] = 1
     x /= (s2[None, :] * s[:, None])
 
+
+
+
 def ultracorrectAssymetric(x, M="auto", tolerance=1e-6):
     "just iterative correction of an assymetric matrix"
     if M == "auto":
@@ -1156,7 +1184,7 @@ def ultracorrectAssymetric(x, M="auto", tolerance=1e-6):
 
 def iterativeCorrection(x, M="auto", tolerance=1e-6,
                         symmetric="auto",
-                        skipDiags= -1):
+                        skipDiags=-1):
     "A wrapper for iterative correction of any matrix"
     x = np.asarray(x, dtype=float)
 
@@ -1190,23 +1218,38 @@ ultracorrect = deprecate(ultracorrect,
 
 ultracorrectBiasReturn = deprecate(iterativeCorrection, "ultracorrectBiasReturn")
 
-def fillDiagonal(inArray, diag, offset=0):
-    "Puts diag in the offset's diagonal of inArray"
-    N = inArray.shape[0]
-    assert inArray.shape[1] == N
-    if offset >= 0:
-        inArray.flat[offset:N * (N - offset):N + 1] = diag
-    else:
-        inArray.flat[(-offset * N)::N + 1] = diag
 
-
-def removeDiagonals(inArray, m):
-    """removes up to mth diagonal in array
-    m = 0: main
-    m = 1: 3 diagonals, etc.
+def completeIC(hm, minimumSum=40, returnBias=False):
+    """Makes a safe iterative correction
+    (i.e. with removing low-coverage regions and diagonals)
+    for a symmetric heatmap
+    Only keeps rows/columns with sum more than minimumSum,
+    and with at least 20 (or 1/5 length) non-zero entries
     """
-    for i in xrange(-m, m + 1):
-        fillDiagonal(inArray, 0, i)
+    assert isSymmetric(hm)
+    hm = np.asarray(hm, dtype=float)
+
+    hmc = hm.copy()  # to remove diagonals safely
+    removeDiagonals(hmc, 1)
+
+    mask = np.sum(hmc, axis=0) > minimumSum
+    num = min(len(hmc) / 5, 20)
+    mask = mask * (np.sum(hmc > 0, axis=0) > num)
+
+
+    if mask.sum() + 3 < len(mask) * 0.5:
+        raise ValueError("""Iterative correction will remove more than a half of the matrix
+        Check that values in rows/columns represent actual reads,
+        and the sum over rows/columns exceeds minimumSum""")
+
+    hmc[-mask] = 0
+    hmc[:, -mask] = 0
+
+    hm, bias = iterativeCorrection(hmc, skipDiags=1)
+    if returnBias:
+        return hm, bias
+    return hm
+
 
 
 def shuffleAlongDiagonal(inMatrix):
@@ -1276,7 +1319,7 @@ def eigenvalue_function(mat, func="default", delta=0.1):
     lam, eig = np.linalg.eigh(mat)
     if func == "default":
         def func(x):
-            #print x.min(), x.max()
+            # print x.min(), x.max()
             xmin, xmax = x.min(), x.max()
             beta = 1. - delta  # foloowing paper here
             alpha = min(beta / ((1 - beta) * (xmax)),
@@ -1291,14 +1334,14 @@ def eigenvalue_function(mat, func="default", delta=0.1):
     fillDiagonal(mat, np.median(mat), 0)
     return mat
 
- 
+
 
 
 def _test_eigenvalue_functions():
     a = 1. * (np.random.random((400, 400)) > 0.97)
-    #vec = np.arange(0, 200)
-    #dif = 1. / ((np.abs(vec[:, None] - vec[None, :]) + 1))
-    #a = np.random.poisson(1 * dif)
+    # vec = np.arange(0, 200)
+    # dif = 1. / ((np.abs(vec[:, None] - vec[None, :]) + 1))
+    # a = np.random.poisson(1 * dif)
     b = a + a.T
     import matplotlib.pyplot as plt
     plt.subplot(2, 4, 1)

@@ -3,6 +3,7 @@
 # Anton Goloborodko (golobor@mit.edu)
 from scipy.ndimage.filters import gaussian_filter1d
 import os
+from mirnylib.numutils import pairBincount
 
 """
 Some nice plotting utilities from Max
@@ -292,6 +293,18 @@ def removeBorder(ax=None):
         ax = plt.axes()
     ax.set_xticklabels([])
     ax.set_yticklabels([])
+    
+    
+def fixFormatter(ax=None):
+    import  matplotlib.pyplot as plt
+    if ax is None:
+        ax = plt.gca() 
+    matplotlib.rc("axes.formatter", limits=(-10, 10))
+    y_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
+    ax.yaxis.set_major_formatter(y_formatter)
+    x_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
+    ax.xaxis.set_major_formatter(x_formatter)
+    
 
 
 def nicePlot(fs=8, show=True):
@@ -476,6 +489,7 @@ def exampleHilbert():
 
 
 def dotSizeScatter(x, y, weights=None,
+                   sizes=None,
                    maxSize=50, useColor=True,
                    useSize=True, percentiles=(1, 99),
                    sizeFunction=np.sqrt,
@@ -513,24 +527,29 @@ def dotSizeScatter(x, y, weights=None,
         raise ValueError("Length of weights array should be the same as data ")
 
 
-    fr = pd.DataFrame({"x":x, "y":y, "weights":weights})
-    grouped = fr.groupby(["x", "y"])
-    gr = grouped.sum()
-    xes, ys, sizes = [], [], []
-    for (x, y), count in zip(gr.index.values, gr["weights"].values):
-        xes.append(x)
-        ys.append(y)
-        sizes.append(sizeFunction(count))
+    xes, ys, dotWeights = pairBincount(x,y, weights)
+    
+    
+    dotWeights = np.array(dotWeights, dtype=float)
+    dotWeights = np.clip(dotWeights, *np.percentile(dotWeights, percentiles))
+    
 
-    sizes = np.array(sizes, dtype=float)
-    sizes = np.clip(sizes, *np.percentile(sizes, percentiles))
+    if sizes != None: 
+        xdummy, ydummy, dotSizes = pairBincount(x,y,sizes)
+        assert np.allclose(xes, xdummy)
+        assert np.allclose(ys, ydummy)
+    else:
+        dotSizes = dotWeights
+
+
     if maxSize is not None:
-        sizes *= maxSize / sizes.max()
+        dotSizes  = dotSizes * maxSize / float(dotSizes.max())
+
 
     if useColor:
-        kwargs["c"] = sizes
+        kwargs["c"] = dotWeights
     if useSize:
-        kwargs["s"] = sizes
+        kwargs["s"] = dotSizes
     plt.scatter(xes, ys, **kwargs)
 
 

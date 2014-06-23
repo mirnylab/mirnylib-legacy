@@ -60,7 +60,7 @@ class Genome(object):
         The drawback is that _memoize() doesn't check for the changes in the
         code of the function!'''
         if not hasattr(self, '_mymem'):
-            self._mymem = joblib.Memory(cachedir=self.genomePath)
+            self._mymem = joblib.Memory(cachedir=self.cacheDir)
 
         def run_func(readChrms, gapFile, chrmFileTemplate,
                      func_name, *args, **kwargs):
@@ -202,7 +202,7 @@ class Genome(object):
 
     def __init__(self, genomePath, gapFile='gap.txt',
                  chrmFileTemplate='chr%s.fa',
-                 readChrms=['#', 'X', 'Y', 'M']):
+                 readChrms=['#', 'X', 'Y', 'M'], cacheDir = "default"):
         '''
         A class that stores cached properties of a genome. To initialize,
         a Genome object needs FASTA files with chromosome sequences.
@@ -226,6 +226,7 @@ class Genome(object):
             genome folder. '#' stands for chromosomes with numerical labels
             (e.g. 1-22 for human). If readChrms is empty then read all
             chromosomes.
+        cacheDir : directory, or "default" for caching in the genomePath
 
         Attributes
         ----------
@@ -354,6 +355,9 @@ class Genome(object):
         '''
         # Set the main attributes of the class.
         self.genomePath = os.path.abspath(os.path.expanduser(genomePath))
+        if cacheDir == "default":
+            cacheDir = self.genomePath    
+        self.cacheDir = cacheDir 
         self.folderName = os.path.split(self.genomePath)[-1]
         self.readChrms = set(readChrms)
         self.gapFile = gapFile
