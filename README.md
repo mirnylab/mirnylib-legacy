@@ -5,7 +5,7 @@ Installation
 ------------
 The easiest way is to use pip, but see notes below:
 
-`$pip install https://bitbucket.org/mirnylab/mirnylib/get/tip.tar.gz`
+`$ pip install https://bitbucket.org/mirnylab/mirnylib/get/tip.tar.gz`
 
 Installation Requirements
 -------------------------
