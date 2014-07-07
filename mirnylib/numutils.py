@@ -110,7 +110,7 @@ def isSymmetric(inMatrix):
 
     M = inMatrix
     varDif = np.abs(M - M.T).max()
-    return varDif < fastMatrixSTD(inMatrix) * 0.0000001
+    return varDif < fastMatrixSTD(inMatrix) * 0.0000001 + 0.00001
 
 
 def _testMatrixUtils():
@@ -993,6 +993,8 @@ def PCA(A, numPCs=6, verbose=False):
     """performs PCA analysis, and returns 6 best principal components
     result[0] is the first PC, etc"""
     A = np.array(A, float)
+    if np.sum(np.sum(A, axis=0) == 0) > 0 :
+        warnings.warn("Columns with zero sum detected. Use zeroPCA instead")
     M = (A - np.mean(A.T, axis=1)).T
     covM = np.dot(M, M.T)
     [latent, coeff] = scipy.sparse.linalg.eigsh(covM, numPCs)
@@ -1007,6 +1009,8 @@ def EIG(A, numPCs=3):
     by default returns 3 EV
     """
     A = np.array(A, float)
+    if np.sum(np.sum(A, axis=0) == 0) > 0 :
+        warnings.warn("Columns with zero sum detected. Use zeroEIG instead")
     M = (A - np.mean(A))  # subtract the mean (along columns)
     if isSymmetric(A):
         [latent, coeff] = scipy.sparse.linalg.eigsh(M, numPCs)
@@ -1016,6 +1020,34 @@ def EIG(A, numPCs=3):
     print "eigenvalues are:", latent[alatent]
     coeff = coeff[:, alatent]
     return (np.transpose(coeff[:, ::-1]), latent[alatent][::-1])
+
+
+def zeroPCA(data, numPCs=3, verbose=False):
+    """
+    PCA which takes into account bins with zero counts
+    """
+    nonzeroMask = np.sum(data, axis=0) > 0
+    data = data[nonzeroMask]
+    data = data[:, nonzeroMask]
+    PCs = PCA(data, numPCs, verbose)
+    PCNew = [np.zeros(len(nonzeroMask), dtype=float) for _ in PCs[0]]
+    for i in range(len(PCs)):
+        PCNew[i][nonzeroMask] = PCs[0][i]
+    return PCNew, PCs[1]
+
+
+def zeroEIG(data, numPCs=3):
+    """
+    Eigenvector expansion which takes into account bins with zero counts
+    """
+    nonzeroMask = np.sum(data, axis=0) > 0
+    data = data[nonzeroMask]
+    data = data[:, nonzeroMask]
+    PCs = EIG(data, numPCs)
+    PCNew = [np.zeros(len(nonzeroMask), dtype=float) for _ in PCs[0]]
+    for i in range(len(PCs)):
+        PCNew[i][nonzeroMask] = PCs[0][i]
+    return PCNew, PCs[1]
 
 
 def project(data, vector):

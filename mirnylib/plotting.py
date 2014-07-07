@@ -1,4 +1,4 @@
-#(c) 2013 Massachusetts Institute of Technology. All Rights Reserved
+# (c) 2013 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu)
 # Anton Goloborodko (golobor@mit.edu)
 from scipy.ndimage.filters import gaussian_filter1d
@@ -16,8 +16,8 @@ These include:
 -niceShow  - nicer "plt.show"
 """
 import matplotlib
-#r = os.system('python -c "import matplotlib.pyplot as plt;plt.figure()"')
-#if r != 0:
+# r = os.system('python -c "import matplotlib.pyplot as plt;plt.figure()"')
+# if r != 0:
 #    matplotlib.use('Agg')
 
 import matplotlib.cm
@@ -29,7 +29,7 @@ np = numpy
 import scipy.stats as st
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
-#from . import numutils
+# from . import numutils
 import numutils
 
 
@@ -100,10 +100,10 @@ def setLongColorCycle(ax=None):
                            [0, 153, 143], [224, 255, 102],
                            [153, 0, 0], [255, 80, 5]]
     maximumContrast = [[i / 255. for i in j] for j in maximumContrastOld]
-    #for i, j in zip(maximumContrast, maximumContrastOld):
+    # for i, j in zip(maximumContrast, maximumContrastOld):
     #    plt.plot(gaussian_filter1d(np.random.random(500), 10), color=i, label=repr(j), linewidth=2)
-    #plt.legend()
-    #plt.show()
+    # plt.legend()
+    # plt.show()
 
     ax.set_color_cycle(maximumContrast)
 
@@ -169,8 +169,8 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
 
     import os
     import tempfile
-    #if you want to change positions of the spheres along each segment, change these numbers
-    #e.g. [0,.1, .2 ...  .9] will draw 10 spheres, and this will look better
+    # if you want to change positions of the spheres along each segment, change these numbers
+    # e.g. [0,.1, .2 ...  .9] will draw 10 spheres, and this will look better
 
     if y is None:
         data = numpy.array(x)
@@ -182,14 +182,14 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
         print "wrong data!"
         return
 
-    #determining the 95 percentile distance between particles,
+    # determining the 95 percentile distance between particles,
     meandist = numpy.percentile(numpy.sqrt(
         numpy.sum(numpy.diff(data, axis=0) ** 2, axis=1)), 95)
-    #rescaling the data, so that bonds are of the order of 1. This is because rasmol spheres are of the fixed diameter.
+    # rescaling the data, so that bonds are of the order of 1. This is because rasmol spheres are of the fixed diameter.
     if rescale:
         data /= meandist
 
-    #writing the rasmol script. Spacefill controls radius of the sphere.
+    # writing the rasmol script. Spacefill controls radius of the sphere.
     rascript = tempfile.NamedTemporaryFile()
     rascript.write("""wireframe off
     color temperature
@@ -198,20 +198,20 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
     """)
     rascript.flush()
 
-    #creating the array, linearly chanhing from -225 to 225, to serve as an array of colors
-    #(rasmol color space is -250 to 250, but it  still sets blue to the minimum color it found and red to the maximum).
+    # creating the array, linearly chanhing from -225 to 225, to serve as an array of colors
+    # (rasmol color space is -250 to 250, but it  still sets blue to the minimum color it found and red to the maximum).
     if color == "auto":
         colors = numpy.array([int(
             (j * 450.) / (len(data))) - 225 for j in xrange(len(data))])
     else:
         colors = color
 
-    #creating spheres along the trajectory
-    #for speedup I just create a Nx4 array, where first three columns are coordinates, and fourth is the color
+    # creating spheres along the trajectory
+    # for speedup I just create a Nx4 array, where first three columns are coordinates, and fourth is the color
     newData = numpy.zeros((len(data) * len(shifts) - (len(shifts) - 1), 4))
     for i in xrange(len(shifts)):
-        #filling in the array like 0,5,10,15; then 1,6,11,16; then 2,7,12,17, etc.
-        #this is just very fast
+        # filling in the array like 0,5,10,15; then 1,6,11,16; then 2,7,12,17, etc.
+        # this is just very fast
         newData[i:-1:len(shifts), :3] = data[:-1] * shifts[i] + \
             data[1:] * (1 - shifts[i])
         newData[i:-1:len(shifts), 3] = colors[:-1]
@@ -224,7 +224,7 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
     for i in newData:
         towrite.write("CA\t%lf\t%lf\t%lf\t%d\n" % tuple(i))
     towrite.flush()
-    #For windows you might need to change the place where your rasmol file is
+    # For windows you might need to change the place where your rasmol file is
     if os.name == "posix":  # if linux
         os.system("rasmol -xyz %s -script %s" % (towrite.name, rascript.name))
     else:  # if windows
@@ -256,7 +256,7 @@ def scatter3D(x, y, z, color='b'):
 
     else:
         ax.scatter(x, y, z, c=color)
-    plt.show()
+    return ax
 
 
 def removeAxes(mode="normal", shift=0, ax=None):
@@ -293,18 +293,18 @@ def removeBorder(ax=None):
         ax = plt.axes()
     ax.set_xticklabels([])
     ax.set_yticklabels([])
-    
-    
+
+
 def fixFormatter(ax=None):
     import  matplotlib.pyplot as plt
     if ax is None:
-        ax = plt.gca() 
+        ax = plt.gca()
     matplotlib.rc("axes.formatter", limits=(-10, 10))
     y_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
     ax.yaxis.set_major_formatter(y_formatter)
     x_formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
     ax.xaxis.set_major_formatter(x_formatter)
-    
+
 
 
 def nicePlot(fs=8, show=True):
@@ -352,11 +352,11 @@ def mat_img(a, cmap="jet", trunk=False, **kwargs):
         sa = numpy.sort(a.ravel())
         a[a > sa[(1 - trunk) * len(sa)]] = sa[(1 - trunk) * len(sa)]
         a[a < sa[trunk * len(sa)]] = sa[trunk * len(sa)]
-    #plt.ioff()
-    #fig = plt.figure()
-    #ax = fig.add_subplot(111)
-    #cax = ax.imshow(a, interpolation = 'nearest', cmap = cmap)
-    #cbar = fig.colorbar(cax)
+    # plt.ioff()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # cax = ax.imshow(a, interpolation = 'nearest', cmap = cmap)
+    # cbar = fig.colorbar(cax)
 
     def do_all():
         plt.imshow(a, interpolation='none', cmap=cmap, **kwargs)
@@ -484,7 +484,7 @@ def vectorToHilbert(data, fillEmpty=np.NAN, crop=True,
 
 def exampleHilbert():
     mat = vectorToHilbert(range(257), crop=True, highlight=3)
-    plt.imshow(mat, interpolation="none")  #important to show boundaries
+    plt.imshow(mat, interpolation="none")  # important to show boundaries
     plt.show()
 
 
@@ -527,15 +527,15 @@ def dotSizeScatter(x, y, weights=None,
         raise ValueError("Length of weights array should be the same as data ")
 
 
-    xes, ys, dotWeights = pairBincount(x,y, weights)
-    
-    
+    xes, ys, dotWeights = pairBincount(x, y, weights)
+
+
     dotWeights = np.array(dotWeights, dtype=float)
     dotWeights = np.clip(dotWeights, *np.percentile(dotWeights, percentiles))
-    
 
-    if sizes != None: 
-        xdummy, ydummy, dotSizes = pairBincount(x,y,sizes)
+
+    if sizes != None:
+        xdummy, ydummy, dotSizes = pairBincount(x, y, sizes)
         assert np.allclose(xes, xdummy)
         assert np.allclose(ys, ydummy)
     else:
@@ -543,7 +543,7 @@ def dotSizeScatter(x, y, weights=None,
 
 
     if maxSize is not None:
-        dotSizes  = dotSizes * maxSize / float(dotSizes.max())
+        dotSizes = dotSizes * maxSize / float(dotSizes.max())
 
 
     if useColor:
@@ -971,7 +971,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
         plt.gcf().autofmt_xdate()
 
 
-def printlogo(pwm, filename, alphabet="ACGT", mode = "pdf"):
+def printlogo(pwm, filename, alphabet="ACGT", mode="pdf"):
     myAlphabet = {"A":0, "C":1, "G":2, "T":3}
     translate = np.array([myAlphabet[i] for i in alphabet])
     pwm = pwm[:, translate]
@@ -994,7 +994,7 @@ def printlogo(pwm, filename, alphabet="ACGT", mode = "pdf"):
     else:
         fout = open(filename + ".{0}".format(mode), 'wb')
         exec("""wl.{0}_formatter(data, format, fout)""".format(mode))
-        
+
     fout.close()
 
 

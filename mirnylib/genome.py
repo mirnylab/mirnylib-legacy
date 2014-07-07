@@ -1,4 +1,4 @@
-#(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
+# (c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Anton Goloborodko (golobor@mit.edu),
 # Maksim Imakaev (imakaev@mit.edu)
 
@@ -63,7 +63,7 @@ class Genome(object):
             self._mymem = joblib.Memory(cachedir=self.cacheDir)
 
         def run_func(readChrms, gapFile, chrmFileTemplate,
-                     func_name, *args, **kwargs):
+                     func_name, genomeName, *args, **kwargs):
             return getattr(self, func_name)(*args, **kwargs)
 
         mem_func = self._mymem.cache(run_func)
@@ -71,7 +71,7 @@ class Genome(object):
         def memoized_func(*args, **kwargs):
             return mem_func(
                 self.readChrms, self.gapFile,
-                self.chrmFileTemplate, func_name, *args, **kwargs)
+                self.chrmFileTemplate, func_name, self.folderName, *args, **kwargs)
 
         return memoized_func
 
@@ -202,7 +202,7 @@ class Genome(object):
 
     def __init__(self, genomePath, gapFile='gap.txt',
                  chrmFileTemplate='chr%s.fa',
-                 readChrms=['#', 'X', 'Y', 'M'], cacheDir = "default"):
+                 readChrms=['#', 'X', 'Y', 'M'], cacheDir="default"):
         '''
         A class that stores cached properties of a genome. To initialize,
         a Genome object needs FASTA files with chromosome sequences.
@@ -356,8 +356,8 @@ class Genome(object):
         # Set the main attributes of the class.
         self.genomePath = os.path.abspath(os.path.expanduser(genomePath))
         if cacheDir == "default":
-            cacheDir = self.genomePath    
-        self.cacheDir = cacheDir 
+            cacheDir = self.genomePath
+        self.cacheDir = cacheDir
         self.folderName = os.path.split(self.genomePath)[-1]
         self.readChrms = set(readChrms)
         self.gapFile = gapFile
@@ -430,7 +430,7 @@ class Genome(object):
         Finds restriction sites and mids of rfrags for a given enzyme
         '''
 
-        #Memorized function
+        # Memorized function
         enzymeSearchFunc = eval('Bio.Restriction.%s.search' % enzymeName)
         rsites = []
         rfragMids = []
@@ -1159,7 +1159,7 @@ class Genome(object):
                 cmask = chromControl != 0
                 keepmask = vmask * cmask  # keeping only bins with non-zero reads in data/control
                 vmasksum, cmasksum = vmask.sum(), cmask.sum()
-                #Comparing number of non-zero bins in a control and non-control group
+                # Comparing number of non-zero bins in a control and non-control group
                 if max(vmasksum, cmasksum) / (1. * min(vmasksum, cmasksum)) \
                 > 1.3:
                     warnings.warn("\nBig deviation: number of non-zero \
@@ -1169,8 +1169,8 @@ class Genome(object):
                 "3. Aggregated reads are divided by control within each subbin"
                 value[keepmask] = value[keepmask] / chromControl[keepmask]
 
-            #Making a linear array into a matrix (rows - bins, columns - subbins within a bin)
-            #possibly appending some extra zeros at the end
+            # Making a linear array into a matrix (rows - bins, columns - subbins within a bin)
+            # possibly appending some extra zeros at the end
             value.resize(self.chrmLensBin[chrom] * (
                 self.resolution / internalResolution))
 
