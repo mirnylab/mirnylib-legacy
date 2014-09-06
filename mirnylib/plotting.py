@@ -984,16 +984,16 @@ def printlogo(pwm, filename, alphabet="ACGT", mode="pdf"):
     options = wl.LogoOptions(resolution=300)
     options.title = filename
     options.color_scheme = wl.colorscheme.nucleotide
-    format = wl.LogoFormat(data, options)
+    formatt = wl.LogoFormat(data, options)
     if mode == "pdf":
         fout = open(filename + ".pdf", 'wb')
-        wl.pdf_formatter(data, format, fout)
+        fout.write(wl.pdf_formatter(data, formatt))
     elif mode == "png":
         fout = open(filename + ".png", 'wb')
-        wl.png_formatter(data, format, fout)
+        fout.write(wl.png_formatter(data, formatt))
     else:
         fout = open(filename + ".{0}".format(mode), 'wb')
-        exec("""wl.{0}_formatter(data, format, fout)""".format(mode))
+        exec("""fout.write(wl.{0}_formatter(data, format))""".format(mode))
 
     fout.close()
 
