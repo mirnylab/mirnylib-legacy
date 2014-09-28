@@ -881,7 +881,7 @@ ultracorrectSymmetricWithVector = \
 
 
 def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
-                      mask="auto", originalCounts="matrix"):
+                      mask="auto", originalCounts="matrix", maxSmooth=9999):
     """This is a super-cool method to smooth a heatmap.
     Smoothes each point into a gaussian, encoumpassing parameter
     raw reads, taked from originalCounts data, or from matrix if not provided
@@ -925,7 +925,7 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
     outMatrix = np.zeros_like(matrix)
     nonZero = matrix > 0
     nonZeroSum = nonZero.sum()
-    values = np.r_[np.logspace(-0.4, 4, 50, 2)]
+    values = np.r_[np.logspace(-0.2, 4, 40, 2)]
     values = values[values * 2 * np.pi > 1]
     # print values
     covered = np.zeros(matrix.shape, dtype=bool)
@@ -933,6 +933,8 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
 
     for value in values:
         # finding normalization of a discrete gaussian filter
+        print value
+
         test = np.zeros((8 * value, 8 * value), dtype=float)
         test[4 * value, 4 * value] = 1
         stest = gaussian_filter(test, value)
@@ -944,6 +946,8 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
 
         # Indeces to smooth on that iteration
         new = (smoothed > cutoff) * (covered != True) * nonZero
+        if value > maxSmooth:
+            new = (covered != True) * nonZero
         newInds = np.nonzero(new.flat)[0]
 
         # newReads = originalCounts.flat[newInds]
@@ -1278,6 +1282,12 @@ def completeIC(hm, minimumSum=40, returnBias=False):
     hmc[:, -mask] = 0
 
     hm, bias = iterativeCorrection(hmc, skipDiags=1)
+    dmean = np.median(np.diagonal(hm, 2))
+    for t in [-1, 0, 1]:
+        fillDiagonal(hm, dmean, t)
+    hm[-mask] = 0
+    hm[:, -mask] = 0
+
     if returnBias:
         return hm, bias
     return hm
@@ -1410,4 +1420,7 @@ def _test():
     _testArraySumByArray()
     _testMatrixUtils()
     _testProjectOnEigenvectors()
+
+
+# _test()
 
