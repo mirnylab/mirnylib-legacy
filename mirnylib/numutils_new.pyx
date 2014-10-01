@@ -267,7 +267,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1,
         
         if M == 599:
             if np.abs(s-1).max() < tolerance:
-                print "IC used {0} iterations".format(iternum+1)
+                #print "IC used {0} iterations".format(iternum+1)
                 break
 
                          

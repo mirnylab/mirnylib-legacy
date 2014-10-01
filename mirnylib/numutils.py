@@ -881,7 +881,7 @@ ultracorrectSymmetricWithVector = \
 
 
 def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
-                      mask="auto", originalCounts="matrix", maxSmooth=9999):
+                      mask="auto", originalCounts="matrix", maxSmooth=9999, silent=True):
     """This is a super-cool method to smooth a heatmap.
     Smoothes each point into a gaussian, encoumpassing parameter
     raw reads, taked from originalCounts data, or from matrix if not provided
@@ -933,7 +933,8 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
 
     for value in values:
         # finding normalization of a discrete gaussian filter
-        print value
+        if not silent:
+            print value
 
         test = np.zeros((8 * value, 8 * value), dtype=float)
         test[4 * value, 4 * value] = 1
