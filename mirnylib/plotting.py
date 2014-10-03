@@ -555,14 +555,24 @@ def dotSizeScatter(x, y, weights=None,
 
 
 
-def plot_line(a, b, **kwargs):
+def plot_line(a, b=None, point=None, **kwargs):
     """Plot a line y = a * x + b.
+    `b` can be supplied directly, or, calculated, given that the
+    line goes through a specified point.
 
     Parameters
     ----------
     a, b : float
-        The slope and intercept of the line.
+        The slope and intercept of the line. b is optional
+    point : (float, float)
+        If specified, draw a line with a slope `a` though this point.
     """
+    if (b is None) and (point is None):
+        raise Exception('Please, supply the intercept b or a point on the line')
+    elif ((not (b is None)) and (not (point is None))):
+        raise Exception('Please, supply only the intercept b or a point on the line')
+    elif ((b is None) and (not (point is None))):
+        b = point[1] - point[0] * a
     xlim = pylab.xlim()
     pylab.plot([xlim[0], xlim[1]],
                [a * xlim[0] + b, a * xlim[1] + b],
