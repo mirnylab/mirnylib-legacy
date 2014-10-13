@@ -1256,12 +1256,12 @@ ultracorrect = deprecate(ultracorrect,
 ultracorrectBiasReturn = deprecate(iterativeCorrection, "ultracorrectBiasReturn")
 
 
-def completeIC(hm, minimumSum=40, returnBias=False):
+def completeIC(hm, minimumSum=40, returnBias=False, minimumNumber=20, minimumPercent = .2):
     """Makes a safe iterative correction
     (i.e. with removing low-coverage regions and diagonals)
     for a symmetric heatmap
     Only keeps rows/columns with sum more than minimumSum,
-    and with at least 20 (or 1/5 length) non-zero entries
+    and with at least  minumumNumber or minimumPercent (default 20 & 1/5 length) non-zero entries
     """
     assert isSymmetric(hm)
     hm = np.asarray(hm, dtype=float)
@@ -1270,7 +1270,7 @@ def completeIC(hm, minimumSum=40, returnBias=False):
     removeDiagonals(hmc, 1)
 
     mask = np.sum(hmc, axis=0) > minimumSum
-    num = min(len(hmc) / 5, 20)
+    num = min(len(hmc) * minimumPercent, minimumNumber)
     mask = mask * (np.sum(hmc > 0, axis=0) > num)
 
 
