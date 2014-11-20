@@ -853,7 +853,7 @@ def observedOverExpected(matrix):
 
     It allows to avoid divergence far from the main diagonal with a very few reads.
     """
-    return numutils_new.observedOverExpected(matrix)
+    return numutils_new.observedOverExpected(matrix)  # @UndefinedVariable
 
 
 def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
@@ -871,7 +871,7 @@ def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
 
     M has priority over tolerance
     """
-    return numutils_new.ultracorrectSymmetricByMask(x, mask, M, tolerance)
+    return numutils_new.ultracorrectSymmetricByMask(x, mask, M, tolerance)  # @UndefinedVariable
 
 ultracorrectSymmetricWithVector = \
     numutils_new.ultracorrectSymmetricWithVector  # @UndefinedVariable @IgnorePep8
