@@ -75,30 +75,49 @@ class Genome(object):
 
         return memoized_func
 
-    def _parseGapFile(self):
-        """Parse a .gap file to determine centromere positions.
+    def setCentromeres(self,
+            cntrStarts = None,
+            cntrEnds = None,
+            centromere_positions = None):
+        """Set centromere positions.
+
+        Parameters
+        ----------
+
+        cntrStarts, cntrEnds : np.arrays of int
+            The arrays containing the starts and the ends of centromeres.
+            Must contain chrmCount elements.
+
+        centromere_positions : dict of (int, int) or np
+            A dictionary with centromere positions.
+            The keys are the chromosome string labels and the values are
+            (centromereStart, centromereEnd). Can be supplied instead of
+            `cntrStarts` and `cntrEnds`.
         """
-        gapPath = os.path.join(self.genomePath, self.gapFile)
-        if not os.path.isfile(gapPath):
-            log.warning(
-                'Gap file not found!\n'
-                'Please provide a link to a gapfile or '
-                'put a file gap.txt in a genome directory')
-            return
+        if ((centromere_positions is None)
+              and not(cntrStarts is None)
+              and not(cntrEnds is None)):
 
-        gapFile = open(gapPath).readlines()
+            cntrStarts = np.array(cntrStarts).astype(int)
+            cntrEnds = np.array(cntrEnds).astype(int)
+            assert(cntrStarts.size == self.chrmCount)
+            assert(cntrEnds.size == self.chrmCount)
+            self.cntrStarts = cntrStarts
+            self.cntrEnds = cntrEnds
 
-        self.cntrStarts = -1 * numpy.ones(self.chrmCount, int)
-        self.cntrEnds = -1 * numpy.zeros(self.chrmCount, int)
+        elif (not(centromere_positions is None)
+              and (cntrStarts is None)
+              and (cntrEnds is None)):
 
-        for line in gapFile:
-            splitline = line.split()
-            if splitline[7] == 'centromere':
-                chrm_str = splitline[1][3:]
-                if chrm_str in self.label2idx:
-                    chrm_idx = self.label2idx[chrm_str]
-                    self.cntrStarts[chrm_idx] = int(splitline[2])
-                    self.cntrEnds[chrm_idx] = int(splitline[3])
+            self.cntrStarts = numpy.zeros(self.chrmCount, int)
+            self.cntrEnds = numpy.zeros(self.chrmCount, int)
+            for label, (i, j) in centromere_positions.iteritems():
+                chrm_idx = self.label2idx[label]
+                self.cntrStarts[chrm_idx] = min(i, j)
+                self.cntrEnds[chrm_idx] = max(i, j)
+        else:
+            raise Exception('Please provide either centromere_positions or '+
+                            'cntrStarts AND cntrEnds.')
 
         self.cntrMids = (self.cntrStarts + self.cntrEnds) / 2
         self.chrmArmLens = numpy.zeros(2 * self.chrmCount, int)
@@ -107,6 +126,47 @@ class Genome(object):
         lowarms = numpy.array(self.cntrStarts)
         higharms = numpy.array(self.chrmLens) - numpy.array(self.cntrEnds)
         self.maxChrmArm = max(lowarms.max(), higharms.max())
+
+    def _parseGapFile(self):
+        """Parse a .gap file to determine centromere positions.
+        """
+        gapPath = os.path.join(self.genomePath, self.gapFile)
+        if not os.path.isfile(gapPath):
+            log.warning(
+                'Gap file not found! Set centromere positions to zero.\n')
+            cntrStarts = numpy.zeros(self.chrmCount, int)
+            cntrEnds = numpy.zeros(self.chrmCount, int)
+        else:
+            gapFile = open(gapPath).readlines()
+
+            cntrStarts = -1 * numpy.ones(self.chrmCount, int)
+            cntrEnds = -1 * numpy.zeros(self.chrmCount, int)
+
+            for line in gapFile:
+                splitline = line.split()
+                if splitline[7] == 'centromere':
+                    chrm_str = splitline[1][3:]
+                    if chrm_str in self.label2idx:
+                        chrm_idx = self.label2idx[chrm_str]
+                        cntrStarts[chrm_idx] = int(splitline[2])
+                        cntrEnds[chrm_idx] = int(splitline[3])
+        self.setCentromeres(cntrStarts=cntrStarts, cntrEnds=cntrEnds)
+
+    def createGapFile(self):
+        """Create a gap file with the centromere positions.
+        Use this method, if the genome you're using has no gap file.
+        """
+        gapPath = os.path.join(self.genomePath, self.gapFile)
+        if os.path.isfile(gapPath):
+            raise Exception('The gap file {0} already exists!'.format(gapPath))
+        gapFile = open(os.path.join(self.genomePath, self.gapFile), 'w')
+        for i in range(self.chrmCount):
+            gapFile.write(
+                '0\t{0}\t{1}\t{2}\t0\tN\t0\tcentromere\tno\n'.format(
+                    (self.chrmFileTemplate % self.chrmLabels[i]).split('.')[0],
+                    self.cntrStarts[i], self.cntrEnds[i]))
+
+        gapFile.close()
 
     def _extractChrmLabel(self, fastaName):
         # First assume a whole filename as input (e.g. 'chr01.fa')
@@ -200,9 +260,12 @@ class Genome(object):
             key=lambda path: self.label2idx[self._extractChrmLabel(path)])
         log.debug('The genome folder is scanned successfully.')
 
-    def __init__(self, genomePath, gapFile='gap.txt',
+    def __init__(self,
+                 genomePath,
+                 gapFile='gap.txt',
                  chrmFileTemplate='chr%s.fa',
-                 readChrms=['#', 'X', 'Y', 'M'], cacheDir="default"):
+                 readChrms=['#', 'X', 'Y', 'M'],
+                 cacheDir='default'):
         '''
         A class that stores cached properties of a genome. To initialize,
         a Genome object needs FASTA files with chromosome sequences.
@@ -226,6 +289,7 @@ class Genome(object):
             genome folder. '#' stands for chromosomes with numerical labels
             (e.g. 1-22 for human). If readChrms is empty then read all
             chromosomes.
+
         cacheDir : directory, or "default" for caching in the genomePath
 
         Attributes
@@ -455,32 +519,6 @@ class Genome(object):
                 self._seqs.append(Bio.SeqIO.read(open(self.fastaNames[i]),
                                                  'fasta'))
         return self._seqs
-
-    def createGapFile(self, centromere_positions):
-        """Create a gap file with the centromere positions.
-
-        Use this method, if the genome you're using has no gap file.
-
-        Parameters
-        ----------
-
-        centromere_positions : dict of (int, int)
-            A dictionary with centromere positions. The keys are the chromosome
-            string labels and the values are (centromereStart, centromereEnd).
-        """
-        gapPath = os.path.join(self.genomePath, self.gapFile)
-        if os.path.isfile(gapPath):
-            raise Exception('The gap file {0} already exists!'.format(gapPath))
-        gapFile = open(os.path.join(self.genomePath, self.gapFile), 'w')
-        for label, (i, j) in centromere_positions.iteritems():
-            centromereStart = min(i, j)
-            centromereEnd = max(i, j)
-            gapFile.write(
-                '0\t{0}\t{1}\t{2}\t0\tN\t0\tcentromere\tno\n'.format(
-                    label, centromereStart, centromereEnd))
-
-        gapFile.close()
-        self._parseGapFile()
 
     def setResolution(self, resolution):
         """Set the resolution of genome binning and calculate the following
