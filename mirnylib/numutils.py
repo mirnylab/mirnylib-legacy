@@ -1036,7 +1036,7 @@ def zeroPCA(data, numPCs=3, verbose=False):
     data = data[:, nonzeroMask]
     PCs = PCA(data, numPCs, verbose)
     PCNew = [np.zeros(len(nonzeroMask), dtype=float) for _ in PCs[0]]
-    for i in range(len(PCs)):
+    for i in range(len(PCs[0])):
         PCNew[i][nonzeroMask] = PCs[0][i]
     return PCNew, PCs[1]
 
@@ -1050,7 +1050,7 @@ def zeroEIG(data, numPCs=3):
     data = data[:, nonzeroMask]
     PCs = EIG(data, numPCs)
     PCNew = [np.zeros(len(nonzeroMask), dtype=float) for _ in PCs[0]]
-    for i in range(len(PCs)):
+    for i in range(len(PCs[0])):
         PCNew[i][nonzeroMask] = PCs[0][i]
     return PCNew, PCs[1]
 
