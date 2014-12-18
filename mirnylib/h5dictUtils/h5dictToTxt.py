@@ -14,6 +14,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from mirnylib.numutils_new import matrixToGzippedFile
 
 
 """
@@ -41,8 +42,8 @@ import numpy
 
 
 
-def convertFile(filename,folder, gz=True):
-    
+def convertFile(filename, folder, gz=True):
+
     if not os.path.exists(filename):
         print "Filename does not exist", filename
         raise IOError("File not found: %s" % filename)
@@ -50,7 +51,7 @@ def convertFile(filename,folder, gz=True):
         raise IOError("Supplied folder is a file! ")
     if not os.path.exists(folder):
         os.mkdir(folder)
-    
+
     mydict = h5dict(filename, 'r')
     for i in mydict.keys():
         data = mydict[i]
@@ -60,9 +61,12 @@ def convertFile(filename,folder, gz=True):
             if len(data.shape) > 0:
                 if gz:
                     savefile = savefile + ".gz"
-                numpy.savetxt(savefile, data)
+                if len(data.shape) == 2:
+                    matrixToGzippedFile(data, savefile)
+                else:
+                    numpy.savetxt(savefile, data)
                 continue
-    
+
         if type(data) == str:
             datarepr = data
         else:
@@ -70,9 +74,9 @@ def convertFile(filename,folder, gz=True):
         print "saving data", i, "to", savefile
         with open(savefile, 'w') as f:
             f.write(datarepr)
-            
-            
-if __name__ == "__main__":            
+
+
+if __name__ == "__main__":
     if len(sys.argv) != 3:
         print "Usage : python h5dictToTxt.py in_h5dict_file out_folder"
         print
@@ -83,5 +87,5 @@ if __name__ == "__main__":
         print "Usage: python h5dictToTxt h5dictFile folderName"
         print "Folder will be created if not exists"
         exit()
-        
-    convertFile(sys.argv[1], sys.argv[2])    
+
+    convertFile(sys.argv[1], sys.argv[2])

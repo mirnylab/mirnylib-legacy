@@ -8,6 +8,8 @@ import numpy as np
 cimport numpy as np 
 cimport cython   
 from math import log 
+import subprocess 
+import os 
 
 
 
@@ -17,12 +19,30 @@ ctypedef unsigned short ushort
 ctypedef unsigned char uchar
 
 
+from libcpp.string cimport string
+
+
+
+cdef extern from "<sstream>" namespace "std":
+    cdef cppclass stringstream:
+        string str()
+        string str(string val)
+        stringstream& operator<< (double val)
+        stringstream& operator<< (string val)
+        stringstream& operator<< (char* val)
+        
+
+
 cdef extern from "stdlib.h": 
     long c_libc_random "random"()
 cdef extern from "stdlib.h": 
     double c_libc_drandom "drand48"()
 
      
+cdef extern from "stdio.h":
+    int sprintf(char *str, char *format, ...)
+    
+         
 ctypedef fused my_type:
     cython.int
     cython.float
@@ -464,6 +484,60 @@ def fakeCisImpl(np.ndarray[np.double_t, ndim = 2] data, np.ndarray[np.int64_t,nd
                         if mask[j,s] == 0:
                             data[i,j] = data[j,s]
                             data[j,i] = data[j,s]
+
+def commandExists(command):
+    "checks if the bash command exists"
+    command = command.split()[0]
+    if subprocess.call(['which', command]) != 0:
+        return False
+    return True
+
+def gzipWriter(filename):
+    """
+    creates a writing process with gzip or parallel gzip (pigz) attached to it
+    """
+    filename = os.path.abspath(filename)
+    with open(filename, 'wb') as outFile:
+        if commandExists("pigz"):
+            writer = ["pigz", "-c", "-9"]
+        else:
+            writer = ["gzip", "-c", "-2"]            
+
+        pwrite = subprocess.Popen(writer, stdin=subprocess.PIPE, stdout=outFile, shell=False, bufsize=-1)
+    return pwrite
+
+@cython.boundscheck(False)
+@cython.nonecheck(False)
+@cython.wraparound(False)                                
+def matrixToGzippedFile(inMatrix, filename,formatString="%.3lf "):
+    cdef int N = len(inMatrix)
+    cdef int M = len(inMatrix[0])
+    writer = gzipWriter(filename)     
+    cdef int i,j
+    outPipe = writer.stdin         
+    cdef np.ndarray[np.double_t, ndim = 2] newMatrix  =  np.array(inMatrix, dtype=np.double, order="C")
+    
+    emptyString = " "*100    
+    
+    cdef char* c_string  = emptyString
+    cdef string s
+    s.reserve(50*M)         
+    cdef double element
+    cdef string curString 
+    cdef  char* curStringTemplate = formatString
+    for i in xrange(N):
+        s.resize(0)        
+        for j in xrange(M):
+            element = newMatrix[i,j]
+            sprintf(c_string, curStringTemplate, element)                                                  
+            s.append(c_string)   
+        if i != N-1:
+            curString = "\n"
+            s.append(curString)
+            
+        outPipe.write(s)
+    writer.communicate()
+ 
 
 
 def contactMC(in_matrix,repeats = 1):

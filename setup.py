@@ -9,6 +9,7 @@ try:
     from Cython.Distutils import build_ext
     ext_modules += [
         Extension("mirnylib.numutils_new", [ "mirnylib/numutils_new.pyx" ],
+            language = "c++",
                   include_dirs=[numpy.get_include()]),
     ]
     cmdclass.update( {'build_ext': build_ext} )

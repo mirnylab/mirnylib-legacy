@@ -32,6 +32,9 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 # from . import numutils
 import numutils
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+
+
 
 def listToColormap(colorList, cmapName=None):
     NSeg = len(colorList) - 1
@@ -307,17 +310,19 @@ def fixFormatter(ax=None):
 
 
 
-def nicePlot(fs=8, show=True):
+def nicePlot(ax="gca", fs=8, show=True):
     """
     replaces obsolete "niceShow" command, packs it with new features
     """
     import matplotlib.pyplot as plt
+    if ax == "gca":
+        ax = plt.gca()
     matplotlib.rcParams.update({'font.size': fs})
 
-    legend = plt.legend(loc=0, prop={"size": fs + 1})
+    legend = ax.legend(loc=0, prop={"size": fs + 1})
     if legend is not None:
         legend.draw_frame(False)
-    removeAxes(shift=0)
+    removeAxes(shift=0, ax=ax)
 
     plt.tight_layout(pad=0.3)
     if show:
