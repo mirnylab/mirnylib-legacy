@@ -265,7 +265,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
     for chunk in chunkLocations:
         start, end = chunk.pop()
         currentChunks.append(tempDataset[start:end])
-    maxes = [i.max() for i in currentChunks]
+    maxes = [i[-1] for i in currentChunks]
         # A set of maximum values of working chunks
     positions = [0 for _ in currentChunks]
         # A set of current positions in working chunks
@@ -539,20 +539,20 @@ def arrayInArray(array, filterarray, chunkSize="auto", assumeUnique=False):
     This method is additionaly optimized
     for large array and short filterarray!\n
     Actual implementation is in the _arrayInArray"""  # sorted array
-    array = np.asarray(array)
+
     if not assumeUnique:
         filterarray = np.unique(filterarray)
     if chunkSize == "auto":
         chunkSize = max(4 * len(filterarray), 50000)
     if len(array) < 2.5 * chunkSize:
-        return _arrayInArray(array, filterarray)
+        return _arrayInArray(np.asarray(array), filterarray)
 
     mask = np.zeros(len(array), 'bool')
     N = len(array)
     chunks = range(0, N, chunkSize) + [N]
     bins = zip(chunks[:-1], chunks[1:])
     for start, end in bins:
-        mask[start:end] = _arrayInArray(array[start:end], filterarray)
+        mask[start:end] = _arrayInArray(np.asarray(array[start:end]), filterarray)
     return mask
 
 
@@ -575,16 +575,21 @@ def _testArayInArray():
     print "arrayInArray test finished successfully "
 
 
-def arraySumByArray(array, filterarray, meanarray):
+def arraySumByArray(array, filterarray, meanarray, chunkSize="auto"):
     """faster [sum(meanarray[array == i]) for i in filterarray]
     Current method is a wrapper that optimizes
     this method for speed and memory efficiency.
     """
-    if (len(array) / len(filterarray) > 4) and (len(array) > 20000000):
-        M = len(array) / len(filterarray) + 1
-        chunkSize = min(len(filterarray) * M, 10000000)
+    if chunkSize == "auto":
+        if (len(array) / len(filterarray) > 4) and (len(array) > 20000000):
+            M = len(array) / len(filterarray) + 1
+            chunkSize = min(len(filterarray) * M, 10000000)
+        else:
+            chunkSize = 9999999999
+
+    if chunkSize < len(array) / 2.5:
         bins = range(0, len(array), chunkSize) + [len(array)]
-        toreturn = np.zeros(len(filterarray), float)
+        toreturn = np.zeros(len(filterarray), meanarray.dtype)
         for i in xrange(len(bins) - 1):
             toreturn += _arraySumByArray(array[bins[i]:bins[i + 1]],
                                          filterarray,
@@ -627,23 +632,32 @@ def _sumByArray(array, filterarray, dtype="int64"):
     return c
 
 
-def sumByArray(array, filterarray, dtype="int64"):
+def sumByArray(array, filterarray, dtype="int64", chunkSize="auto"):
     """faster [sum(array == i) for i in filterarray]
     Current method is a wrapper that
     optimizes this method for speed and memory efficiency.
     """
-    array = np.asarray(array)
-    filterarray = np.asarray(filterarray)
-    if array.dtype > filterarray.dtype:
-        array = np.asarray(array, dtype=filterarray.dtype)
-    else:
-        filterarray = np.asarray(filterarray, dtype=array.dtype)
+    if len(array) == 0:
+        return np.zeros(0, dtype=dtype)
+    arDtype = np.asarray(array[:1]).dtype
 
-    if (len(array) / len(filterarray) > 2) and (len(array) > 20000000):
-        M = len(array) / len(filterarray) + 1
-        chunkSize = min(len(filterarray) * M, 10000000)
+    filterarray = np.asarray(filterarray)
+
+    if arDtype > filterarray.dtype:
+        array = np.asarray(array, dtype=filterarray.dtype)
+
+    else:
+        filterarray = np.asarray(filterarray, dtype=arDtype)
+
+
+    if chunkSize == "auto":
+        if (len(array) / len(filterarray) > 2) and (len(array) > 20000000):
+            M = len(array) / len(filterarray) + 1
+            chunkSize = min(len(filterarray) * M, 10000000)
+
+    if chunkSize < len(array):
         bins = range(0, len(array), chunkSize) + [len(array)]
-        toreturn = np.zeros(len(filterarray), array.dtype)
+        toreturn = np.zeros(len(filterarray), dtype)
         for i in xrange(len(bins) - 1):
             toreturn += _sumByArray(
                 array[bins[i]:bins[i + 1]], filterarray, dtype)
@@ -1256,7 +1270,7 @@ ultracorrect = deprecate(ultracorrect,
 ultracorrectBiasReturn = deprecate(iterativeCorrection, "ultracorrectBiasReturn")
 
 
-def completeIC(hm, minimumSum=40, returnBias=False, minimumNumber=20, minimumPercent = .2):
+def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumber=20, minimumPercent=.2):
     """Makes a safe iterative correction
     (i.e. with removing low-coverage regions and diagonals)
     for a symmetric heatmap
@@ -1267,7 +1281,7 @@ def completeIC(hm, minimumSum=40, returnBias=False, minimumNumber=20, minimumPer
     hm = np.asarray(hm, dtype=float)
 
     hmc = hm.copy()  # to remove diagonals safely
-    removeDiagonals(hmc, 1)
+    removeDiagonals(hmc, diagsToRemove - 1)
 
     mask = np.sum(hmc, axis=0) > minimumSum
     num = min(len(hmc) * minimumPercent, minimumNumber)
@@ -1283,8 +1297,8 @@ def completeIC(hm, minimumSum=40, returnBias=False, minimumNumber=20, minimumPer
     hmc[:, -mask] = 0
 
     hm, bias = iterativeCorrection(hmc, skipDiags=1)
-    dmean = np.median(np.diagonal(hm, 2))
-    for t in [-1, 0, 1]:
+    dmean = np.median(np.diagonal(hm, diagsToRemove))
+    for t in xrange(-diagsToRemove + 1, diagsToRemove):
         fillDiagonal(hm, dmean, t)
     hm[-mask] = 0
     hm[:, -mask] = 0
@@ -1416,12 +1430,14 @@ def _testAdaptiveSmoothing():
 
 
 def _test():
+    _testArraySumByArray()
     _testArayInArray()
     _testExternalSort()
-    _testArraySumByArray()
     _testMatrixUtils()
     _testProjectOnEigenvectors()
 
+if __name__ == "__main__":
+    _test()
 
 # _test()
 
