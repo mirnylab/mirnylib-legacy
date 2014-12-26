@@ -655,7 +655,7 @@ def sumByArray(array, filterarray, dtype="int64", chunkSize="auto"):
             M = len(array) / len(filterarray) + 1
             chunkSize = min(len(filterarray) * M, 10000000)
 
-    if chunkSize < len(array):
+    if chunkSize < 0.5 * len(array):
         bins = range(0, len(array), chunkSize) + [len(array)]
         toreturn = np.zeros(len(filterarray), dtype)
         for i in xrange(len(bins) - 1):

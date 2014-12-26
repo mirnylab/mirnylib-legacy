@@ -1,4 +1,4 @@
-#(c) 2012 Massachusetts Institute of Technology. All Rights Reserved
+# (c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Anton Goloborodko (golobor@mit.edu),
 # Maksim Imakaev (imakaev@mit.edu)
 
@@ -198,6 +198,16 @@ class h5dict(collections.MutableMapping):
                 self.__setitem__(k, v)
         for i in kwargs:
             self.__setitem__(i, kwargs[i])
+
+    def rename(self, oldkey, newkey):
+        if oldkey not in self:
+            raise ValueError("dataset {0} does not exist".format(oldkey))
+        if newkey in self:
+            raise ValueError("dataset {0} already exists".format(newkey))
+        self._h5file[newkey] = self._h5file[oldkey]
+        self._types[newkey] = self._types[oldkey]
+        self._dtypes[newkey] = self._dtypes[oldkey]
+        self.__delitem__(oldkey)
 
     def flush(self):
         self._h5file.flush()
