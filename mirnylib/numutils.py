@@ -214,7 +214,9 @@ def trunc(x, low=0.005, high=0.005):
 trunk = mirnylib.systemutils.deprecate(trunc, "trunk")
 
 
-def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
+def externalMergeSort(inDataset, tempDataset, chunkSize=300000000, 
+                      sorter = np.sort,
+                      searchsorted = lambda x,y:np.searchsorted(x,y,side="right")):
     """
     An in-place merge sort to work with persistent numpy-type arrays,
     in particular, h5py datasets.
@@ -244,7 +246,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
     # Initial pre-sorting inDataset - tempDataset
     for start, stop in bins:
         chunk = inDataset[start:stop]
-        chunk.sort()
+        chunk = sorter(chunk)
         tempDataset[start:stop] = chunk
 
     # Determining smaller merge chunk sizes and positions
@@ -271,13 +273,15 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
         # A set of current positions in working chunks
 
     while True:
-        chInd = np.argmin(maxes)
         # An index of a chunk that has minimum maximum value right now
-        # We can't merge beyound this value,
-        # we need to update this chunk before doing this
+        armaxes = np.array(maxes)
+        sorted = sorter(armaxes)
+        chInd = np.nonzero(armaxes == sorted[0])[0][0]        
+        #This is equivalent to: 
+        #chInd = np.argmin(maxes) 
+        #it was removed because we now only specify sorter        
 
-        limits = [np.searchsorted(chunk, maxes[chInd],
-                                  side="right") for chunk in currentChunks]
+        limits = [searchsorted(chunk, maxes[chInd]) for chunk in currentChunks]
         # Up to where can we merge each chunk now? Find it using searchsorted
 
         currentMerge = np.concatenate([chunk[st:ed] for chunk, st,
@@ -286,7 +290,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
         # Create a current array to merge
 
         positions = limits  # we've merged up to here
-        currentMerge.sort()  # Poor man's merge
+        currentMerge = sorter(currentMerge)  # Poor man's merge
         inDataset[outputPosition:outputPosition + len(currentMerge)
                   ] = currentMerge  # write sorted merge output here.
         outputPosition += len(currentMerge)
@@ -310,7 +314,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000):
 
 
 def _testExternalSort():
-    a = np.random.random(150000000)
+    a = np.random.randint(0,100000000,50000000)
     from mirnylib.h5dict import h5dict
     t = h5dict()
     t["1"] = a
@@ -320,7 +324,7 @@ def _testExternalSort():
     import time
     tt = time.time()
     externalMergeSort(
-        t.get_dataset("1"), t.get_dataset("2"), chunkSize=30000000)
+        t.get_dataset("1"), t.get_dataset("2"), chunkSize=1000000)
     print  "time to sort", time.time() - tt
     tt = time.time()
     dif = t.get_dataset("1")[::1000000] - np.sort(a)[::1000000]
@@ -328,7 +332,7 @@ def _testExternalSort():
     assert dif.sum() == 0
     print "Test finished successfully!"
 
-# _testExternalSort()
+#_testExternalSort()
 
 
 def uniqueIndex(data):

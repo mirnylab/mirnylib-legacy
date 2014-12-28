@@ -238,3 +238,4 @@ class h5dict(collections.MutableMapping):
                                     chunks=True)
         self._types[key] = np.ndarray
         self._dtypes[key] = dtype
+        return self.get_dataset(key)
