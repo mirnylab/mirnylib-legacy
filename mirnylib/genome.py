@@ -177,6 +177,12 @@ class Genome(object):
         if search_results is None:
             regexp = self.chrmFileTemplate.split('.')[0] % ('(.*)')
             search_results = re.search(regexp, fastaName)
+
+        if search_results is None:
+            raise Exception(
+                'The filename {} does not match the template {}.'.format(
+                fastaName, self.chrmFileTemplate))
+
         chrm_label = search_results.group(1)
 
         # Remove leading zeroes.
