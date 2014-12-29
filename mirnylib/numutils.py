@@ -230,7 +230,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
 
     if (len(inDataset) < 10000) or (len(inDataset) < chunkSize):
         data = np.array(inDataset)
-        inDataset[:] = np.sort(data)
+        inDataset[:] = sorter(data)
         print "Sorted using default sort"
         return
     elif chunkSize < 5 * sqrt(len(inDataset)):
