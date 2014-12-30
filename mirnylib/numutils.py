@@ -228,10 +228,10 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
     read and written twice to the HDD. Which is not that bad :)
     """
 
-    if (len(inDataset) < 10000) or (len(inDataset) < chunkSize):
+    if (len(inDataset) < chunkSize):
         data = np.array(inDataset)
         inDataset[:] = sorter(data)
-        print "Sorted using default sort"
+        print "Sorted using default sort", chunkSize, len(inDataset)
         return
     elif chunkSize < 5 * sqrt(len(inDataset)):
         warnings.warn("Chunk size should be big enough... you provide {0} "
