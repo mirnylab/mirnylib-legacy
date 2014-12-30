@@ -691,9 +691,9 @@ def scatter_trend(x, y, **kwargs):
                  linestyle='--',
                  label=label)
 
-    legend = plt.legend(loc=kwargs.get('loc', 'best'))
-    legend_frame = legend.get_frame()
-    legend_frame.set_alpha(kwargs.get('alpha_legend', 0.7))
+        legend = plt.legend(loc=kwargs.get('loc', 'best'))
+        legend_frame = legend.get_frame()
+        legend_frame.set_alpha(kwargs.get('alpha_legend', 0.7))
 
 
 def plot_matrix_3d(matrix, **kwargs):
