@@ -314,6 +314,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
 
 
 def _testExternalSort():
+    print "--- Testing external merge sort"
     a = np.random.randint(0,100000000,50000000)
     from mirnylib.h5dict import h5dict
     t = h5dict()
@@ -330,7 +331,7 @@ def _testExternalSort():
     dif = t.get_dataset("1")[::1000000] - np.sort(a)[::1000000]
     print "time to do regular sort:", time.time() - tt
     assert dif.sum() == 0
-    print "Test finished successfully!"
+    print "   Test finished successfully!"
 
 #_testExternalSort()
 
@@ -389,6 +390,8 @@ def chunkedUnique(data, chunksize=5000000, return_index=False):
         return current, currentIndex
     else:
         return current
+
+    
 
 
 def trimZeros(x):
@@ -561,6 +564,7 @@ def arrayInArray(array, filterarray, chunkSize="auto", assumeUnique=False):
 
 
 def _testArayInArray():
+    print "--- Testing arrayInArray"
     a = np.random.randint(0, 1000000, 10000000)
     b = np.random.randint(0, 1000000, 500000)
     arrayInArray(a, b)
@@ -604,6 +608,7 @@ def arraySumByArray(array, filterarray, meanarray, chunkSize="auto"):
 
 
 def _testArraySumByArray():
+    print "---testing arraySumByArray"
     a = np.random.randint(0, 1000000, 30000000)
     b = np.random.randint(0, 1000000, 500000)
     c = np.random.random(30000000)
@@ -614,6 +619,7 @@ def _testArraySumByArray():
     dif = (r1 - r2).sum()
     print "Difference is {0}, should be less than 1e-10".format(dif)
     assert dif < 1e-10
+    print "   Test finished correctly"
 
 # _testArraySumByArray()
 
@@ -671,6 +677,54 @@ def sumByArray(array, filterarray, dtype="int64", chunkSize="auto"):
 
 
 "Mathematical utilities"
+
+
+def chunkedBincount(x, weights=None, minlength=None,chunkSize = 100000000):
+    """np.bincount on an hdf5 array"""
+    if minlength == None: 
+        print "minlength has to be set for chunked bincount"    
+    bins = range(0, len(x), chunkSize) + [len(x)]
+    bins = zip(bins[:-1], bins[1:])
+    for st,end in bins:
+        if st == 0:
+            if weights == None: 
+                result = np.bincount(x[st:end],minlength = minlength)
+            else:
+                result = np.bincount(x[st:end],weights = weights[st:end], minlength = minlength)                                
+            if len(result) > minlength:
+                raise ValueError("maximum value of a chunk {0} more than minlength {1}".format(len(result),minlength))
+        else:
+            if weights == None: 
+                addition = np.bincount(x[st:end],minlength = minlength)
+            else:
+                addition = np.bincount(x[st:end],weights = weights[st:end], minlength = minlength)                                
+            if len(addition) > minlength:
+                raise ValueError("maximum value of a chunk {0} more than minlength {1}".format(len(addition),minlength))
+            result += addition             
+    return result
+
+def _testChunkedBincount():
+    print "--- Testing chunked bincount"
+    array = np.random.randint(0,1000,1000000)
+    weights = np.random.random(1000000)
+    a = np.bincount(array, minlength = 1000)
+    b = chunkedBincount(array, minlength = 1000, chunkSize = 10000)
+    c = chunkedBincount(array,minlength = 1000, chunkSize = 1000000000)
+    assert np.allclose(a,b)
+    assert np.allclose(a,c)
+    a = np.bincount(array, weights, minlength = 1000)
+    b = chunkedBincount(array, weights, minlength = 1000, chunkSize = 10000)
+    c = chunkedBincount(array,weights, minlength = 1000, chunkSize = 1000000000)
+    assert np.allclose(a,b)
+    assert np.allclose(a,c)
+        
+    print "all values for bincount are correct"
+    try: 
+        chunkedBincount(array, minlength = 10, chunkSize = 100000)
+        raise RuntimeError("Error did not work")
+    except ValueError:
+        print "Error reported correctly "
+    print "   chunkedBincount tests finished \n"
 
 
 def corr2d(x):
@@ -1103,12 +1157,12 @@ projectOnEigenvalues = deprecate(
 
 def _testProjectOnEigenvectors():
     "for a smoothed matrix last eigenvector is essentially flat"
-    print "Testing projection on eigenvectors"
+    print "---Testing projection on eigenvectors"
     a = np.random.random((100, 100))
     a = gaussian_filter(a, 3)
     sa = a + a.T
     assert np.max(np.abs((projectOnEigenvectors(sa, 99) - sa))) < 0.00001
-    print "Test finished successfully!"
+    print "   Test finished successfully!"
 
 
 
@@ -1370,7 +1424,7 @@ def create_regions(a):
     a2 = np.nonzero(a[:-1] * (1 - a[1:]))[0]
     return np.transpose(np.array([a1, a2]))
 
-def eigenvalue_function(mat, func="default", delta=0.1):
+def eigenvalue_function(mat, func=lambda x:x, delta=0.1):
     """
     This script can be used to transform eigenvalues of a matrix.
     It can be used, for example, to cap them using a square root...
@@ -1378,45 +1432,10 @@ def eigenvalue_function(mat, func="default", delta=0.1):
     By default, it applies the function from the
     """
     lam, eig = np.linalg.eigh(mat)
-    if func == "default":
-        def func(x):
-            # print x.min(), x.max()
-            xmin, xmax = x.min(), x.max()
-            beta = 1. - delta  # foloowing paper here
-            alpha = min(beta / ((1 - beta) * (xmax)),
-                        - beta / ((1 + beta) * (xmin)))
-            toreturn = x / ((1 / alpha) + x)
-            print toreturn.min(), toreturn.max()
-            return toreturn
-
-
-
     mat = np.dot(np.dot(eig, np.diag(func(lam))), eig.T)
     fillDiagonal(mat, np.median(mat), 0)
     return mat
 
-
-
-
-def _test_eigenvalue_functions():
-    a = 1. * (np.random.random((400, 400)) > 0.97)
-    # vec = np.arange(0, 200)
-    # dif = 1. / ((np.abs(vec[:, None] - vec[None, :]) + 1))
-    # a = np.random.poisson(1 * dif)
-    b = a + a.T
-    import matplotlib.pyplot as plt
-    plt.subplot(2, 4, 1)
-    vmin, vmax = np.percentile(b, (0.3, 99.7))
-    plt.imshow(b, interpolation="none", vmin=vmin, vmax=vmax)
-
-    for j, delta in enumerate([0.99, 0.5, 0.1, 0.03, 0.01, 0.001, 0.0000000001]):
-        plt.subplot(2 , 4 , j + 2)
-
-        c = eigenvalue_function(b, delta=delta)
-        plt.title("delta = {0}, corr={1:.4f}".format(delta, pearsonr(b.flat, c.flat)[0]))
-        vmin, vmax = np.percentile(c, (0.3, 99.7))
-        plt.imshow(c, interpolation="none", vmin=vmin, vmax=vmax)
-    plt.show()
 
 
 def _testAdaptiveSmoothing():
@@ -1434,6 +1453,7 @@ def _testAdaptiveSmoothing():
 
 
 def _test():
+    _testChunkedBincount()
     _testArraySumByArray()
     _testArayInArray()
     _testExternalSort()
