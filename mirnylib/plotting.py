@@ -1,9 +1,6 @@
 # (c) 2013 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu)
 # Anton Goloborodko (golobor@mit.edu)
-from scipy.ndimage.filters import gaussian_filter1d
-import os
-from mirnylib.numutils import pairBincount
 
 """
 Some nice plotting utilities from Max
@@ -15,29 +12,29 @@ These include:
 -removeBorder  - removes border from the plot
 -niceShow  - nicer "plt.show"
 """
-import matplotlib
+import mirnylib.numutils
+import matplotlib  # @UnusedImport
+import numpy as np
 # r = os.system('python -c "import matplotlib.pyplot as plt;plt.figure()"')
 # if r != 0:
 #    matplotlib.use('Agg')
-
 import matplotlib.cm
 import warnings
-
 import pylab
-import numpy
-np = numpy
 import scipy.stats as st
-from mpl_toolkits.mplot3d.axes3d import Axes3D
-
-# from . import numutils
+from mpl_toolkits.mplot3d.axes3d import Axes3D  # @UnresolvedImport
 import numutils
+
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass
 
 matplotlib.rcParams['pdf.fonttype'] = 42
 
 
 
-def listToColormap(colorList, cmapName=None):
-    NSeg = len(colorList) - 1
+def listToColormap(colorList, cmapName=None):    
     colorList = np.array(colorList)
     if colorList.min() < 0:
         raise ValueError("Colors should be 0 to 1, or 0 to 255")
@@ -84,31 +81,32 @@ registerList(acidBluesList, "acidblues")
 registerList(nMethList, "nmeth")
 
 
+maximumContrastOld = [[0, 117, 220], [153, 63, 0], [43, 206, 72],
+                      [157, 204, 0], [194, 0, 136], [255, 0, 16],
+                      [240, 163, 255], [255, 164, 5], [94, 241, 242],
+                      [116, 10, 255], [255, 255, 0],
+                      [76, 0, 92], [255, 204, 153],
+                      [148, 255, 181], [143, 124, 0],
+                       [0, 51, 128],
+                      [255, 168, 187], [66, 102, 0],
+                       [0, 153, 143], [224, 255, 102],
+                       [153, 0, 0], [255, 80, 5]]
+maximumContrastList = [[i / 255. for i in j] for j in maximumContrastOld]
+
+
 def setLongColorCycle(ax=None):
     """
     Call this function to set a 22 color long color cycle
      for the current axis, or for a specified axis.
     """
-    import matplotlib.pyplot as plt
     if ax == None:
         ax = plt.gca()
-    maximumContrastOld = [[0, 117, 220], [153, 63, 0], [43, 206, 72],
-                          [157, 204, 0], [194, 0, 136], [255, 0, 16],
-                          [240, 163, 255], [255, 164, 5], [94, 241, 242],
-                          [116, 10, 255], [255, 255, 0],
-                          [76, 0, 92], [255, 204, 153],
-                          [148, 255, 181], [143, 124, 0],
-                           [0, 51, 128],
-                          [255, 168, 187], [66, 102, 0],
-                           [0, 153, 143], [224, 255, 102],
-                           [153, 0, 0], [255, 80, 5]]
-    maximumContrast = [[i / 255. for i in j] for j in maximumContrastOld]
     # for i, j in zip(maximumContrast, maximumContrastOld):
     #    plt.plot(gaussian_filter1d(np.random.random(500), 10), color=i, label=repr(j), linewidth=2)
     # plt.legend()
     # plt.show()
 
-    ax.set_color_cycle(maximumContrast)
+    ax.set_color_cycle(maximumContrastList)
 
 
 def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
@@ -117,7 +115,6 @@ def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
 
     Also trims the "range[0]:range[1]" fragment from the colormap - use this to cut the part of the "jet" colormap!
     """
-    import matplotlib.pyplot as plt
     if type(cmap) == str:
         cmap = plt.cm.get_cmap(cmap)
 
@@ -131,7 +128,7 @@ def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
         step_dict[key] = map(lambda x: x[0], cdict[key])
 
     step_list = sum(step_dict.values(), [])
-    array = numpy.array
+    array = np.array
     step_list = array(list(set(step_list)))
     # Then compute the LUT, and apply the function to the LUT
     reduced_cmap = lambda step: array(cmap(step)[0:3])
@@ -176,18 +173,18 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
     # e.g. [0,.1, .2 ...  .9] will draw 10 spheres, and this will look better
 
     if y is None:
-        data = numpy.array(x)
+        data = np.array(x)
     else:
-        data = numpy.array([x, y, z])
+        data = np.array([x, y, z])
     if len(data[0]) != 3:
-        data = numpy.transpose(data)
+        data = np.transpose(data)
     if len(data[0]) != 3:
         print "wrong data!"
         return
 
     # determining the 95 percentile distance between particles,
-    meandist = numpy.percentile(numpy.sqrt(
-        numpy.sum(numpy.diff(data, axis=0) ** 2, axis=1)), 95)
+    meandist = np.percentile(np.sqrt(
+        np.sum(np.diff(data, axis=0) ** 2, axis=1)), 95)
     # rescaling the data, so that bonds are of the order of 1. This is because rasmol spheres are of the fixed diameter.
     if rescale:
         data /= meandist
@@ -204,14 +201,14 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
     # creating the array, linearly chanhing from -225 to 225, to serve as an array of colors
     # (rasmol color space is -250 to 250, but it  still sets blue to the minimum color it found and red to the maximum).
     if color == "auto":
-        colors = numpy.array([int(
+        colors = np.array([int(
             (j * 450.) / (len(data))) - 225 for j in xrange(len(data))])
     else:
         colors = color
 
     # creating spheres along the trajectory
     # for speedup I just create a Nx4 array, where first three columns are coordinates, and fourth is the color
-    newData = numpy.zeros((len(data) * len(shifts) - (len(shifts) - 1), 4))
+    newData = np.zeros((len(data) * len(shifts) - (len(shifts) - 1), 4))
     for i in xrange(len(shifts)):
         # filling in the array like 0,5,10,15; then 1,6,11,16; then 2,7,12,17, etc.
         # this is just very fast
@@ -237,13 +234,11 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
 
 def scatter3D(x, y, z, color='b'):
     """shows a scatterplot in 3D"""
-    import matplotlib.pyplot as plt
-
     fig = plt.figure()
     ax = Axes3D(fig)
 
-    if (type(color) == numpy.ndarray) or (type(color) == list):
-        color = numpy.array(color, dtype=float)
+    if (type(color) == np.ndarray) or (type(color) == list):
+        color = np.array(color, dtype=float)
         color -= color.min()
         color /= float(color.max() - color.min())
         if len(set(color)) > 20:
@@ -263,7 +258,6 @@ def scatter3D(x, y, z, color='b'):
 
 
 def removeAxes(mode="normal", shift=0, ax=None):
-    import matplotlib.pyplot as plt
     if ax is None:
         ax = plt.gca()
     ax.xaxis.set_ticks_position('bottom')
@@ -286,7 +280,6 @@ def removeAxes(mode="normal", shift=0, ax=None):
 
 
 def removeBorder(ax=None):
-    import matplotlib.pyplot as plt
     removeAxes("all", 0, ax=ax)
     if ax is None:
         ax = plt.gca()
@@ -299,7 +292,6 @@ def removeBorder(ax=None):
 
 
 def fixFormatter(ax=None):
-    import  matplotlib.pyplot as plt
     if ax is None:
         ax = plt.gca()
     matplotlib.rc("axes.formatter", limits=(-10, 10))
@@ -314,7 +306,6 @@ def nicePlot(ax="gca", fs=8, show=True):
     """
     replaces obsolete "niceShow" command, packs it with new features
     """
-    import matplotlib.pyplot as plt
     if ax == "gca":
         ax = plt.gca()
     matplotlib.rcParams.update({'font.size': fs})
@@ -330,7 +321,6 @@ def nicePlot(ax="gca", fs=8, show=True):
 
 
 def niceShow(mytype=None, subplotAdjust="auto", fs=8):
-    import matplotlib.pyplot as plt
     matplotlib.rcParams.update({'font.size': fs})
     if mytype == "log":
         plt.xscale("log")
@@ -348,13 +338,12 @@ def niceShow(mytype=None, subplotAdjust="auto", fs=8):
 
 
 def mat_img(a, cmap="jet", trunk=False, **kwargs):
-    import matplotlib.pyplot as plt
     "shows an array using imshow with colorbar"
-    a = numpy.array(a, float)
+    a = np.array(a, float)
     if trunk != False:
         if trunk == True:
             trunk = 0.01
-        sa = numpy.sort(a.ravel())
+        sa = np.sort(a.ravel())
         a[a > sa[(1 - trunk) * len(sa)]] = sa[(1 - trunk) * len(sa)]
         a[a < sa[trunk * len(sa)]] = sa[trunk * len(sa)]
     # plt.ioff()
@@ -369,10 +358,6 @@ def mat_img(a, cmap="jet", trunk=False, **kwargs):
         plt.show()
     do_all()
 
-
-import matplotlib.pyplot as plt
-import numpy as np
-import turtle
 
 
 def hilbert_curve(n):
@@ -442,6 +427,7 @@ def vectorToHilbert(data, fillEmpty=np.NAN, crop=True,
         a matrix containing hilbert curve representation of the data
 
     """
+    
     data = np.asarray(data)
     M = len(data)
 
@@ -512,8 +498,6 @@ def dotSizeScatter(x, y, weights=None,
         A function (count -> size) to use.
     """
 
-    import pandas as pd
-
     x = np.asarray(x)
     y = np.asarray(y)
     if weights != None:
@@ -532,7 +516,7 @@ def dotSizeScatter(x, y, weights=None,
         raise ValueError("Length of weights array should be the same as data ")
 
 
-    xes, ys, dotWeights = pairBincount(x, y, weights)
+    xes, ys, dotWeights = mirnylib.numutils.pairBincount(x, y, weights)
 
 
     dotWeights = np.array(dotWeights, dtype=float)
@@ -540,7 +524,7 @@ def dotSizeScatter(x, y, weights=None,
 
 
     if sizes != None:
-        xdummy, ydummy, dotSizes = pairBincount(x, y, sizes)
+        xdummy, ydummy, dotSizes = mirnylib.numutils.pairBincount(x, y, sizes)
         assert np.allclose(xes, xdummy)
         assert np.allclose(ys, ydummy)
     else:
@@ -647,11 +631,10 @@ def scatter_trend(x, y, **kwargs):
     alpha_legend : float, optional
         Legend box transparency. 0.7 by default.
     """
-    import matplotlib.pyplot as plt
-    x, y = numpy.asarray(x), numpy.asarray(y)
-    mask = np.logical_not(numpy.isnan(x) + numpy.isnan(y) + np.isinf(x) + np.isinf(y))
+    x, y = np.asarray(x), np.asarray(y)
+    mask = np.logical_not(np.isnan(x) + np.isnan(y) + np.isinf(x) + np.isinf(y))
     x, y = x[mask], y[mask]
-    a, b, r, stderr, p, sd_slope, sd_intercept = linear_regression(x, y)
+    a, b, r, stderr, p, sd_slope, sd_intercept = linear_regression(x, y)  # @UnusedVariable
 
     if kwargs.pop('show_sigma_estimates', True):
         equation_label = '$y\,=\,({:.3f}\pm{:.3f})x\,+\,{:.3f}\pm{:.3f}$'.format(
@@ -697,13 +680,13 @@ def scatter_trend(x, y, **kwargs):
 
 
 def plot_matrix_3d(matrix, **kwargs):
-    import mpl_toolkits.mplot3d.axes3d as pylab3d
+    import mpl_toolkits.mplot3d.axes3d as pylab3d  # @UnresolvedImport
     ax = pylab3d.Axes3D(pylab.gcf())
-    x = kwargs.get('x', numpy.arange(matrix.shape[1]))
-    y = kwargs.get('y', numpy.arange(matrix.shape[0]))
+    x = kwargs.get('x', np.arange(matrix.shape[1]))
+    y = kwargs.get('y', np.arange(matrix.shape[0]))
     matrix = np.copy(matrix)
     matrix[np.isnan(matrix)] = np.nanmin(matrix)
-    X, Y = numpy.meshgrid(x, y)
+    X, Y = np.meshgrid(x, y)
 
     plot_type = kwargs.get('plot_type', 'surface')
     if plot_type == 'surface':
@@ -712,7 +695,7 @@ def plot_matrix_3d(matrix, **kwargs):
     elif plot_type == 'wireframe':
         ax.plot_wireframe(X, Y, matrix, cmap=pylab.cm.get_cmap("jet"))
     elif plot_type == 'scatter':
-        ax.scatter3D(numpy.ravel(X), numpy.ravel(Y), numpy.ravel(matrix))
+        ax.scatter3D(np.ravel(X), np.ravel(Y), np.ravel(matrix))
     elif plot_type == 'contour':
         num_contours = kwargs.get('num_contours', 50)
         ax.contour3D(X, Y, matrix, num_contours, cmap=pylab.cm.get_cmap("jet"))
@@ -749,9 +732,8 @@ def plot_matrix(matrix, **kwargs):
     ticklabels2 : list, optional
         Custom tick labels for the second dimension of the matrix.
     """
-    import matplotlib.pyplot as plt
-    clip_min = kwargs.pop('clip_min', -numpy.inf)
-    clip_max = kwargs.pop('clip_max', numpy.inf)
+    clip_min = kwargs.pop('clip_min', -np.inf)
+    clip_max = kwargs.pop('clip_max', np.inf)
 
     if 'ticklabels1' in kwargs:
         plt.yticks(range(matrix.shape[0]))
@@ -762,7 +744,7 @@ def plot_matrix(matrix, **kwargs):
         plt.gca().set_xticklabels(kwargs.pop('ticklabels2'))
 
     plt.imshow(
-        numpy.clip(matrix, a_min=clip_min, a_max=clip_max),
+        np.clip(matrix, a_min=clip_min, a_max=clip_max),
         interpolation='nearest',
         **kwargs)
     if 'label' not in kwargs:
@@ -787,7 +769,6 @@ def plot_function(function, **kwargs):
     plot_type : {'line', 'scatter'}
         The type of plot, a continuous line or a scatter plot. 'line' by default.
     """
-    import matplotlib.pyplot as plt
     if 'x' in kwargs and 'x_range' in kwargs:
         raise Exception('Please supply either x or x_range, but not both')
 
@@ -795,9 +776,9 @@ def plot_function(function, **kwargs):
         x = kwargs.pop('x')
     elif 'x_range' in kwargs:
         x_range = kwargs.pop('x_range')
-        x = numpy.arange(x_range[0], x_range[1], x_range[2])
+        x = np.arange(x_range[0], x_range[1], x_range[2])
 
-    y = numpy.array([function(i) for i in x], dtype=float)
+    y = np.array([function(i) for i in x], dtype=float)
 
     plot_type = kwargs.pop('plot_type', 'line')
     if plot_type == 'line':
@@ -809,14 +790,14 @@ def plot_function(function, **kwargs):
 
 
 def plot_loglog_density(x, bins=10, **kwargs):
-    bins = numpy.asarray(numutils.logbins(1, max(x), N_in=bins))
+    bins = np.asarray(numutils.logbins(1, max(x), N_in=bins))
     binsizes = bins[1:] - bins[:-1]
     binmids = bins[:-1] + binsizes / 2
     # Calculate density so that it integrates to one.
-    avg_counts = numpy.histogram(x, bins=bins, density=True)[0]
+    avg_counts = np.histogram(x, bins=bins, density=True)[0]
     binmids = binmids[avg_counts != 0]
     avg_counts = avg_counts[avg_counts != 0]
-    scatter_trend(numpy.log10(binmids), numpy.log10(avg_counts), **kwargs)
+    scatter_trend(np.log10(binmids), np.log10(avg_counts), **kwargs)
 
 
 def plot_function_3d(x, y, function, **kwargs):
@@ -850,7 +831,7 @@ def plot_function_3d(x, y, function, **kwargs):
         Z.append([])
         for x_value in x:
             Z[-1].append(function(x_value, y_value))
-    Z = numpy.array(Z)
+    Z = np.array(Z)
     plot_matrix_3d(Z, x=x, y=y, **kwargs)
 
 
@@ -873,13 +854,13 @@ def plot_function_contour(x, y, function, **kwargs):
         The title. Empty by default.
 
     """
-    X, Y = numpy.meshgrid(x, y)
+    X, Y = np.meshgrid(x, y)
     Z = []
     for y_value in y:
         Z.append([])
         for x_value in x:
             Z[-1].append(function(x_value, y_value))
-    Z = numpy.array(Z)
+    Z = np.array(Z)
     num_contours = kwargs.get('num_contours', 50)
     if kwargs.get('filling', True):
         pylab.contourf(X, Y, Z, num_contours, cmap=pylab.cm.get_cmap("jet"))
@@ -901,11 +882,11 @@ def average_3d_data(x, y, z, nbins):
     if (x_max - x_min) > (y_max - y_min):
         delta = (x_max - x_min) / nbins
         nbins_x = nbins + 1
-        nbins_y = int(numpy.ceil((y_max - y_min) / delta))
+        nbins_y = int(np.ceil((y_max - y_min) / delta))
     else:
         delta = (y_max - y_min) / nbins
         nbins_y = nbins
-        nbins_x = int(numpy.ceil((x_max - x_min) / delta))
+        nbins_x = int(np.ceil((x_max - x_min) / delta))
     nbins_x += 1
     nbins_y += 1
     x_min -= delta / 2.0
@@ -913,14 +894,14 @@ def average_3d_data(x, y, z, nbins):
     x_max += delta / 2.0
     y_max += delta / 2.0
 
-    if not issubclass(numpy.ndarray, type(x)):
-        x = numpy.array(x)
-    if not issubclass(numpy.ndarray, type(y)):
-        y = numpy.array(y)
-    if not issubclass(numpy.ndarray, type(z)):
-        z = numpy.array(z)
+    if not issubclass(np.ndarray, type(x)):
+        x = np.array(x)
+    if not issubclass(np.ndarray, type(y)):
+        y = np.array(y)
+    if not issubclass(np.ndarray, type(z)):
+        z = np.array(z)
 
-    matrix = numpy.zeros(shape=(nbins_x, nbins_y), dtype=float)
+    matrix = np.zeros(shape=(nbins_x, nbins_y), dtype=float)
     for i in range(nbins_x):
         for j in range(nbins_y):
             lower_x = x_min + i * delta
@@ -929,10 +910,10 @@ def average_3d_data(x, y, z, nbins):
             upper_y = y_min + (j + 1) * delta
             mask = ((x >= lower_x) * (x < upper_x) * (
                 y >= lower_y) * (y < upper_y))
-            if numpy.any(mask):
-                matrix[i, j] = numpy.mean(z[mask])
+            if np.any(mask):
+                matrix[i, j] = np.mean(z[mask])
             else:
-                matrix[i, j] = numpy.nan
+                matrix[i, j] = np.nan
     return matrix
 
 
@@ -946,7 +927,7 @@ def plot_average_3d(x, y, z, nbins, **kwargs):
 
 
 def histogram2d(x, y, bins=10):
-    hist, xedges, yedges = numpy.histogram2d(x, y, bins=bins)
+    hist, xedges, yedges = np.histogram2d(x, y, bins=bins)
     extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
 
     plot_matrix(hist, extent=extent, aspect='auto')
@@ -959,7 +940,6 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     This function is based on the code from
     http://www.scipy.org/Cookbook/Matplotlib/BarCharts
     """
-    import matplotlib.pyplot as plt
     if hasattr(y, 'keys') and hasattr(y, 'values'):
         items = list(y.iteritems())
         items.sort(key=lambda x: x[0])
@@ -971,7 +951,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     rotate_labels = kwargs.get('rotate_labels', True)
 
     width = kwargs.pop('width', 0.4)
-    xlocs = numpy.array(range(len(y))) + 0.5
+    xlocs = np.array(range(len(y))) + 0.5
     ecolor = kwargs.pop('ecolor', 'k')
     elinewidth = kwargs.pop('elinewidth', 1.0)
     plt.bar(xlocs, y, yerr=yerr, width=width, ecolor=ecolor,
@@ -993,7 +973,7 @@ def printlogo(pwm, filename, alphabet="ACGT", mode="pdf"):
     "Prints logo from nucleotides as a pdf"
     import cPickle
     cPickle.dump(pwm, open(filename + ".pkl", 'wb'), -1)
-    import weblogolib as wl
+    import weblogolib as wl  # @UnresolvedImport
     PWMdata = np.array(pwm)
     data = wl.LogoData.from_counts(wl.std_alphabets["dna"], PWMdata)
     options = wl.LogoOptions(resolution=300)

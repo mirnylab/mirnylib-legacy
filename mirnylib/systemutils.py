@@ -16,10 +16,36 @@ import cPickle
 import pdb
 import traceback
 import warnings
-import ctypes
+import subprocess
 import numpy as np
 from copy import copy
+import logging
+log = logging.getLogger(__name__)
 
+
+
+def commandExists(command):
+    "checks if the bash command exists"
+    command = command.split()[0]
+    if subprocess.call(['which', command]) != 0:
+        return False
+    return True
+
+def gzipWriter(filename, pigzArguments=["-4"]):
+    """
+    creates a writing process with gzip or parallel gzip (pigz) attached to it
+    """
+    filename = os.path.abspath(filename)
+    with open(filename, 'wb') as outFile:
+        if commandExists("pigz"):
+            writer = ["pigz", "-c"] + pigzArguments
+        else:
+            writer = ["gzip", "-c", "-1"]
+            warnings.warn("Please install 'pigz' parallel gzip for faster speed")
+
+        pwrite = subprocess.Popen(writer, stdin=subprocess.PIPE, stdout=outFile, shell=False, bufsize=-1)
+    log.info("""Writer created with command "{0}" """.format(writer))
+    return pwrite
 
 def _exceptionHook(infoType, value, tb):
     "Exception hook"

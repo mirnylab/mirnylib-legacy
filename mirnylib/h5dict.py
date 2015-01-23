@@ -208,6 +208,10 @@ class h5dict(collections.MutableMapping):
         self._types[newkey] = self._types[oldkey]
         self._dtypes[newkey] = self._dtypes[oldkey]
         self.__delitem__(oldkey)
+        if self.autoflush:
+            self._h5file.flush()
+
+
 
     def flush(self):
         self._h5file.flush()
@@ -238,4 +242,7 @@ class h5dict(collections.MutableMapping):
                                     chunks=True)
         self._types[key] = np.ndarray
         self._dtypes[key] = dtype
+        if self.autoflush:
+            self._h5file.flush()
+        
         return self.get_dataset(key)

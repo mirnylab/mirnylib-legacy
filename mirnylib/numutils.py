@@ -1,7 +1,6 @@
 # (c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu),
 # Anton Goloborodko (golobor@mit.edu)
-import pandas as pd
 import numpy as np
 import warnings
 import mirnylib.systemutils
@@ -9,10 +8,7 @@ from numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
 from numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
 from numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
 from numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
-from numutils_new import  ultracorrectSymmetricWithVector  # @UnresolvedImport @IgnorePep8
 from scipy.ndimage.filters import  gaussian_filter
-from mirnylib.systemutils import  deprecate, setExceptionHook
-from scipy.stats.stats import spearmanr, pearsonr
 na = np.array
 import  scipy.sparse.linalg
 import scipy.stats
@@ -275,8 +271,8 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
     while True:
         # An index of a chunk that has minimum maximum value right now
         armaxes = np.array(maxes)
-        sorted = sorter(armaxes)
-        chInd = np.nonzero(armaxes == sorted[0])[0][0]        
+        sortedArray = sorter(armaxes)
+        chInd = np.nonzero(armaxes == sortedArray[0])[0][0]        
         #This is equivalent to: 
         #chInd = np.argmin(maxes) 
         #it was removed because we now only specify sorter        
@@ -1151,7 +1147,7 @@ def projectOnEigenvectors(data, N=1, forceSymmetrize=False):
         ndata += values[i] * vectors[i][:, None] * vectors[i][None, :]
     return ndata
 
-projectOnEigenvalues = deprecate(
+projectOnEigenvalues = mirnylib.systemutils.deprecate(
     projectOnEigenvectors, "projectOnEigenvalues")
 
 
@@ -1210,7 +1206,6 @@ def pairBincount(x, y, weights=None):
 
 def ultracorrectFragmentList(fragid1, fragid2, maxNum=30, tolerance=1e-5, weights=None):
 
-    from time import sleep
     fragid1, fragid2 = np.concatenate([fragid1, fragid2]), np.concatenate([fragid2, fragid1])
     while True:
         fragUnique = np.unique(fragid1)
@@ -1322,10 +1317,10 @@ def iterativeCorrection(x, M="auto", tolerance=1e-6,
 
 def ultracorrect(*args, **kwargs):
     return iterativeCorrection(*args, **kwargs)[0]
-ultracorrect = deprecate(ultracorrect,
+ultracorrect = mirnylib.systemutils.deprecate(ultracorrect,
      message="Please use iterativeCorrection instead of ultracorrect")
 
-ultracorrectBiasReturn = deprecate(iterativeCorrection, "ultracorrectBiasReturn")
+ultracorrectBiasReturn = mirnylib.systemutils.deprecate(iterativeCorrection, "ultracorrectBiasReturn")
 
 
 def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumber=20, minimumPercent=.2):
@@ -1340,13 +1335,13 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
 
     hmc = hm.copy()  # to remove diagonals safely
     removeDiagonals(hmc, diagsToRemove - 1)
-
-    mask = np.sum(hmc, axis=0) > minimumSum
+    matsum = np.sum(hmc, axis=0) 
+    mask =  matsum > minimumSum
     num = min(len(hmc) * minimumPercent, minimumNumber)
     mask = mask * (np.sum(hmc > 0, axis=0) > num)
 
 
-    if mask.sum() + 3 < len(mask) * 0.5:
+    if mask.sum() + 3 < (matsum > 0).sum()  * 0.5:
         raise ValueError("""Iterative correction will remove more than a half of the matrix
         Check that values in rows/columns represent actual reads,
         and the sum over rows/columns exceeds minimumSum""")
@@ -1364,7 +1359,6 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
     if returnBias:
         return hm, bias
     return hm
-
 
 
 def shuffleAlongDiagonal(inMatrix):

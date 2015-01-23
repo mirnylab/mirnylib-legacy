@@ -1005,7 +1005,7 @@ class Genome(object):
         if resolution > 10000:
             raise ValueError("Please use parseWigFile instead for resolutions >10 kb")
         import bx.bbi.bigwig_file
-        from bx.bbi.bigwig_file import BigWigFile
+        from bx.bbi.bigwig_file import BigWigFile  # @UnresolvedImport
 
         """
         Internal method for parsing bigWig files, updated
@@ -1016,7 +1016,7 @@ class Genome(object):
         else:
             bwFile = BigWigFile(filename)
         print "parsingBigWigFile",
-        assert isinstance(bwFile, bx.bbi.bigwig_file.BigWigFile)
+        assert isinstance(bwFile, bx.bbi.bigwig_file.BigWigFile)  # @UndefinedVariable
 
         for i in xrange(self.chrmCount):
             chrId = "chr%s" % self.idx2label[i]
