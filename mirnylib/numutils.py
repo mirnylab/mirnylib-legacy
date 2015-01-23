@@ -1323,7 +1323,7 @@ ultracorrect = mirnylib.systemutils.deprecate(ultracorrect,
 ultracorrectBiasReturn = mirnylib.systemutils.deprecate(iterativeCorrection, "ultracorrectBiasReturn")
 
 
-def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumber=20, minimumPercent=.2):
+def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumber=10, minimumPercent=.1):
     """Makes a safe iterative correction
     (i.e. with removing low-coverage regions and diagonals)
     for a symmetric heatmap
@@ -1342,12 +1342,14 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
 
 
     if mask.sum() + 3 < (matsum > 0).sum()  * 0.5:
-        raise ValueError("""Iterative correction will remove more than a half of the matrix
+        warnings.warn("""Iterative correction will remove more than a half of the matrix
         Check that values in rows/columns represent actual reads,
         and the sum over rows/columns exceeds minimumSum""")
 
     hmc[-mask] = 0
     hmc[:, -mask] = 0
+    if hmc.sum() == 0: 
+        return np.zeros_like(hm)
 
     hm, bias = iterativeCorrection(hmc, skipDiags=1)
     dmean = np.median(np.diagonal(hm, diagsToRemove))
