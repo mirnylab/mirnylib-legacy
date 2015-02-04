@@ -47,6 +47,9 @@ from scipy import weave
 import logging
 log = logging.getLogger(__name__)
 
+h = logging.NullHandler()
+log.addHandler(h)
+
 
 class Genome(object):
     """A class to compute and cache various properties of genomic sequences."""
