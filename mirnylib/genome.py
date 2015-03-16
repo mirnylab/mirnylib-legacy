@@ -923,66 +923,11 @@ class Genome(object):
         else:
             useM = False
             Mnum = 0
-        chromCount, useX, useY, useM, Ynum, Xnum, Mnum, myfilename
-        code = r"""
-        #line 14 "binary_search.py"
-        using namespace std;
-        int chrom=1;
-        bool skip = false;
-        int pos;
-        int step;
-        char line[50];
-        char chromNum[10];
-        const char * filename = myfilename.c_str();
-        FILE *myfile;
-
-        myfile = fopen(filename,"r");
-
-        int breakflag = 0;
-
-        while (fgets(line, 50, myfile) != NULL)
-        {
-
-          if (line[0] == 'f')
-              {
-              for (int j = 0;j<strlen(line);j++)
-              {
-              }
-              if (breakflag == 1) break;
-              sscanf(line,"fixedStep chrom=chr%s start=%d step=%d",
-              &chromNum,&pos,&step);
-              skip = false;
-              chrom = atoi(chromNum);
-              if (strcmp(chromNum ,"X") == 0)
-               { chrom = Xnum; if (useX == false) skip = true;}
-              if (strcmp(chromNum ,"Y") == 0)
-               { chrom = Ynum; if (useY == false) skip = true;}
-              if (strcmp(chromNum ,"M") == 0)
-               { chrom = Mnum; if (useM == false) skip = true;}
-              if ((chrom == 0) || (chrom > chromCount)) skip = true;
-              if (skip == true) printf("Skipping chromosome %s\n", chromNum);
-
-              continue;
-              }
-            if (skip == false)
-            {
-              double t;
-              sscanf(line,"%lf",&t);
-              data[Mkb * (chrom - 1) + pos / resolution] += t;
-              pos+= step;
-            }
-        }
-        """
-        support = """
-        #include <math.h>
-        #include <iostream>
-        #include <fstream>
-        """
-        weave.inline(code, ['myfilename', "data", "chromCount",
-                            "useX", "useY", "useM",
-                            "Xnum", "Ynum", "Mnum", "Mkb", "resolution"],
-                     extra_compile_args=['-march=native -malign-double'],
-                     support_code=support)
+ 
+	from fastExtensions.fastExtensions import readWigFile
+        readWigFile(myfilename, data, chromCount,
+                            useX, useY, useM,
+                            Xnum, Ynum, Mnum, Mkb, resolution)
 
         datas = [data[i * Mkb:(i + 1) * Mkb] for i in xrange(self.chrmCount)]
         for chrom, track in enumerate(datas):
