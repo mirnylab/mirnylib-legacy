@@ -924,6 +924,30 @@ def observedOverExpected(matrix):
     return numutils_new.observedOverExpected(matrix)  # @UndefinedVariable
 
 
+def observedOverExpectedWithMask(matrix,mask):
+    """
+    Parameters
+    ----------
+    matrix : a symmetric contactmap
+        A Hi-C contactmap to calculate observed over expected.
+    mask : a boolean mask, 1==good, 0==bad
+
+    Returns
+    -------
+        matrix : a symmetric corrected contactmap
+
+    .. note:: This function does not work in place; it returns a copy.
+
+    It divides each diagonal of a Hi-C contact map by its' mean.
+    It also does it in a smart way: it calculates averages
+    over stripes from X to X*1.05, and divides each stripe by its mean.
+
+    It allows to avoid divergence far from the main diagonal with a very few reads.
+    """
+    return numutils_new.observedOverExpectedWithMask(matrix,mask)  # @UndefinedVariable
+
+
+
 def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
     """
     Parameters
