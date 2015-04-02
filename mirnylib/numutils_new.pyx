@@ -459,6 +459,54 @@ def observedOverExpected(matrix):
                     if offset > 0: data[j,offset+j] /= meanss
     return _data
 
+
+@cython.boundscheck(False)
+@cython.nonecheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def observedOverExpectedWithMask(matrix,mask):
+    "Calculates observedOverExpected of any contact map, over regions where mask==1"
+
+    cdef int i, j, bin, start, end, count, offset
+    cdef double ss, meanss  
+
+    _data = np.array(matrix, dtype = np.double, order = "C")
+    N = _data.shape[0]
+
+    _datamask = np.array(mask==1, dtype = np.double, order = "C")
+
+    
+    cdef np.ndarray[np.double_t, ndim = 2] data = _data 
+
+    cdef np.ndarray[np.double_t, ndim = 2] datamask = _datamask 
+
+    _bins = logbins(1,N,1.05)
+    _bins = [(0,1)] + [(_bins[i],_bins[i+1]) for i in xrange(len(_bins)-1)]
+    _bins = np.array(_bins,dtype = np.int64, order = "C")
+    cdef np.ndarray[np.int64_t, ndim = 2] bins = _bins
+    cdef int M = len(bins)
+    
+    for bin in range(M):
+        start = bins[bin,0]
+        end  = bins[bin,1]
+        ss = 0 
+        count = 0
+        for offset in range(start,end):
+            for j in range(0,N-offset):
+                if datamask[offset+j,j]==1:                    
+                    ss += data[offset+j, j]
+                    count += 1
+        #print start, end, count
+        meanss = ss / count
+        if meanss != 0: 
+            for offset in range(start,end):
+                for j in range(0,N-offset):
+                    if datamask[offset+j,j]==1:
+                        data[offset + j, j] /= meanss
+                        if offset > 0: data[j,offset+j] /= meanss
+
+    return _data
+
           
 
 @cython.boundscheck(False)
