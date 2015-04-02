@@ -79,12 +79,8 @@ class h5dict(collections.MutableMapping):
             try:
                 self._h5file = h5py.File(self.path, mode)
             except Exception as inst:
-                if os.path.isfile(self.path):
-                    raise Exception(
-                        ('The file {0} is likely to be '
-                         'used by other h5dict object.').format(self.path))
-                else:
-                    raise inst
+                print ('The file {0} is damaged or is used by other h5dict object.').format(self.path)
+                raise inst
 
             self.__self_load__()
             self.autoflush = autoflush
@@ -222,9 +218,6 @@ class h5dict(collections.MutableMapping):
                 issubclass(self._types[i], np.ndarray)]
 
     def get_dataset(self, key):
-        if key not in self.array_keys():
-            log.warning('The requested key {0} is not an array'.format(
-                key))
         return self._h5file[key]
 
     def add_empty_dataset(self, key, shape, dtype):
@@ -244,5 +237,5 @@ class h5dict(collections.MutableMapping):
         self._dtypes[key] = dtype
         if self.autoflush:
             self._h5file.flush()
-        
+
         return self.get_dataset(key)

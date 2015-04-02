@@ -79,9 +79,9 @@ class Genome(object):
         return memoized_func
 
     def setCentromeres(self,
-            cntrStarts = None,
-            cntrEnds = None,
-            centromere_positions = None):
+            cntrStarts=None,
+            cntrEnds=None,
+            centromere_positions=None):
         """Set centromere positions.
 
         Parameters
@@ -119,7 +119,7 @@ class Genome(object):
                 self.cntrStarts[chrm_idx] = min(i, j)
                 self.cntrEnds[chrm_idx] = max(i, j)
         else:
-            raise Exception('Please provide either centromere_positions or '+
+            raise Exception('Please provide either centromere_positions or ' +
                             'cntrStarts AND cntrEnds.')
 
         self.cntrMids = (self.cntrStarts + self.cntrEnds) / 2
@@ -237,26 +237,35 @@ class Genome(object):
 
         # Convert IDs to indices:
         # A. Convert numerical IDs.
-        num_ids = [i for i in self.chrmLabels if i.isdigit()]
-        log.debug('The chromosomes with numerical IDs: {0}'.format(num_ids))
-        # Sort IDs naturally, i.e. place '2' before '10'.
-        num_ids.sort(key=lambda x: int(re.findall(r'\d+$', x)[0]))
+        if not self.forceOrder:
+            num_ids = [i for i in self.chrmLabels if i.isdigit()]
+            log.debug('The chromosomes with numerical IDs: {0}'.format(num_ids))
+            # Sort IDs naturally, i.e. place '2' before '10'.
+            num_ids.sort(key=lambda x: int(re.findall(r'\d+$', x)[0]))
 
-        self.chrmCount = len(num_ids)
-        self.label2idx = dict(
-            [(num_ids[i], int(i)) for i in xrange(len(num_ids))])
-        self.idx2label = dict(
-            [(int(i), num_ids[i]) for i in xrange(len(num_ids))])
+            self.chrmCount = len(num_ids)
+            self.label2idx = dict(
+                [(num_ids[i], int(i)) for i in xrange(len(num_ids))])
+            self.idx2label = dict(
+                [(int(i), num_ids[i]) for i in xrange(len(num_ids))])
+        else:
+            self.chrmCount = 0
+            self.label2idx = {}
+            self.idx2label = {}
 
         # B. Convert non-numerical IDs. Give the priority to XYM over the rest.
-        nonnum_ids = [i for i in self.chrmLabels if not i.isdigit()]
+        if self.forceOrder:
+            nonnum_ids = self.readChrms
+        else:
+            nonnum_ids = sorted([i for i in self.chrmLabels if not i.isdigit()])
+
         log.debug('The chromosomes with non-numerical IDs: {0}'.format(
             nonnum_ids))
-        for i in ['M', 'Y', 'X']:
-            if i in nonnum_ids:
-                nonnum_ids.pop(nonnum_ids.index(i))
-                nonnum_ids.insert(0, i)
-
+        if not self.forceOrder:
+            for i in ['M', 'Y', 'X']:
+                if i in nonnum_ids:
+                    nonnum_ids.pop(nonnum_ids.index(i))
+                    nonnum_ids.insert(0, i)
         for i in nonnum_ids:
             self.label2idx[i] = self.chrmCount
             self.idx2label[self.chrmCount] = i
@@ -274,7 +283,7 @@ class Genome(object):
                  gapFile='gap.txt',
                  chrmFileTemplate='chr%s.fa',
                  readChrms=['#', 'X', 'Y', 'M'],
-                 cacheDir='default'):
+                 cacheDir='default', forceOrder=False):
         '''
         A class that stores cached properties of a genome. To initialize,
         a Genome object needs FASTA files with chromosome sequences.
@@ -428,11 +437,12 @@ class Genome(object):
         '''
         # Set the main attributes of the class.
         self.genomePath = os.path.abspath(os.path.expanduser(genomePath))
+        self.forceOrder = forceOrder
         if cacheDir == "default":
             cacheDir = self.genomePath
         self.cacheDir = cacheDir
         self.folderName = os.path.split(self.genomePath)[-1]
-        self.readChrms = set(readChrms)
+        self.readChrms = list(readChrms)
         self.gapFile = gapFile
         self.chrmFileTemplate = chrmFileTemplate
 
@@ -901,7 +911,7 @@ class Genome(object):
         M = self.maxChrmLen
         Mkb = int(M / resolution + 1)
         chromCount = self.chrmCount
-        data = numpy.zeros(Mkb * self.chrmCount, float)
+        data = numpy.zeros(Mkb * self.chrmCount, np.double)
         resolution = int(resolution)
         if "X" in self.chrmLabels:
             useX = True
@@ -923,8 +933,8 @@ class Genome(object):
         else:
             useM = False
             Mnum = 0
- 
-	from fastExtensions.fastExtensions import readWigFile
+
+	from fastExtensions.fastExtensionspy import readWigFile
         readWigFile(myfilename, data, chromCount,
                             useX, useY, useM,
                             Xnum, Ynum, Mnum, Mkb, resolution)

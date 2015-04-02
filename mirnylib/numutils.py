@@ -155,30 +155,9 @@ def openmpSum(in_array):
     """
     Performs fast sum of an array using openmm
     """
-    from scipy import weave
-    a = np.asarray(in_array)
-    b = np.array([1.])
-    N = int(np.prod(a.shape))
-    N  # PyDev warning remover
-    code = r"""
-    int i=0;
-    double sum = 0;
-    omp_set_num_threads(4);
-    #pragma omp parallel for      \
-      default(shared) private(i)  \
-      reduction(+:sum)
-        for (i=0; i<N; i++)
-              sum += a[i];
-    b[0] = sum;
-    """
-    weave.inline(code, ['a', 'N', 'b'],
-                     extra_compile_args=['-march=native  -O3  -fopenmp '],
-                     support_code=r"""
-    #include <stdio.h>
-    #include <omp.h>
-    #include <math.h>""",
-                 libraries=['gomp'])
-    return b[0]
+    from fastExtensions.fastExtensionspy import openmmArraySum  # @UnresolvedImport
+    return  openmmArraySum(in_array)
+
 
 
 "Manipulation with np arrays"
@@ -210,9 +189,9 @@ def trunc(x, low=0.005, high=0.005):
 trunk = mirnylib.systemutils.deprecate(trunc, "trunk")
 
 
-def externalMergeSort(inDataset, tempDataset, chunkSize=300000000, 
-                      sorter = np.sort,
-                      searchsorted = lambda x,y:np.searchsorted(x,y,side="right")):
+def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
+                      sorter=np.sort,
+                      searchsorted=lambda x, y:np.searchsorted(x, y, side="right")):
     """
     An in-place merge sort to work with persistent numpy-type arrays,
     in particular, h5py datasets.
@@ -272,10 +251,10 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
         # An index of a chunk that has minimum maximum value right now
         armaxes = np.array(maxes)
         sortedArray = sorter(armaxes)
-        chInd = np.nonzero(armaxes == sortedArray[0])[0][0]        
-        #This is equivalent to: 
-        #chInd = np.argmin(maxes) 
-        #it was removed because we now only specify sorter        
+        chInd = np.nonzero(armaxes == sortedArray[0])[0][0]
+        # This is equivalent to:
+        # chInd = np.argmin(maxes)
+        # it was removed because we now only specify sorter
 
         limits = [searchsorted(chunk, maxes[chInd]) for chunk in currentChunks]
         # Up to where can we merge each chunk now? Find it using searchsorted
@@ -311,7 +290,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
 
 def _testExternalSort():
     print "--- Testing external merge sort"
-    a = np.random.randint(0,100000000,50000000)
+    a = np.random.randint(0, 100000000, 50000000)
     from mirnylib.h5dict import h5dict
     t = h5dict()
     t["1"] = a
@@ -329,7 +308,7 @@ def _testExternalSort():
     assert dif.sum() == 0
     print "   Test finished successfully!"
 
-#_testExternalSort()
+# _testExternalSort()
 
 
 def uniqueIndex(data):
@@ -387,7 +366,7 @@ def chunkedUnique(data, chunksize=5000000, return_index=False):
     else:
         return current
 
-    
+
 
 
 def trimZeros(x):
@@ -675,48 +654,48 @@ def sumByArray(array, filterarray, dtype="int64", chunkSize="auto"):
 "Mathematical utilities"
 
 
-def chunkedBincount(x, weights=None, minlength=None,chunkSize = 100000000):
+def chunkedBincount(x, weights=None, minlength=None, chunkSize=100000000):
     """np.bincount on an hdf5 array"""
-    if minlength == None: 
-        print "minlength has to be set for chunked bincount"    
+    if minlength == None:
+        print "minlength has to be set for chunked bincount"
     bins = range(0, len(x), chunkSize) + [len(x)]
     bins = zip(bins[:-1], bins[1:])
-    for st,end in bins:
+    for st, end in bins:
         if st == 0:
-            if weights == None: 
-                result = np.bincount(x[st:end],minlength = minlength)
+            if weights == None:
+                result = np.bincount(x[st:end], minlength=minlength)
             else:
-                result = np.bincount(x[st:end],weights = weights[st:end], minlength = minlength)                                
+                result = np.bincount(x[st:end], weights=weights[st:end], minlength=minlength)
             if len(result) > minlength:
-                raise ValueError("maximum value of a chunk {0} more than minlength {1}".format(len(result),minlength))
+                raise ValueError("maximum value of a chunk {0} more than minlength {1}".format(len(result), minlength))
         else:
-            if weights == None: 
-                addition = np.bincount(x[st:end],minlength = minlength)
+            if weights == None:
+                addition = np.bincount(x[st:end], minlength=minlength)
             else:
-                addition = np.bincount(x[st:end],weights = weights[st:end], minlength = minlength)                                
+                addition = np.bincount(x[st:end], weights=weights[st:end], minlength=minlength)
             if len(addition) > minlength:
-                raise ValueError("maximum value of a chunk {0} more than minlength {1}".format(len(addition),minlength))
-            result += addition             
+                raise ValueError("maximum value of a chunk {0} more than minlength {1}".format(len(addition), minlength))
+            result += addition
     return result
 
 def _testChunkedBincount():
     print "--- Testing chunked bincount"
-    array = np.random.randint(0,1000,1000000)
+    array = np.random.randint(0, 1000, 1000000)
     weights = np.random.random(1000000)
-    a = np.bincount(array, minlength = 1000)
-    b = chunkedBincount(array, minlength = 1000, chunkSize = 10000)
-    c = chunkedBincount(array,minlength = 1000, chunkSize = 1000000000)
-    assert np.allclose(a,b)
-    assert np.allclose(a,c)
-    a = np.bincount(array, weights, minlength = 1000)
-    b = chunkedBincount(array, weights, minlength = 1000, chunkSize = 10000)
-    c = chunkedBincount(array,weights, minlength = 1000, chunkSize = 1000000000)
-    assert np.allclose(a,b)
-    assert np.allclose(a,c)
-        
+    a = np.bincount(array, minlength=1000)
+    b = chunkedBincount(array, minlength=1000, chunkSize=10000)
+    c = chunkedBincount(array, minlength=1000, chunkSize=1000000000)
+    assert np.allclose(a, b)
+    assert np.allclose(a, c)
+    a = np.bincount(array, weights, minlength=1000)
+    b = chunkedBincount(array, weights, minlength=1000, chunkSize=10000)
+    c = chunkedBincount(array, weights, minlength=1000, chunkSize=1000000000)
+    assert np.allclose(a, b)
+    assert np.allclose(a, c)
+
     print "all values for bincount are correct"
-    try: 
-        chunkedBincount(array, minlength = 10, chunkSize = 100000)
+    try:
+        chunkedBincount(array, minlength=10, chunkSize=100000)
         raise RuntimeError("Error did not work")
     except ValueError:
         print "Error reported correctly "
@@ -1335,20 +1314,20 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
 
     hmc = hm.copy()  # to remove diagonals safely
     removeDiagonals(hmc, diagsToRemove - 1)
-    matsum = np.sum(hmc, axis=0) 
-    mask =  matsum > minimumSum
+    matsum = np.sum(hmc, axis=0)
+    mask = matsum > minimumSum
     num = min(len(hmc) * minimumPercent, minimumNumber)
     mask = mask * (np.sum(hmc > 0, axis=0) > num)
 
 
-    if mask.sum() + 3 < (matsum > 0).sum()  * 0.5:
+    if mask.sum() + 3 < (matsum > 0).sum() * 0.5:
         warnings.warn("""Iterative correction will remove more than a half of the matrix
         Check that values in rows/columns represent actual reads,
         and the sum over rows/columns exceeds minimumSum""")
 
     hmc[-mask] = 0
     hmc[:, -mask] = 0
-    if hmc.sum() == 0: 
+    if hmc.sum() == 0:
         return np.zeros_like(hm)
 
     hm, bias = iterativeCorrection(hmc, skipDiags=1)
