@@ -32,6 +32,7 @@ binned concatenated genome : a genome with chromosomes binned and merged.
     is usually shorter than `resolution` but still counts as a full bin.
 '''
 
+from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 import glob
 import re
@@ -43,7 +44,7 @@ import Bio.SeqUtils
 import Bio.Restriction
 Bio.Restriction  # To shut up Eclipse warning
 import joblib
-from scipy import weave
+#from scipy import weave
 import logging
 log = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ class Genome(object):
 
             self.cntrStarts = numpy.zeros(self.chrmCount, int)
             self.cntrEnds = numpy.zeros(self.chrmCount, int)
-            for label, (i, j) in centromere_positions.iteritems():
+            for label, (i, j) in centromere_positions.items():
                 chrm_idx = self.label2idx[label]
                 self.cntrStarts[chrm_idx] = min(i, j)
                 self.cntrEnds[chrm_idx] = max(i, j)
@@ -122,7 +123,7 @@ class Genome(object):
             raise Exception('Please provide either centromere_positions or ' +
                             'cntrStarts AND cntrEnds.')
 
-        self.cntrMids = (self.cntrStarts + self.cntrEnds) / 2
+        self.cntrMids = (self.cntrStarts + self.cntrEnds) // 2
         self.chrmArmLens = numpy.zeros(2 * self.chrmCount, int)
         self.chrmArmLens[0::2] = self.cntrMids
         self.chrmArmLens[1::2] = self.chrmLens - self.cntrMids
@@ -245,9 +246,9 @@ class Genome(object):
 
             self.chrmCount = len(num_ids)
             self.label2idx = dict(
-                [(num_ids[i], int(i)) for i in xrange(len(num_ids))])
+                [(num_ids[i], int(i)) for i in range(len(num_ids))])
             self.idx2label = dict(
-                [(int(i), num_ids[i]) for i in xrange(len(num_ids))])
+                [(int(i), num_ids[i]) for i in range(len(num_ids))])
         else:
             self.chrmCount = 0
             self.label2idx = {}
@@ -272,8 +273,8 @@ class Genome(object):
             self.chrmCount += 1
 
         # Sort fastaNames and self.chrmLabels according to the indices:
-        self.chrmLabels = zip(*sorted(self.idx2label.items(),
-                                      key=lambda x: x[0]))[1]
+        self.chrmLabels = list(zip(*sorted(list(self.idx2label.items()),
+                                      key=lambda x: x[0])))[1]
         self.fastaNames.sort(
             key=lambda path: self.label2idx[self._extractChrmLabel(path)])
         log.debug('The genome folder is scanned successfully.')
@@ -326,7 +327,7 @@ class Genome(object):
         genomePath : str
             The path to the folder with the genome.
 
-        name : str
+        folderName : str
             The string identifier of the genome, the name of the last folder in
             the path.
 
@@ -469,7 +470,7 @@ class Genome(object):
 
     def _getChrmLen(self):
         return numpy.array([len(self.seqs[i])
-                            for i in xrange(0, self.chrmCount)])
+                            for i in range(0, self.chrmCount)])
 
     def getGCBin(self, resolution):
         # At the first call the function rewrites itself with a memoized
@@ -479,10 +480,10 @@ class Genome(object):
 
     def _getGCBin(self, resolution):
         GCBin = []
-        for chrm in xrange(self.chrmCount):
+        for chrm in range(self.chrmCount):
             chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
             GCBin.append(numpy.ones(chrmSizeBin, dtype=numpy.float))
-            for j in xrange(chrmSizeBin):
+            for j in range(chrmSizeBin):
                 GCBin[chrm][j] = self.getGC(
                     chrm, j * int(resolution), (j + 1) * int(resolution))
         return GCBin
@@ -495,10 +496,10 @@ class Genome(object):
 
     def _getUnmappedBasesBin(self, resolution):
         unmappedBasesBin = []
-        for chrm in xrange(self.chrmCount):
+        for chrm in range(self.chrmCount):
             chrmSizeBin = int(self.chrmLens[chrm] // resolution) + 1
             unmappedBasesBin.append(numpy.ones(chrmSizeBin, dtype=numpy.float))
-            for j in xrange(chrmSizeBin):
+            for j in range(chrmSizeBin):
                 unmappedBasesBin[chrm][j] = self.getUnmappedBases(
                     chrm, j * int(resolution), (j + 1) * int(resolution))
         return unmappedBasesBin
@@ -517,15 +518,15 @@ class Genome(object):
         enzymeSearchFunc = eval('Bio.Restriction.%s.search' % enzymeName)
         rsites = []
         rfragMids = []
-        for i in xrange(self.chrmCount):
+        for i in range(self.chrmCount):
             rsites.append(numpy.r_[
                 0, numpy.array(enzymeSearchFunc(self.seqs[i].seq)) + 1,
                 len(self.seqs[i].seq)])
-            rfragMids.append((rsites[i][:-1] + rsites[i][1:]) / 2)
+            rfragMids.append((rsites[i][:-1] + rsites[i][1:]) // 2)
 
         # Remove the first trivial restriction site (0)
         # to equalize the number of points in rsites and rfragMids.
-        for i in xrange(len(rsites)):
+        for i in range(len(rsites)):
             rsites[i] = rsites[i][1:]
 
         return rsites, rfragMids
@@ -534,7 +535,7 @@ class Genome(object):
     def seqs(self):
         if not hasattr(self, "_seqs"):
             self._seqs = []
-            for i in xrange(self.chrmCount):
+            for i in range(self.chrmCount):
                 self._seqs.append(Bio.SeqIO.read(open(self.fastaNames[i]),
                                                  'fasta'))
         return self._seqs
@@ -609,7 +610,7 @@ class Genome(object):
         self.resolution = int(resolution)
 
         # Bin chromosomes.
-        self.chrmLensBin = self.chrmLens / self.resolution + 1
+        self.chrmLensBin = self.chrmLens // self.resolution + 1
         self.chrmBordersBinCont = numpy.r_[0, numpy.cumsum(self.chrmLensBin)]
         self.chrmStartsBinCont = numpy.r_[0, numpy.cumsum(
             self.chrmLensBin)[:-1]]
@@ -617,12 +618,12 @@ class Genome(object):
         self.numBins = self.chrmEndsBinCont[-1]
 
         self.chrmIdxBinCont = numpy.zeros(self.numBins, int)
-        for i in xrange(self.chrmCount):
+        for i in range(self.chrmCount):
             self.chrmIdxBinCont[
                 self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]] = i
 
         self.posBinCont = numpy.zeros(self.numBins, int)
-        for i in xrange(self.chrmCount):
+        for i in range(self.chrmCount):
             self.posBinCont[
                 self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]] = (
                     self.resolution
@@ -631,7 +632,7 @@ class Genome(object):
 
         # Bin centromeres.
         self.cntrMidsBinCont = (self.chrmStartsBinCont
-                                + self.cntrMids / self.resolution)
+                                + self.cntrMids // self.resolution)
         self.chrmArmBordersBinCont = numpy.zeros(
             self.chrmCount * 2 + 1, dtype=numpy.int)
         self.chrmArmBordersBinCont[1::2] = self.cntrMidsBinCont
@@ -643,9 +644,9 @@ class Genome(object):
         self.GCBin = self.getGCBin(self.resolution)
         self.unmappedBasesBin = self.getUnmappedBasesBin(self.resolution)
         self.binSizesBp = []
-        for i in xrange(self.chrmCount):
+        for i in range(self.chrmCount):
             chromLen = self.chrmLens[i]
-            cur = [self.resolution for _ in xrange(chromLen / self.resolution)]
+            cur = [self.resolution for _ in range(chromLen // self.resolution)]
             cur.append(chromLen % self.resolution)
             self.binSizesBp.append(numpy.array(cur))
         self.mappedBasesBin = [numpy.array(i[0] * (100. - i[1]) / 100, int)
@@ -749,15 +750,15 @@ class Genome(object):
 
         self.rsiteIds = numpy.concatenate(
             [self.rsites[chrm] + chrm * self.fragIDmult
-             for chrm in xrange(self.chrmCount)])
+             for chrm in range(self.chrmCount)])
 
         self.rfragMidIds = numpy.concatenate(
             [self.rfragMids[chrm] + chrm * self.fragIDmult
-             for chrm in xrange(self.chrmCount)])
+             for chrm in range(self.chrmCount)])
 
         self.rsiteChrms = numpy.concatenate(
             [numpy.ones(len(self.rsites[chrm]), int) * chrm
-             for chrm in xrange(self.chrmCount)])
+             for chrm in range(self.chrmCount)])
 
         assert (len(self.rsiteIds) == len(self.rfragMidIds))
 
@@ -766,7 +767,7 @@ class Genome(object):
 
     def splitByChrms(self, inArray):
         return [inArray[self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]]
-                for i in xrange(self.chrmCount)]
+                for i in range(self.chrmCount)]
 
     def upgradeMatrix(self, oldGenome):
         """Checks if old genome can be upgraded to new genome by truncation.
@@ -790,19 +791,19 @@ class Genome(object):
 
         if isinstance(oldGenome, Genome):
             oldGenome = oldGenome.idx2label
-        if True in [i not in oldGenome.values()
-                    for i in self.idx2label.values()]:
-            difference = [i for i in self.idx2label.values(
-                ) if i not in oldGenome.values()]
-            raise StandardError("Genome upgrade is not possible: " +
+        if True in [i not in list(oldGenome.values())
+                    for i in list(self.idx2label.values())]:
+            difference = [i for i in list(self.idx2label.values(
+                )) if i not in list(oldGenome.values())]
+            raise Exception("Genome upgrade is not possible: " +
                             repr(difference) + " are chromosomes"
                             " that are missing in the old genome")
         if False not in [oldGenome[i] == self.idx2label[i]
-                         for i in self.idx2label.keys()]:
+                         for i in list(self.idx2label.keys())]:
             return None
-        oldLabelToIdx = dict([(oldGenome[i], i) for i in oldGenome.keys()])
-        convertingArray = numpy.zeros(len(oldGenome.keys()), dtype=int) - 1
-        for i in self.idx2label.values():
+        oldLabelToIdx = dict([(oldGenome[i], i) for i in list(oldGenome.keys())])
+        convertingArray = numpy.zeros(len(list(oldGenome.keys())), dtype=int) - 1
+        for i in list(self.idx2label.values()):
             convertingArray[oldLabelToIdx[i]] = self.label2idx[i]
         return convertingArray
 
@@ -815,7 +816,7 @@ class Genome(object):
             warnings.warn("Chromosome zero not found! Are you using"
                           " zero-based chromosomes?", UserWarning)
         if max(chromSet) >= self.chrmCount:
-            raise StandardError("Chromosome number %d exceeds expected"
+            raise Exception("Chromosome number %d exceeds expected"
                                 " chromosome count %d" %
                                 (max(chromSet), self.chrmCount))
         if max(chromSet) < self.chrmCount - 1:
@@ -826,9 +827,9 @@ class Genome(object):
         check = positions > maxpositions
         if check.any():  # found positions that exceeds chromosme length
             inds = numpy.nonzero(check)[0]
-            inds = inds[::len(inds) / 10]
+            inds = inds[::len(inds) // 10]
             for i in inds:
-                raise StandardError("Position %d on chrm %d exceeds "
+                raise Exception("Position %d on chrm %d exceeds "
                                     "maximum positions %d" % (
                         chromosomes[i], positions[i],
                         self.chrmLens[chromosomes[i]])
@@ -869,14 +870,14 @@ class Genome(object):
         frag2ind = numpy.searchsorted(self.rfragMidIds, fragments2)
         distance = numpy.abs(frag1ind - frag2ind)
         del frag1ind, frag2ind
-        ch1 = fragments1 / self.fragIDmult
-        ch2 = fragments2 / self.fragIDmult
+        ch1 = fragments1 // self.fragIDmult
+        ch2 = fragments2 // self.fragIDmult
         distance[ch1 != ch2] = 1000000
         return distance
 
     def getPairsLessThanDistance(self, fragments1, fragments2,
                                  cutoffDistance, enzymeName):
-        import numutils
+        from . import numutils
         """returns all possible pairs (fragment1,fragment2)
         with fragment distance less-or-equal than cutoff"""
         if not hasattr(self, "rfragMidIds"):
@@ -888,11 +889,11 @@ class Genome(object):
         assert (fragments2[::100] - self.rfragMidIds[f2ID[::100]]).sum() == 0
 
         fragment2Candidates = numpy.concatenate(
-            [f1ID + i for i in (range(-cutoffDistance, 0) +
-                                range(1, cutoffDistance + 1))])
+            [f1ID + i for i in (list(range(-cutoffDistance, 0)) +
+                                list(range(1, cutoffDistance + 1)))])
         fragment1Candidates = numpy.concatenate(
-            [f1ID for i in (range(-cutoffDistance, 0) +
-                            range(1, cutoffDistance + 1))])
+            [f1ID for i in (list(range(-cutoffDistance, 0)) +
+                            list(range(1, cutoffDistance + 1)))])
         mask = numutils.arrayInArray(fragment2Candidates, f2ID)
 
         fragment2Real = fragment2Candidates[mask]
@@ -907,9 +908,9 @@ class Genome(object):
             raise ValueError("Please use parseWigFile instead for resolutions >10 kb")
         myfilename = filename
         if os.path.exists(filename) == False:
-            raise StandardError("File not found!")
+            raise Exception("File not found!")
         M = self.maxChrmLen
-        Mkb = int(M / resolution + 1)
+        Mkb = int(M // resolution + 1)
         chromCount = self.chrmCount
         data = numpy.zeros(Mkb * self.chrmCount, np.double)
         resolution = int(resolution)
@@ -934,17 +935,17 @@ class Genome(object):
             useM = False
             Mnum = 0
 
-	from fastExtensions.fastExtensionspy import readWigFile
+        from .fastExtensions.fastExtensionspy import readWigFile  # @UnresolvedImport
         readWigFile(myfilename, data, chromCount,
                             useX, useY, useM,
                             Xnum, Ynum, Mnum, Mkb, resolution)
 
-        datas = [data[i * Mkb:(i + 1) * Mkb] for i in xrange(self.chrmCount)]
+        datas = [data[i * Mkb:(i + 1) * Mkb] for i in range(self.chrmCount)]
         for chrom, track in enumerate(datas):
-            if track[self.chrmLens[chrom] / resolution + 2:].sum() != 0:
-                raise StandardError("Genome mismatch: entrees "
+            if track[self.chrmLens[chrom] // resolution + 2:].sum() != 0:
+                raise Exception("Genome mismatch: entrees "
                                     "in wig file after chromosome end!")
-        datas = [numpy.array(i[:self.chrmLens[chrom] / resolution +
+        datas = [numpy.array(i[:self.chrmLens[chrom] // resolution +
             1]) for chrom, i in enumerate(datas)]
         return datas
 
@@ -973,16 +974,16 @@ class Genome(object):
             bwFile = BigWigFile(open(filename))
         else:
             bwFile = BigWigFile(filename)
-        print "parsingBigWigFile",
+        print("parsingBigWigFile", end=' ')
         assert isinstance(bwFile, bx.bbi.bigwig_file.BigWigFile)  # @UndefinedVariable
 
-        for i in xrange(self.chrmCount):
+        for i in range(self.chrmCount):
             chrId = "chr%s" % self.idx2label[i]
-            print chrId,
+            print(chrId, end=' ')
             totalCount = int(numpy.ceil(self.chrmLens[i] / float(resolution)))
             values = numpy.zeros(totalCount, float)
             step = 500
-            for i in xrange(totalCount / step):
+            for i in range(totalCount // step):
                 beg = step * i
                 end = min(step * (i + 1), totalCount * resolution)
                 summary = bwFile.summarize(chrId, beg *
@@ -996,7 +997,7 @@ class Genome(object):
                     stepValues[stepCounts == 0] = 0
                 values[beg:end] = stepValues
             if values.sum() == 0:
-                raise  StandardError("Chromosome {0} is absent in bigWig"
+                raise  Exception("Chromosome {0} is absent in bigWig"
                                      " file!".format(chrId))
             data.append(values)
 
@@ -1109,19 +1110,19 @@ class Genome(object):
             if wigFileType == "auto":
                 ext = os.path.splitext(name)[1]
                 if ext == "":
-                    raise StandardError("Wig file has no extension. \
+                    raise Exception("Wig file has no extension. \
                     Please specify it's type")
                 elif ext.lower() == ".wig":
                     op = open(name)
                     if "fi" not in [op.readline()[:2] for _ in range(5)]:
-                        raise StandardError("Cannot read non variable-step wig \
+                        raise Exception("Cannot read non variable-step wig \
                         files! Please use wigToBigWig utility. See docstring \
                         of this method.")
                     wigFileType = "wig"
                 elif ext.lower() == ".bigwig":
                     wigFileType = "bigwig"
                 else:
-                    raise StandardError("Unknown extension of wig file: %s" %
+                    raise Exception("Unknown extension of wig file: %s" %
                         ext)
 
             if wigFileType == "wig":
@@ -1131,7 +1132,7 @@ class Genome(object):
                 data = self.parseBigWigFileAtSmallResolution(name, resolution=internalResolution,
                     divideByValidCounts=True)
             else:
-                raise StandardError("Wrong type of wig file : %s" %
+                raise Exception("Wrong type of wig file : %s" %
                     wigFileType)
             return data
 
@@ -1140,7 +1141,7 @@ class Genome(object):
 
         "2. If multiple files are given, aggregates them at this level by taking a sum"
         for otherdata in data[1:]:
-            for i in xrange(len(otherdata)):
+            for i in range(len(otherdata)):
                 data[0][i] += otherdata[i]
         data = data[0]
 
@@ -1149,7 +1150,7 @@ class Genome(object):
             controlData = loadFile(control)
 
         if self.resolution % internalResolution != 0:
-            raise StandardError("Cannot parse wig file at resolution \
+            raise Exception("Cannot parse wig file at resolution \
             that is not a multiply of internal resolution ({0})".format(internalResolution))
 
         resultByChromosome = []
@@ -1178,7 +1179,7 @@ class Genome(object):
 
             value.shape = (-1, self.resolution / internalResolution)
             if value.mean() == 0:
-                raise StandardError("Chromosome {0} contains zero data in wig \
+                raise Exception("Chromosome {0} contains zero data in wig \
                 file(s) {1}".format(self.idx2label[chrom], filenames))
 
             "4. We take functionToAverage (by default - log) of all non-zero subbins in the bin"

@@ -1,19 +1,23 @@
 # (c) 2012 Massachusetts Institute of Technology. All Rights Reserved
 # Code written by: Maksim Imakaev (imakaev@mit.edu),
 # Anton Goloborodko (golobor@mit.edu)
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
 import warnings
-import mirnylib.systemutils
-from numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
-from numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
-from numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
-from numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
+import scipy.ndimage.interpolation
+from scipy.stats.stats import pearsonr
+from . import systemutils
+from .numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
+from .numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
+from .numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
+from .numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
 from scipy.ndimage.filters import  gaussian_filter
 na = np.array
 import  scipy.sparse.linalg
 import scipy.stats
+from scipy.ndimage.interpolation import zoom
 from math import cos, log, sin, sqrt
-import numutils_new
+from . import numutils_new
 #-----------------------------
 "Mathematical & programming utilities first"
 #-----------------------------
@@ -110,7 +114,7 @@ def isSymmetric(inMatrix):
 
 
 def _testMatrixUtils():
-    print "Testing isSymmetric"
+    print("Testing isSymmetric")
     a = np.random.randint(0, 1000, (1000, 1000))
     assert not isSymmetric(a)
     b = a + a.T
@@ -119,9 +123,9 @@ def _testMatrixUtils():
     assert isSymmetric(b)
     b[0] += 0.001
     assert not isSymmetric(b)
-    print "Finished testing isSymmetric, test successful"
-    print
-    print "Testing isInteger"
+    print("Finished testing isSymmetric, test successful")
+    print()
+    print("Testing isInteger")
     assert isInteger(1)
     assert isInteger(0)
     assert isInteger(np.zeros(100, int))
@@ -140,22 +144,22 @@ def _testMatrixUtils():
     assert isInteger(myarray)
     myarray[1] += 0.01
     assert not isInteger(myarray)
-    print "finished testing isInteger"
-    print
-    print "testing generalizedDtype"
+    print("finished testing isInteger")
+    print()
+    print("testing generalizedDtype")
     assert generalizedDtype([1, 2]) == np.int
     assert generalizedDtype([1., 2.]) == np.double
     assert generalizedDtype([True, False]) == np.int
     assert generalizedDtype(np.float16) == np.double
     assert generalizedDtype(np.int8) == np.int
-    print "All tests finished successfully!"
+    print("All tests finished successfully!")
 
 
 def openmpSum(in_array):
     """
     Performs fast sum of an array using openmm
     """
-    from fastExtensions.fastExtensionspy import openmmArraySum  # @UnresolvedImport
+    from .fastExtensions.fastExtensionspy import openmmArraySum  # @UnresolvedImport
     return  openmmArraySum(in_array)
 
 
@@ -165,10 +169,9 @@ def openmpSum(in_array):
 
 def rank(x):
     "Returns rank of an array"
-    tmp = np.argsort(x)
-    return na(np.arange(len(x)), float).take(tmp.argsort())
+    return scipy.stats.rankdata(x) - 1
 
-def zerorank(x):
+def zerorank(x, zerovalue = 0):
     x = np.asarray(x)
     mask = x != 0
     ret = np.zeros(len(x), dtype=int)
@@ -186,7 +189,17 @@ def trunc(x, low=0.005, high=0.005):
     lowValue, highValue = np.percentile(x, [low * 100., (1 - high) * 100.])
     return np.clip(x, a_min=lowValue, a_max=highValue)
 
-trunk = mirnylib.systemutils.deprecate(trunc, "trunk")
+trunk = systemutils.deprecate(trunc, "trunk")
+
+
+def _testRank():
+    values = [([1,2,3,4],[0,1,2,3]), ([3,2,1,6,7],[2,1,0,3,4]),([3,2,1,2,4],[3,1.5, 0, 1.5, 4])]
+    for i,j in values:
+        print (j, rank(i))
+        assert np.allclose(rank(i), j)
+    print (zerorank([1,2,3,0,0,0, -1, -2]))
+    print (zerorank([0, 1,1,1,1,2,3,4], zerovalue=1))
+
 
 
 def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
@@ -206,7 +219,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
     if (len(inDataset) < chunkSize):
         data = np.array(inDataset)
         inDataset[:] = sorter(data)
-        print "Sorted using default sort", chunkSize, len(inDataset)
+        print("Sorted using default sort", chunkSize, len(inDataset))
         return
     elif chunkSize < 5 * sqrt(len(inDataset)):
         warnings.warn("Chunk size should be big enough... you provide {0} "
@@ -214,9 +227,9 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
         chunkSize = 5 * int(sqrt(len(inDataset)))
 
     N = len(inDataset)
-    bins = range(0, N, chunkSize) + [N]
-    bins = zip(bins[:-1], bins[1:])  # "big chunks" of chunkSize each
-    print "Sorting using %d chunks" % (len(bins),)
+    bins = list(range(0, N, chunkSize)) + [N]
+    bins = list(zip(bins[:-1], bins[1:]))  # "big chunks" of chunkSize each
+    print("Sorting using %d chunks" % (len(bins),))
 
     # Initial pre-sorting inDataset - tempDataset
     for start, stop in bins:
@@ -229,11 +242,11 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
     # Smaller chunks are called "merge chunks"
     # Further they will be merged one by one
     M = len(bins)
-    mergeChunkSize = chunkSize / M
+    mergeChunkSize = chunkSize // M
     chunkLocations = []
     for start, stop in bins:
-        chunkBins = range(start, stop, mergeChunkSize) + [stop]
-        chunkBins = zip(chunkBins[:-1], chunkBins[1:])
+        chunkBins = list(range(start, stop, mergeChunkSize)) + [stop]
+        chunkBins = list(zip(chunkBins[:-1], chunkBins[1:]))
         chunkLocations.append(chunkBins[::-1])
             # first chunk is last, as we use pop() later
     outputPosition = 0  # location in the output file, inDataset now
@@ -289,24 +302,24 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
 
 
 def _testExternalSort():
-    print "--- Testing external merge sort"
+    print("--- Testing external merge sort")
     a = np.random.randint(0, 100000000, 50000000)
-    from mirnylib.h5dict import h5dict
+    from .h5dict import h5dict
     t = h5dict()
     t["1"] = a
     t["2"] = a
 
-    print "starting sort"
+    print("starting sort")
     import time
     tt = time.time()
     externalMergeSort(
         t.get_dataset("1"), t.get_dataset("2"), chunkSize=1000000)
-    print  "time to sort", time.time() - tt
+    print("time to sort", time.time() - tt)
     tt = time.time()
     dif = t.get_dataset("1")[::1000000] - np.sort(a)[::1000000]
-    print "time to do regular sort:", time.time() - tt
+    print("time to do regular sort:", time.time() - tt)
     assert dif.sum() == 0
-    print "   Test finished successfully!"
+    print("   Test finished successfully!")
 
 # _testExternalSort()
 
@@ -319,8 +332,8 @@ def uniqueIndex(data):
 
     args = np.argsort(data)
     index = np.zeros(len(data), bool)
-    myr = range(0, len(data), len(data) / 50 + 1) + [len(data)]
-    for i in xrange(len(myr) - 1):
+    myr = list(range(0, len(data), len(data) // 50 + 1)) + [len(data)]
+    for i in range(len(myr) - 1):
         start = myr[i]
         end = myr[i + 1]
         dataslice = data.take(args[start:end], axis=0)
@@ -335,6 +348,7 @@ def uniqueIndex(data):
     return index
 
 
+
 def chunkedUnique(data, chunksize=5000000, return_index=False):
     """Performs unique of a long, but repetitive array.
     Set chunksize 5-10 times longer than the number of unique elements"""
@@ -343,8 +357,8 @@ def chunkedUnique(data, chunksize=5000000, return_index=False):
         return np.unique(data, return_index=return_index)
 
     mytype = data.dtype
-    bins = range(0, len(data), chunksize) + [len(data)]
-    bins = zip(bins[:-1], bins[1:])
+    bins = list(range(0, len(data), chunksize)) + [len(data)]
+    bins = list(zip(bins[:-1], bins[1:]))
     current = np.zeros(0, dtype=mytype)
     if return_index:
         currentIndex = np.zeros(0, dtype=int)
@@ -367,7 +381,17 @@ def chunkedUnique(data, chunksize=5000000, return_index=False):
         return current
 
 
-
+def __testUnique():
+    a = np.random.randint(0,100000, 100000)
+    b = np.sort(np.unique(a))
+    c = uniqueIndex(a)
+    print(c)
+    d = a[c]
+    assert np.allclose(b, np.sort(d))
+    e = chunkedUnique(a, chunksize=13000)
+    assert np.allclose(np.sort(e), b)
+    g,h = chunkedUnique(a, chunksize=13000, return_index=True)
+    assert np.allclose(np.sort(a[h]), b)
 
 def trimZeros(x):
     "trims leading and trailing zeros of a 1D/2D array"
@@ -379,88 +403,64 @@ def trimZeros(x):
     return x[ax1.min():ax1.max() + 1, ax2.min(): ax2.max() + 1]
 
 
-def zoomOut(x, shape):
-    "rescales an array preserving the structure and total sum"
-    M1 = shape[0]
-    M2 = shape[1]
-    N1 = x.shape[0]
-    N2 = x.shape[1]
-    if (N1 < M1) or (N2 < M2):
-        d1 = M1 / N1 + 1
-        d2 = M2 / N2 + 1
 
-        newx = np.zeros((d1 * N1, d2 * N2))
-        for i in xrange(d1):
-            for j in xrange(d2):
-                newx[i::d1, j::d2] = x / (1. * d1 * d2)
-        x = newx
-        N1, N2 = N1 * d1, N2 * d2  # array is bigger now
+def zoomArray(inArray, finalShape, sameSum=False, order=1):
+    assert len(inArray.shape) == 2
+    inArray = np.asarray(inArray, dtype = np.double)
+    curshape = inArray.shape
+    multipliers = np.array(finalShape) / np.array(curshape) + 0.0000001
+    rescaled = zoom(inArray, multipliers, order = order, prefilter=False)
+    if sameSum:
+        extraSize = np.prod(finalShape) / np.prod(curshape)
+        rescaled /= extraSize
+    return  rescaled
 
-    shift1 = N1 / float(M1) + 0.000000001
-    shift2 = N2 / float(M2) + 0.000000001
-    x = np.asarray(x, dtype=float)
-    tempres = np.zeros((M1, N2), float)
-    for i in xrange(N1):
-        beg = (i / shift1)
-        end = ((i + 1) / shift1)
-        if int(beg) == int(end):
-            tempres[beg, :] += x[i, :]
-        else:
-            tempres[beg, :] += x[i, :] * (int(end) - beg) / (end - beg)
-            tempres[beg + 1, :] += x[i, :] * (end - int(end)) / (end - beg)
-    res = np.zeros((M1, M2), float)
-    for i in xrange(N2):
-        beg = (i / shift2)
-        end = ((i + 1) / shift2)
-        if int(beg) == int(end):
-            res[:, beg] += tempres[:, i]
-        else:
-            res[:, beg] += tempres[:, i] * (int(end) - beg) / (end - beg)
-            res[:, beg + 1] += tempres[:, i] * (end - int(end)) / (end - beg)
-    return res
+zoomOut = systemutils.deprecate(
+    zoomArray, "zoomOut")  # backwards compatibility
 
-
-smartZoomOut = mirnylib.systemutils.deprecate(
-    zoomOut, "smartZoomOut")  # backwards compatibility
+def sliceAlongAxis(array, myslice, axis):
+    """
+    Applies slice "myslice" along the axis "axis" in the array "array"
+    """
+    sliceArray = [slice(None) for _ in array.shape]
+    sliceArray[axis] = myslice
+    return array[tuple(sliceArray)]
 
 
 def coarsegrain(array, size, extendEdge=False):
-    """coarsegrains array by summing values in sizeXsize squares;
-    truncates the unused squares"""
-    array = np.asarray(array, dtype=generalizedDtype(array.dtype))
+    """
+    array: Nd array to be rebinned (coarsegrained)
+    size : int or array of ints
+        By how much to rebin the array, or each axis
+    extendEdge:
+        if False, then the last incomplete bin is truncates
+        if True, a new bin is created
+        coarsegrain(np.ones(10), 3, True) = [3,3,3,1]
+        coarsegrain(np.ones(10), 3, False) = [3,3,3]
 
-    if not extendEdge:
-        if len(array.shape) == 2:
-            N = len(array) - len(array) % size
-            array = array[:N, :N]
-            a = np.zeros((N / size, N / size), float)
-            for i in xrange(size):
-                for j in xrange(size):
-                    a += array[i::size, j::size]
-            return a
-        if len(array.shape) == 1:
-            array = array[:(len(array) / size) * size]
-            narray = np.zeros(len(array) / size, float)
-            for i in xrange(size):
-                narray += array[i::size]
-            return narray
-    else:
-        N = len(array)
-        if len(array.shape) == 2:
-            resultSize = np.ceil(float(N) / size)
-            a = np.zeros((resultSize, resultSize), float)
-            for i in xrange(size):
-                for j in xrange(size):
-                    add = array[i::size, j::size]
-                    a[:add.shape[0], :add.shape[1]] += add
-            return a
-        if len(array.shape) == 1:
-            resultSize = np.ceil(float(N) / size)
-            a = np.zeros((resultSize), float)
-            for i in xrange(size):
-                add = array[i::size]
-                a[:len(add)] += add
-            return a
+    """
+    array = np.asarray(array, dtype=generalizedDtype(array.dtype))
+    if type(size) != tuple:
+        try:
+            size = int(size)
+        except:
+            raise ValueError("size should be int, you provided {0}".format(size))
+        size = [size for _ in array.shape]
+
+    for axInd, axSize in enumerate(size):
+        N = array.shape[axInd]
+        if not extendEdge:
+            array = sliceAlongAxis(array, slice(0, (N / axSize) * axSize), axInd)
+        M = int(np.ceil(array.shape[axInd] / float(axSize)))
+        arShape = list(array.shape)
+        arShape[axInd] = M
+        newarray = np.zeros(tuple(arShape), dtype=generalizedDtype(array.dtype))
+        for st in range(axSize):
+            addition = sliceAlongAxis(array, slice(st, None, axSize), axInd)
+            oldArrayPart = sliceAlongAxis(newarray, slice(None, addition.shape[axInd]), axInd)
+            oldArrayPart += addition
+        array = newarray
+    return array
 
 
 def partialCorrelation(x, y, z,
@@ -531,31 +531,31 @@ def arrayInArray(array, filterarray, chunkSize="auto", assumeUnique=False):
 
     mask = np.zeros(len(array), 'bool')
     N = len(array)
-    chunks = range(0, N, chunkSize) + [N]
-    bins = zip(chunks[:-1], chunks[1:])
+    chunks = list(range(0, N, chunkSize)) + [N]
+    bins = list(zip(chunks[:-1], chunks[1:]))
     for start, end in bins:
         mask[start:end] = _arrayInArray(np.asarray(array[start:end]), filterarray)
     return mask
 
 
 def _testArayInArray():
-    print "--- Testing arrayInArray"
+    print("--- Testing arrayInArray")
     a = np.random.randint(0, 1000000, 10000000)
     b = np.random.randint(0, 1000000, 500000)
     arrayInArray(a, b)
     import time
     tt = time.time()
     res1 = arrayInArray(a, b)
-    print "optimized way: ", time.time() - tt
+    print("optimized way: ", time.time() - tt)
     tt = time.time()
     res2 = _arrayInArray(a, b)
-    print "standard way: ", time.time() - tt
+    print("standard way: ", time.time() - tt)
     tt = time.time()
     res3 = np.in1d(a, b)
-    print "np way: ", time.time() - tt
+    print("np way: ", time.time() - tt)
     assert (res1 != res2).sum() == 0
     assert (res1 != res3).sum() == 0
-    print "arrayInArray test finished successfully "
+    print("arrayInArray test finished successfully ")
 
 
 def arraySumByArray(array, filterarray, meanarray, chunkSize="auto"):
@@ -571,9 +571,9 @@ def arraySumByArray(array, filterarray, meanarray, chunkSize="auto"):
             chunkSize = 9999999999
 
     if chunkSize < len(array) / 2.5:
-        bins = range(0, len(array), chunkSize) + [len(array)]
+        bins = list(range(0, len(array), chunkSize)) + [len(array)]
         toreturn = np.zeros(len(filterarray), meanarray.dtype)
-        for i in xrange(len(bins) - 1):
+        for i in range(len(bins) - 1):
             toreturn += _arraySumByArray(array[bins[i]:bins[i + 1]],
                                          filterarray,
                                          meanarray[bins[i]:bins[i + 1]])
@@ -583,7 +583,7 @@ def arraySumByArray(array, filterarray, meanarray, chunkSize="auto"):
 
 
 def _testArraySumByArray():
-    print "---testing arraySumByArray"
+    print("---testing arraySumByArray")
     a = np.random.randint(0, 1000000, 30000000)
     b = np.random.randint(0, 1000000, 500000)
     c = np.random.random(30000000)
@@ -592,9 +592,9 @@ def _testArraySumByArray():
     r2 = arraySumByArray(a, b, c)
 
     dif = (r1 - r2).sum()
-    print "Difference is {0}, should be less than 1e-10".format(dif)
+    print("Difference is {0}, should be less than 1e-10".format(dif))
     assert dif < 1e-10
-    print "   Test finished correctly"
+    print("   Test finished correctly")
 
 # _testArraySumByArray()
 
@@ -641,9 +641,9 @@ def sumByArray(array, filterarray, dtype="int64", chunkSize="auto"):
             chunkSize = min(len(filterarray) * M, 10000000)
 
     if chunkSize < 0.5 * len(array):
-        bins = range(0, len(array), chunkSize) + [len(array)]
+        bins = list(range(0, len(array), chunkSize)) + [len(array)]
         toreturn = np.zeros(len(filterarray), dtype)
-        for i in xrange(len(bins) - 1):
+        for i in range(len(bins) - 1):
             toreturn += _sumByArray(
                 array[bins[i]:bins[i + 1]], filterarray, dtype)
         return toreturn
@@ -657,19 +657,19 @@ def sumByArray(array, filterarray, dtype="int64", chunkSize="auto"):
 def chunkedBincount(x, weights=None, minlength=None, chunkSize=100000000):
     """np.bincount on an hdf5 array"""
     if minlength == None:
-        print "minlength has to be set for chunked bincount"
-    bins = range(0, len(x), chunkSize) + [len(x)]
-    bins = zip(bins[:-1], bins[1:])
+        print("minlength has to be set for chunked bincount")
+    bins = list(range(0, len(x), chunkSize)) + [len(x)]
+    bins = list(zip(bins[:-1], bins[1:]))
     for st, end in bins:
         if st == 0:
-            if weights == None:
+            if weights is None:
                 result = np.bincount(x[st:end], minlength=minlength)
             else:
                 result = np.bincount(x[st:end], weights=weights[st:end], minlength=minlength)
             if len(result) > minlength:
                 raise ValueError("maximum value of a chunk {0} more than minlength {1}".format(len(result), minlength))
         else:
-            if weights == None:
+            if weights is None:
                 addition = np.bincount(x[st:end], minlength=minlength)
             else:
                 addition = np.bincount(x[st:end], weights=weights[st:end], minlength=minlength)
@@ -679,7 +679,7 @@ def chunkedBincount(x, weights=None, minlength=None, chunkSize=100000000):
     return result
 
 def _testChunkedBincount():
-    print "--- Testing chunked bincount"
+    print("--- Testing chunked bincount")
     array = np.random.randint(0, 1000, 1000000)
     weights = np.random.random(1000000)
     a = np.bincount(array, minlength=1000)
@@ -693,13 +693,13 @@ def _testChunkedBincount():
     assert np.allclose(a, b)
     assert np.allclose(a, c)
 
-    print "all values for bincount are correct"
+    print("all values for bincount are correct")
     try:
         chunkedBincount(array, minlength=10, chunkSize=100000)
         raise RuntimeError("Error did not work")
     except ValueError:
-        print "Error reported correctly "
-    print "   chunkedBincount tests finished \n"
+        print("Error reported correctly ")
+    print("   chunkedBincount tests finished \n")
 
 
 def corr2d(x):
@@ -765,6 +765,26 @@ def logbinsnew(a, b, ratio=0, N=0):
     return data10
 
 
+def averageOverBins(bins, function, maxEvaluations=10):
+    """averages a function over bins, evaluating the function no more than maxEvaluations between any two pairs of bins
+
+    """
+    finalBins = []
+    finalValues = []
+    for st, end in zip(bins[:-1], bins[1:]):
+        if end - st < 2 * maxEvaluations:
+            myrange = list(range(st, end))
+        else:
+            myrange = list(range(st, end, (end - st) / maxEvaluations))
+
+        vals = []
+        points = []
+        for i in myrange:
+            points.append(i)
+            vals.append(function(i))
+        finalBins.append(np.mean(points))
+        finalValues.append(np.mean(vals))
+    return finalBins, finalValues
 
 
 
@@ -876,7 +896,7 @@ def removeDiagonals(inArray, m):
     m = 0: main
     m = 1: 3 diagonals, etc.
     """
-    for i in xrange(-m, m + 1):
+    for i in range(-m, m + 1):
         fillDiagonal(inArray, 0, i)
 
 
@@ -903,7 +923,7 @@ def observedOverExpected(matrix):
     return numutils_new.observedOverExpected(matrix)  # @UndefinedVariable
 
 
-def observedOverExpectedWithMask(matrix,mask):
+def observedOverExpectedWithMask(matrix, mask):
     """
     Parameters
     ----------
@@ -923,7 +943,7 @@ def observedOverExpectedWithMask(matrix,mask):
 
     It allows to avoid divergence far from the main diagonal with a very few reads.
     """
-    return numutils_new.observedOverExpectedWithMask(matrix,mask)  # @UndefinedVariable
+    return numutils_new.observedOverExpectedWithMask(matrix, mask)  # @UndefinedVariable
 
 
 
@@ -951,7 +971,7 @@ ultracorrectSymmetricWithVector = \
 
 
 
-def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
+def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",  # @UnusedVariable
                       mask="auto", originalCounts="matrix", maxSmooth=9999, silent=True):
     """This is a super-cool method to smooth a heatmap.
     Smoothes each point into a gaussian, encoumpassing parameter
@@ -1005,7 +1025,7 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",
     for value in values:
         # finding normalization of a discrete gaussian filter
         if not silent:
-            print value
+            print(value)
 
         test = np.zeros((8 * value, 8 * value), dtype=float)
         test[4 * value, 4 * value] = 1
@@ -1052,7 +1072,7 @@ def maskPCA(A, mask):
     M = (A - means).T
     M[bmask] = 0
     covs = np.zeros((len(M), len(M)), float)
-    for i in xrange(len(M)):
+    for i in range(len(M)):
         myvector = M[i]
         mymask = mask[i]
         allmask = mask * mymask[None, :]
@@ -1061,7 +1081,7 @@ def maskPCA(A, mask):
         masksums = allmask.sum(axis=1)
         covs[i] = covsums / masksums
     [latent, coeff] = linalg.eig(covs)
-    print latent[:4]
+    print(latent[:4])
     return coeff
 
 
@@ -1075,7 +1095,7 @@ def PCA(A, numPCs=6, verbose=False):
     covM = np.dot(M, M.T)
     [latent, coeff] = scipy.sparse.linalg.eigsh(covM, numPCs)
     if verbose:
-        print "Eigenvalues are:", latent
+        print("Eigenvalues are:", latent)
     return (np.transpose(coeff[:, ::-1]), latent[::-1])
 
 
@@ -1093,7 +1113,7 @@ def EIG(A, numPCs=3):
     else:
         [latent, coeff] = scipy.sparse.linalg.eigs(M, numPCs)
     alatent = np.argsort(np.abs(latent))
-    print "eigenvalues are:", latent[alatent]
+    print("eigenvalues are:", latent[alatent])
     coeff = coeff[:, alatent]
     return (np.transpose(coeff[:, ::-1]), latent[alatent][::-1])
 
@@ -1146,22 +1166,22 @@ def projectOnEigenvectors(data, N=1, forceSymmetrize=False):
     vectors, values = EIG(data, N)
 
     ndata = meanOfData
-    for i in xrange(N):
+    for i in range(N):
         ndata += values[i] * vectors[i][:, None] * vectors[i][None, :]
     return ndata
 
-projectOnEigenvalues = mirnylib.systemutils.deprecate(
+projectOnEigenvalues = systemutils.deprecate(
     projectOnEigenvectors, "projectOnEigenvalues")
 
 
 def _testProjectOnEigenvectors():
     "for a smoothed matrix last eigenvector is essentially flat"
-    print "---Testing projection on eigenvectors"
+    print("---Testing projection on eigenvectors")
     a = np.random.random((100, 100))
     a = gaussian_filter(a, 3)
     sa = a + a.T
     assert np.max(np.abs((projectOnEigenvectors(sa, 99) - sa))) < 0.00001
-    print "   Test finished successfully!"
+    print("   Test finished successfully!")
 
 
 
@@ -1175,11 +1195,11 @@ def padFragmentList(fragid1, fragid2):
     if len(fragUnique) > 30000:
         warnings.warn(RuntimeWarning("You have more than 30000 unique fragments... thats a lot"))
     if len(fragUnique) > 150000:
-        raise (RuntimeError("You have more than 150000 unique fragments... thats a lot"))
+        raise RuntimeError
     extra1 = fragUnique[:, None] * np.ones(M)[None, :]
     extra2 = fragUnique[None, :] * np.ones(M)[:, None]
-    print extra1
-    print extra2
+    print(extra1)
+    print(extra2)
     mask = extra1 > extra2
     extra1, extra2 = extra1[mask], extra2[mask]
     fragid1 = np.concatenate([fragid1, extra1.flat])
@@ -1214,7 +1234,7 @@ def ultracorrectFragmentList(fragid1, fragid2, maxNum=30, tolerance=1e-5, weight
         fragUnique = np.unique(fragid1)
         fragSum = sumByArray(fragid1, fragUnique)
         fragMask = fragSum > maxNum
-        print "removing low count fragments: {0} out of {1}".format(sum(-fragMask), len(fragMask))
+        print("removing low count fragments: {0} out of {1}".format(sum(-fragMask), len(fragMask)))
         if sum(-fragMask) == 0:
             break
         fragKeep = fragUnique[fragMask]
@@ -1230,12 +1250,12 @@ def ultracorrectFragmentList(fragid1, fragid2, maxNum=30, tolerance=1e-5, weight
     m1 = arraySearch(fragUnique, fragid1)
     m2 = arraySearch(fragUnique, fragid2)
     while True:
-        print "IC step",
+        print("IC step")
         fragSum = arraySumByArray(fragid1, fragUnique, weights)
         fragSum /= fragSum.mean()
         weights /= fragSum[m1]
         weights /= fragSum[m2]
-        print fragSum.var(), fragSum.mean()
+        print(fragSum.var(), fragSum.mean())
         if fragSum.var() < tolerance:
             return fragid1, fragid2, weights, counts
 
@@ -1272,21 +1292,21 @@ def correctInPlace(x):
 
 
 
-def ultracorrectAssymetric(x, M="auto", tolerance=1e-6):
+def ultracorrectAssymetric(x, M="auto", tolerance="unused"):  # @UnusedVariable
     "just iterative correction of an assymetric matrix"
     if M == "auto":
         M = 50
     x = np.array(x, float)
     if x.sum() == 0:
         return x
-    print np.mean(x),
+    print(np.mean(x))
     newx = np.array(x)
-    for _ in xrange(M):
+    for _ in range(M):
         correctInPlace(newx)
 
-    print np.mean(newx),
+    print(np.mean(newx), end=' ')
     newx /= (1. * np.mean(newx) / np.mean(x))
-    print np.mean(newx)
+    print(np.mean(newx))
     return newx
 
 def iterativeCorrection(x, M="auto", tolerance=1e-6,
@@ -1305,7 +1325,7 @@ def iterativeCorrection(x, M="auto", tolerance=1e-6,
     if not symmetric:
         if M == "auto":
             M = 50
-        print "Matrix is not symmetric, doing {0} iterations of IC".format(M)
+        print("Matrix is not symmetric, doing {0} iterations of IC".format(M))
         return ultracorrectAssymetric(x, M), 1
     if M == "auto":
         M = None  # default of ultracorrectSymmetricWithVector
@@ -1320,10 +1340,10 @@ def iterativeCorrection(x, M="auto", tolerance=1e-6,
 
 def ultracorrect(*args, **kwargs):
     return iterativeCorrection(*args, **kwargs)[0]
-ultracorrect = mirnylib.systemutils.deprecate(ultracorrect,
+ultracorrect = systemutils.deprecate(ultracorrect,
      message="Please use iterativeCorrection instead of ultracorrect")
 
-ultracorrectBiasReturn = mirnylib.systemutils.deprecate(iterativeCorrection, "ultracorrectBiasReturn")
+ultracorrectBiasReturn = systemutils.deprecate(iterativeCorrection, "ultracorrectBiasReturn")
 
 
 def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumber=10, minimumPercent=.1):
@@ -1356,7 +1376,7 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
 
     hm, bias = iterativeCorrection(hmc, skipDiags=1)
     dmean = np.median(np.diagonal(hm, diagsToRemove))
-    for t in xrange(-diagsToRemove + 1, diagsToRemove):
+    for t in range(-diagsToRemove + 1, diagsToRemove):
         fillDiagonal(hm, dmean, t)
     hm[-mask] = 0
     hm[:, -mask] = 0
@@ -1372,7 +1392,7 @@ def shuffleAlongDiagonal(inMatrix):
     sh = inMatrix.shape
     assert sh[0] == sh[1]
     N = sh[0]
-    for i in xrange(-N + 1, N):
+    for i in range(-N + 1, N):
         diag = np.diagonal(inMatrix, i).copy()
         np.random.shuffle(diag)
         fillDiagonal(inMatrix, diag, i)
@@ -1384,7 +1404,7 @@ def smeerAlongDiagonal(inMatrix):
     sh = inMatrix.shape
     assert sh[0] == sh[1]
     N = sh[0]
-    for i in xrange(-N + 1, N):
+    for i in range(-N + 1, N):
         diag = np.diagonal(inMatrix, i).mean()
         fillDiagonal(inMatrix, diag, i)
     return inMatrix
@@ -1423,18 +1443,6 @@ def create_regions(a):
     a2 = np.nonzero(a[:-1] * (1 - a[1:]))[0]
     return np.transpose(np.array([a1, a2]))
 
-def eigenvalue_function(mat, func=lambda x:x, delta=0.1):
-    """
-    This script can be used to transform eigenvalues of a matrix.
-    It can be used, for example, to cap them using a square root...
-
-    By default, it applies the function from the
-    """
-    lam, eig = np.linalg.eigh(mat)
-    mat = np.dot(np.dot(eig, np.diag(func(lam))), eig.T)
-    fillDiagonal(mat, np.median(mat), 0)
-    return mat
-
 
 
 def _testAdaptiveSmoothing():
@@ -1451,13 +1459,33 @@ def _testAdaptiveSmoothing():
     plt.show()
 
 
+
+
+def __testZoomCoarsegrain():
+
+    a = np.random.random((500,500)) +1
+    asum = a.sum()
+    for s1, s2 in np.random.randint(20,300,(20,2)):
+        rescaled1 = zoomArray(a, (s1, s2), True, order=1)
+        assert rescaled1.shape == (s1, s2)
+
+        assert np.allclose(rescaled1.sum(), asum, rtol=0.1)
+    for i in range(2,10):
+        ar1 = zoomArray(a, (500//i ,500//i), True, order = 1)
+        ar2 = coarsegrain(a, i)
+        print (np.var(ar1), np.var(ar2))
+
+
 def _test():
+    __testZoomCoarsegrain()
+    __testUnique()
     _testChunkedBincount()
     _testArraySumByArray()
     _testArayInArray()
     _testExternalSort()
     _testMatrixUtils()
     _testProjectOnEigenvectors()
+    _testRank()
 
 if __name__ == "__main__":
     _test()

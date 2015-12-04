@@ -12,7 +12,8 @@ These include:
 -removeBorder  - removes border from the plot
 -niceShow  - nicer "plt.show"
 """
-import mirnylib.numutils
+from __future__ import absolute_import, division, print_function, unicode_literals
+from . import numutils
 import matplotlib  # @UnusedImport
 import numpy as np
 # r = os.system('python -c "import matplotlib.pyplot as plt;plt.figure()"')
@@ -23,7 +24,7 @@ import warnings
 import pylab
 import scipy.stats as st
 from mpl_toolkits.mplot3d.axes3d import Axes3D  # @UnresolvedImport
-import numutils
+from . import numutils
 
 try:
     import matplotlib.pyplot as plt
@@ -34,7 +35,7 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 
 
 
-def listToColormap(colorList, cmapName=None):    
+def listToColormap(colorList, cmapName=None):
     colorList = np.array(colorList)
     if colorList.min() < 0:
         raise ValueError("Colors should be 0 to 1, or 0 to 255")
@@ -120,21 +121,19 @@ def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
 
     cdict = cmap._segmentdata
 
-    for key in cdict.keys():
-        print cdict[key]
     step_dict = {}
     # Firt get the list of points where the segments start or end
     for key in ('red', 'green', 'blue'):
-        step_dict[key] = map(lambda x: x[0], cdict[key])
+        step_dict[key] = [x[0] for x in cdict[key]]
 
-    step_list = sum(step_dict.values(), [])
+    step_list = sum(list(step_dict.values()), [])
     array = np.array
     step_list = array(list(set(step_list)))
     # Then compute the LUT, and apply the function to the LUT
     reduced_cmap = lambda step: array(cmap(step)[0:3])
-    old_LUT = array(map(reduced_cmap, mapRange[0] + step_list * (
-        mapRange[1] - mapRange[0])))
-    new_LUT = array(map(function, old_LUT))
+    old_LUT = array(list(map(reduced_cmap, mapRange[0] + step_list * (
+        mapRange[1] - mapRange[0]))))
+    new_LUT = array(list(map(function, old_LUT)))
     # Now try to make a minimal segment definition of the new LUT
     cdict = {}
     for i, key in enumerate(('red', 'green', 'blue')):
@@ -144,7 +143,7 @@ def cmap_map(function=lambda x: x, cmap="jet", mapRange=[0, 1]):
                 this_cdict[step] = new_LUT[j, i]
             elif new_LUT[j, i] != old_LUT[j, i]:
                 this_cdict[step] = new_LUT[j, i]
-        colorvector = map(lambda x: x + (x[1],), this_cdict.items())
+        colorvector = [x + (x[1],) for x in list(this_cdict.items())]
         colorvector.sort()
         cdict[key] = colorvector
     return matplotlib.colors.LinearSegmentedColormap('colormap', cdict, 1024)
@@ -179,7 +178,7 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
     if len(data[0]) != 3:
         data = np.transpose(data)
     if len(data[0]) != 3:
-        print "wrong data!"
+        print("wrong data!")
         return
 
     # determining the 95 percentile distance between particles,
@@ -202,14 +201,14 @@ def showPolymerRasmol(x, y=None, z=None, color="auto", shifts=[0., 0.2, 0.4, 0.6
     # (rasmol color space is -250 to 250, but it  still sets blue to the minimum color it found and red to the maximum).
     if color == "auto":
         colors = np.array([int(
-            (j * 450.) / (len(data))) - 225 for j in xrange(len(data))])
+            (j * 450.) / (len(data))) - 225 for j in range(len(data))])
     else:
         colors = color
 
     # creating spheres along the trajectory
     # for speedup I just create a Nx4 array, where first three columns are coordinates, and fourth is the color
     newData = np.zeros((len(data) * len(shifts) - (len(shifts) - 1), 4))
-    for i in xrange(len(shifts)):
+    for i in range(len(shifts)):
         # filling in the array like 0,5,10,15; then 1,6,11,16; then 2,7,12,17, etc.
         # this is just very fast
         newData[i:-1:len(shifts), :3] = data[:-1] * shifts[i] + \
@@ -242,7 +241,7 @@ def scatter3D(x, y, z, color='b'):
         color -= color.min()
         color /= float(color.max() - color.min())
         if len(set(color)) > 20:
-            for i in xrange(len(x)):
+            for i in range(len(x)):
                 ax.scatter(x[i], y[i], z[i],
                            c=plt.cm.get_cmap("jet")(color[i]))
         else:
@@ -262,7 +261,7 @@ def removeAxes(mode="normal", shift=0, ax=None):
         ax = plt.gca()
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
-    for loc, spine in ax.spines.iteritems():
+    for loc, spine in list(ax.spines.items()):
         if mode == "normal":
             if loc in ['left', 'bottom']:
                 if shift != 0:
@@ -310,7 +309,7 @@ def nicePlot(ax="gca", fs=8, show=True):
         ax = plt.gca()
     matplotlib.rcParams.update({'font.size': fs})
 
-    legend = ax.legend(loc=0, prop={"size": fs + 1})
+    legend = ax.legend(loc=0, prop={"size": fs })
     if legend is not None:
         legend.draw_frame(False)
     removeAxes(shift=0, ax=ax)
@@ -373,7 +372,7 @@ def hilbert_curve(n):
     c = t + t.size * 2
     d = np.flipud(np.rot90(t, -1)) + t.size * 3
     # and stack four tiles into resulting array
-    return np.vstack(map(np.hstack, [[a, b], [d, c]]))
+    return np.vstack(list(map(np.hstack, [[a, b], [d, c]])))
 
 
 def matToImage(matrix, saveto, vmin=None, vmax=None, cmap="jet"):
@@ -391,7 +390,7 @@ def matToImage(matrix, saveto, vmin=None, vmax=None, cmap="jet"):
     matrix -= vmin
 
     matrix /= (vmax - vmin)
-    print matrix.min(), matrix.max()
+    print((matrix.min(), matrix.max()))
     image = cm.get_cmap(cmap)(matrix)[:, :, :3]
     image = np.array(image[:, :, :3] * 255, dtype=np.uint8)
 
@@ -427,7 +426,7 @@ def vectorToHilbert(data, fillEmpty=np.NAN, crop=True,
         a matrix containing hilbert curve representation of the data
 
     """
-    
+
     data = np.asarray(data)
     M = len(data)
 
@@ -456,11 +455,11 @@ def vectorToHilbert(data, fillEmpty=np.NAN, crop=True,
         result = result[:maxy, :maxx]
     if highlight is not None:
         indMask = np.zeros((N, N), np.int) - 10 * M
-        indMask[x, y] = range(len(x))
+        indMask[x, y] = list(range(len(x)))
         diffx = indMask[1:, :] - indMask[:-1, :]
         diffy = indMask[:, 1:] - indMask[:, :-1]
         diffx, diffy = np.abs(diffx), np.abs(diffy)
-        print diffx
+        print(diffx)
         choosex = (diffx > highlight) * (diffx < M)
         choosey = (diffy > highlight) * (diffy < M)
         if highlightAx == "gca":
@@ -474,7 +473,7 @@ def vectorToHilbert(data, fillEmpty=np.NAN, crop=True,
     return result
 
 def exampleHilbert():
-    mat = vectorToHilbert(range(257), crop=True, highlight=3)
+    mat = vectorToHilbert(list(range(257)), crop=True, highlight=3)
     plt.imshow(mat, interpolation="none")  # important to show boundaries
     plt.show()
 
@@ -483,7 +482,6 @@ def dotSizeScatter(x, y, weights=None,
                    sizes=None,
                    maxSize=50, useColor=True,
                    useSize=True, percentiles=(1, 99),
-                   sizeFunction=np.sqrt,
                    ** kwargs):
     """
     Plots scatter of points, showing repeated points by size of the scatter dot.
@@ -704,7 +702,7 @@ def plot_matrix_3d(matrix, **kwargs):
         ax.contourf3D(X, Y, matrix, num_contours,
                       cmap=pylab.cm.get_cmap("jet"))
     else:
-        raise StandardError('Unknown plot type: %s' % (plot_type,))
+        raise Exception('Unknown plot type: %s' % (plot_type,))
 
     ax.set_xlabel(kwargs.get('xlabel', ''))
     ax.set_ylabel(kwargs.get('ylabel', ''))
@@ -736,11 +734,11 @@ def plot_matrix(matrix, **kwargs):
     clip_max = kwargs.pop('clip_max', np.inf)
 
     if 'ticklabels1' in kwargs:
-        plt.yticks(range(matrix.shape[0]))
+        plt.yticks(list(range(matrix.shape[0])))
         plt.gca().set_yticklabels(kwargs.pop('ticklabels1'))
 
     if 'ticklabels2' in kwargs:
-        plt.xticks(range(matrix.shape[1]))
+        plt.xticks(list(range(matrix.shape[1])))
         plt.gca().set_xticklabels(kwargs.pop('ticklabels2'))
 
     plt.imshow(
@@ -941,7 +939,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     http://www.scipy.org/Cookbook/Matplotlib/BarCharts
     """
     if hasattr(y, 'keys') and hasattr(y, 'values'):
-        items = list(y.iteritems())
+        items = list(y.items())
         items.sort(key=lambda x: x[0])
         labels = [i[0] for i in items]
         y = [i[1] for i in items]
@@ -951,7 +949,7 @@ def bar_chart(y, labels=None, yerr=None, **kwargs):
     rotate_labels = kwargs.get('rotate_labels', True)
 
     width = kwargs.pop('width', 0.4)
-    xlocs = np.array(range(len(y))) + 0.5
+    xlocs = np.array(list(range(len(y)))) + 0.5
     ecolor = kwargs.pop('ecolor', 'k')
     elinewidth = kwargs.pop('elinewidth', 1.0)
     plt.bar(xlocs, y, yerr=yerr, width=width, ecolor=ecolor,
@@ -971,8 +969,8 @@ def printlogo(pwm, filename, alphabet="ACGT", mode="pdf"):
     translate = np.array([myAlphabet[i] for i in alphabet])
     pwm = pwm[:, translate]
     "Prints logo from nucleotides as a pdf"
-    import cPickle
-    cPickle.dump(pwm, open(filename + ".pkl", 'wb'), -1)
+    import pickle
+    pickle.dump(pwm, open(filename + ".pkl", 'wb'), -1)
     import weblogolib as wl  # @UnresolvedImport
     PWMdata = np.array(pwm)
     data = wl.LogoData.from_counts(wl.std_alphabets["dna"], PWMdata)

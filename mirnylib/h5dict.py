@@ -8,8 +8,9 @@ h5dict - HDF5-based persistent dict
 ===================================
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
-import cPickle
+import pickle
 import tempfile
 import os
 import collections
@@ -55,11 +56,6 @@ class h5dict(collections.MutableMapping):
             self.__self_load__()
             self.autoflush = False
             self.is_tmp = False  # In-memory h5dict doesn't have any tmp files.
-            if path:
-                if os.path.exists(path):
-                    tmpH5dict = h5dict(path, mode='r')
-                    self.update(tmpH5dict)
-                    del tmpH5dict
 
         else:
             if path is None:
@@ -79,23 +75,23 @@ class h5dict(collections.MutableMapping):
             try:
                 self._h5file = h5py.File(self.path, mode)
             except Exception as inst:
-                print ('The file {0} is damaged or is used by other h5dict object.').format(self.path)
+                print(('The file {0} is damaged or is used by other h5dict object.').format(self.path))
                 raise inst
 
             self.__self_load__()
             self.autoflush = autoflush
 
     def __self_dump__(self):
-        if self.self_key in self._h5file.keys():
+        if self.self_key in list(self._h5file.keys()):
             self._h5file.__delitem__(self.self_key)
 
         data = {'_types': self._types, '_dtypes': self._dtypes}
-        dsetData = cPickle.dumps(data, protocol=0)
+        dsetData = pickle.dumps(data, protocol=0)
         self._h5file.create_dataset(name=self.self_key, data=dsetData)
 
     def __self_load__(self):
-        if self.self_key in self._h5file.keys():
-            data = cPickle.loads(self._h5file[self.self_key].value)
+        if self.self_key in list(self._h5file.keys()):
+            data = pickle.loads(self._h5file[self.self_key].value)
             self._types = data['_types']
             self._dtypes = data['_dtypes']
         else:
@@ -112,19 +108,23 @@ class h5dict(collections.MutableMapping):
         return [i for i in self._h5file if i != self.self_key].__iter__()
 
     def __len__(self):
-        return len(self.keys() - 1)
+        return len(list(self.keys()) - 1)
 
     def keys(self):
-        return [i for i in self._h5file.keys() if i != self.self_key]
+        return [i for i in list(self._h5file.keys()) if i != self.self_key]
 
     def __getitem__(self, key):
-        if key not in self.keys():
+
+        if key not in list(self._h5file.keys()):
+
             raise KeyError('\'%s\' is not in the keys' % key)
 
+
         value = self._h5file[key].value
+
         # If it is a single string, then it is a pickled object.
-        if isinstance(value, str):
-            value = cPickle.loads(value)
+        if "pickle" in self._h5file[key].attrs:
+            value = pickle.loads(value)
 
         return value
 
@@ -144,9 +144,9 @@ class h5dict(collections.MutableMapping):
             raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if key == self.self_key:
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
-        if not isinstance(key, str) and not isinstance(key, unicode):
+        if not isinstance(key, str) and not isinstance(key, str):
             raise Exception('h5dict only accepts string keys')
-        if key in self.keys():
+        if key in list(self.keys()):
             self.__delitem__(key)
 
         if issubclass(value.__class__, np.ndarray):
@@ -156,8 +156,9 @@ class h5dict(collections.MutableMapping):
             self._types[key] = type(value)
             self._dtypes[key] = value.dtype
         else:
-            self._h5file.create_dataset(name=key,
-                                        data=cPickle.dumps(value, protocol=0))
+            self._h5file.create_dataset(name=key,data=np.array(pickle.dumps(value, protocol=-1)))
+
+            self._h5file[key].attrs["pickle"] = True
             self._types[key] = type(value)
             self._dtypes[key] = None
 
@@ -213,7 +214,7 @@ class h5dict(collections.MutableMapping):
         self._h5file.flush()
 
     def array_keys(self):
-        return [i for i in self._h5file.keys()
+        return [i for i in list(self._h5file.keys())
                 if i != self.self_key and
                 issubclass(self._types[i], np.ndarray)]
 
@@ -225,9 +226,9 @@ class h5dict(collections.MutableMapping):
             raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if key == self.self_key:
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
-        if not isinstance(key, str) and not isinstance(key, unicode):
+        if not isinstance(key, str) and not isinstance(key, str):
             raise Exception('h5dict only accepts string keys')
-        if key in self.keys():
+        if key in list(self.keys()):
             self.__delitem__(key)
 
         self._h5file.create_dataset(name=key, shape=shape, dtype=dtype,
@@ -239,3 +240,4 @@ class h5dict(collections.MutableMapping):
             self._h5file.flush()
 
         return self.get_dataset(key)
+
