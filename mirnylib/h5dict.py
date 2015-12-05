@@ -247,8 +247,6 @@ class h5dict(collections.MutableMapping):
             raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if key == self.self_key:
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
-        if not isinstance(key, str) and not isinstance(key, str):
-            raise Exception('h5dict only accepts string keys')
         if key in list(self.keys()):
             self.__delitem__(key)
 

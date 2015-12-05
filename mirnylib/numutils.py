@@ -9,7 +9,7 @@ from scipy.stats.stats import pearsonr
 from . import systemutils
 from .numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
 from .numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
-from .numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
+#from .numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
 from .numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
 from scipy.ndimage.filters import  gaussian_filter
 na = np.array
@@ -26,7 +26,7 @@ from . import numutils_new
 
 #----------Importing cytonised functions----------
 
-fasterBooleanIndexing, fakeCisImpl
+fasterBooleanIndexing
 
 
 def generalizedDtype(inObject):
