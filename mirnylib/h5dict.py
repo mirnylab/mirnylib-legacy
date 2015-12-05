@@ -133,7 +133,7 @@ class h5dict(collections.MutableMapping):
         # If it is a single string, then it is a pickled object.
         if "pickle" in self._h5file[key].attrs:
             value = pickle.loads(value)
-        elif (self._h5file[key].shape == () ) and (self._h5file[key].dtype.kind == "S"):  # old convension
+        elif (self._h5file[key].shape == () ) and (self._h5file[key].dtype.kind in ["S", "O"]):  # old convension
             value = pickle.loads(value)
 
         return value
