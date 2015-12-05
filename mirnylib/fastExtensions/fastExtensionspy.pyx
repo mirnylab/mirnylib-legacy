@@ -22,6 +22,8 @@ ctypedef fused real:
 
 cdef extern from "fastExtensions.h":
     cdef T openmmSum[T](T* a, T* b)
+
+
     
 cdef extern from "fastExtensions.h":
     void  readWigFileCpp(char* filename, double* data, int chromCount,
@@ -35,6 +37,9 @@ cdef extern from "fastExtensions.h":
 def openmmArraySum(real[:] a):
     return openmmSum(&a[0], &a[a.shape[0]-1]) 
                             
+
+def coverageSum(real[:] a, int N):
+    return openmmCoverageSum(&a[0], &a[N* N], &a[N * (N+1)], N)
 
                            
 def readWigFile(char* filename, double [:] data, int chromCount,

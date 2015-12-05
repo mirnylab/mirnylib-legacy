@@ -20,6 +20,12 @@ import h5py
 
 log = logging.getLogger(__name__)
 
+def merge_two_dicts(x, y):
+    '''Given two dicts, merge them into a new dict as a shallow copy.'''
+    z = x.copy()
+    z.update(y)
+    return z
+
 
 class h5dict(collections.MutableMapping):
     self_key = '_self_key'
@@ -45,6 +51,7 @@ class h5dict(collections.MutableMapping):
             supplied location.
         '''
         self.read_only = (mode == 'r')
+        self.newDsetArgDict = {"compression":"lzf"}
 
         if in_memory:
             tmpfile = tempfile.NamedTemporaryFile()
@@ -80,6 +87,7 @@ class h5dict(collections.MutableMapping):
 
             self.__self_load__()
             self.autoflush = autoflush
+
 
     def __self_dump__(self):
         if self.self_key in list(self._h5file.keys()):
@@ -125,6 +133,8 @@ class h5dict(collections.MutableMapping):
         # If it is a single string, then it is a pickled object.
         if "pickle" in self._h5file[key].attrs:
             value = pickle.loads(value)
+        elif (self._h5file[key].shape == () ) and (self._h5file[key].dtype.kind == "S"):  # old convension
+            value = pickle.loads(value)
 
         return value
 
@@ -151,8 +161,9 @@ class h5dict(collections.MutableMapping):
 
         if issubclass(value.__class__, np.ndarray):
             self._h5file.create_dataset(name=key, data=value,
-                                        compression='lzf',
-                                        chunks=True)
+                                        chunks=True,
+                                        **self.newDsetArgDict
+                                        )
             self._types[key] = type(value)
             self._dtypes[key] = value.dtype
         else:
@@ -167,6 +178,7 @@ class h5dict(collections.MutableMapping):
         if self.autoflush:
             self._h5file.flush()
 
+
     def value_type(self, key):
         return self._types[key]
 
@@ -178,6 +190,17 @@ class h5dict(collections.MutableMapping):
         self._h5file.close()
         if self.is_tmp:
             os.remove(self.path)
+
+    def setCompression(self, mode="gzip", compression_opts=None):
+        """
+        Use this to set gzip compression (or any others if available).
+        Default is use gzip -4; but if you want higher compression, set compression_opts to higher values (6-7).
+        """
+
+        self.newDsetArgDict["compression"] = mode
+        if compression_opts is not None:
+            self.newDsetArgDict["compression_opts"] = compression_opts
+
 
     def pop(self, key):
         value = self.__getitem__(key)
@@ -221,7 +244,7 @@ class h5dict(collections.MutableMapping):
     def get_dataset(self, key):
         return self._h5file[key]
 
-    def add_empty_dataset(self, key, shape, dtype):
+    def add_empty_dataset(self, key, shape, dtype, **kwargs):
         if self.read_only:
             raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if key == self.self_key:
@@ -231,9 +254,9 @@ class h5dict(collections.MutableMapping):
         if key in list(self.keys()):
             self.__delitem__(key)
 
+
         self._h5file.create_dataset(name=key, shape=shape, dtype=dtype,
-                                    compression='lzf',
-                                    chunks=True)
+                                    chunks=True, **merge_two_dicts(kwargs, self.newDsetArgDict))
         self._types[key] = np.ndarray
         self._dtypes[key] = dtype
         if self.autoflush:

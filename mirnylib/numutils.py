@@ -1346,7 +1346,7 @@ ultracorrect = systemutils.deprecate(ultracorrect,
 ultracorrectBiasReturn = systemutils.deprecate(iterativeCorrection, "ultracorrectBiasReturn")
 
 
-def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumber=10, minimumPercent=.1):
+def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumber=10, minimumPercent=.1, returnBiasMask=False):
     """Makes a safe iterative correction
     (i.e. with removing low-coverage regions and diagonals)
     for a symmetric heatmap
@@ -1372,6 +1372,10 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
     hmc[-mask] = 0
     hmc[:, -mask] = 0
     if hmc.sum() == 0:
+        if returnBias:
+            return np.zeros_like(hm), np.zeros(len(hm))
+        if returnBiasMask:
+            return np.zeros_like(hm), np.zeros(len(hm)), np.zeros(len(hm))
         return np.zeros_like(hm)
 
     hm, bias = iterativeCorrection(hmc, skipDiags=1)
@@ -1383,6 +1387,8 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
 
     if returnBias:
         return hm, bias
+    if returnBiasMask:
+        return hm, bias, mask
     return hm
 
 

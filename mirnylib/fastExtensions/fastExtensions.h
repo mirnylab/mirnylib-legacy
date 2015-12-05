@@ -20,5 +20,6 @@ TYPE openmmSum(TYPE* a, TYPE* b)
 };
 
 
+
                           
 #endif
