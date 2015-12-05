@@ -56,6 +56,32 @@ ctypedef fused my_type:
     uchar
     
 
+
+@cython.boundscheck(False)
+@cython.nonecheck(False)
+@cython.wraparound(False)                                
+def fakeCisImpl(np.ndarray[np.double_t, ndim = 2] data, np.ndarray[np.int64_t,ndim = 2] mask):
+    cdef int N
+    N = len(data) 
+    cdef int i,j,r,s
+    for i in range(N):
+        for j in range(i,N):
+            if mask[i,j] == 1:
+                while True:
+                    r = c_libc_random() % 2                    
+                    if (r == 0):
+                        s = c_libc_random() % N 
+                        if mask[i,s] == 0:
+                            data[i,j] = data[i,s]
+                            data[j,i] = data[i,s]
+                            break
+                    else:
+                        s = c_libc_random() % N
+                        if mask[j,s] == 0:
+                            data[i,j] = data[j,s]
+                            data[j,i] = data[j,s]
+
+
 def logbins(a, b, pace, N_in=0):
     "create log-spaced bins"
     a = int(a)
