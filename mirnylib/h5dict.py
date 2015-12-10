@@ -241,7 +241,6 @@ class h5dict(collections.MutableMapping):
 
     def get_dataset(self, key):
         dataset = self._h5file[str(key)]
-        print(dataset)
         return dataset
 
     def add_empty_dataset(self, key, shape, dtype, **kwargs):
