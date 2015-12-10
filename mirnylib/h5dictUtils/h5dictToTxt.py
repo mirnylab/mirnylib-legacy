@@ -45,7 +45,7 @@ import numpy
 def convertFile(filename, folder, gz=True):
 
     if not os.path.exists(filename):
-        print "Filename does not exist", filename
+        print(("Filename does not exist", filename))
         raise IOError("File not found: %s" % filename)
     if os.path.isfile(folder):
         raise IOError("Supplied folder is a file! ")
@@ -53,11 +53,11 @@ def convertFile(filename, folder, gz=True):
         os.mkdir(folder)
 
     mydict = h5dict(filename, 'r')
-    for i in mydict.keys():
+    for i in list(mydict.keys()):
         data = mydict[i]
         savefile = os.path.join(folder, i)
         if issubclass(type(data), numpy.ndarray):
-            print "saving numpy array", i, "to", savefile
+            print(("saving numpy array", i, "to", savefile))
             if len(data.shape) > 0:
                 if gz:
                     savefile = savefile + ".gz"
@@ -71,21 +71,21 @@ def convertFile(filename, folder, gz=True):
             datarepr = data
         else:
             datarepr = repr(data)
-        print "saving data", i, "to", savefile
+        print(("saving data", i, "to", savefile))
         with open(savefile, 'w') as f:
             f.write(datarepr)
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print "Usage : python h5dictToTxt.py in_h5dict_file out_folder"
-        print
-        print "Converts h5dict file to a bunch of txt files"
-        print 'Each key of the array is converted to a separate file'
-        print "Numpy.arrays are converted to a matlab-loadable txt files"
-        print "Other keys are converted using python's repr command"
-        print "Usage: python h5dictToTxt h5dictFile folderName"
-        print "Folder will be created if not exists"
+        print("Usage : python h5dictToTxt.py in_h5dict_file out_folder")
+        print()
+        print("Converts h5dict file to a bunch of txt files")
+        print('Each key of the array is converted to a separate file')
+        print("Numpy.arrays are converted to a matlab-loadable txt files")
+        print("Other keys are converted using python's repr command")
+        print("Usage: python h5dictToTxt h5dictFile folderName")
+        print("Folder will be created if not exists")
         exit()
 
     convertFile(sys.argv[1], sys.argv[2])

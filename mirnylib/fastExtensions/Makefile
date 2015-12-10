@@ -11,5 +11,5 @@ debug:
 	g++  -g -O0 --debug -shared  -o fastExtensionspy.so  fastExtensionspy.o fastExtensions.o `python-config --libs` 
 
 clean:
-	rm -f mycodepy.cpp *.o *.so
+	rm -f fastExtensionspy.cpp *.o *.so
 

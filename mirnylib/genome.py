@@ -115,7 +115,7 @@ class Genome(object):
 
             self.cntrStarts = numpy.zeros(self.chrmCount, int)
             self.cntrEnds = numpy.zeros(self.chrmCount, int)
-            for label, (i, j) in centromere_positions.items():
+            for label, (i, j) in list(centromere_positions.items()):
                 chrm_idx = self.label2idx[label]
                 self.cntrStarts[chrm_idx] = min(i, j)
                 self.cntrEnds[chrm_idx] = max(i, j)

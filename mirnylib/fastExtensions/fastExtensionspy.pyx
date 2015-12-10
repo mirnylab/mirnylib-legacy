@@ -38,10 +38,7 @@ def openmmArraySum(real[:] a):
     return openmmSum(&a[0], &a[a.shape[0]-1]) 
                             
 
-def coverageSum(real[:] a, int N):
-    return openmmCoverageSum(&a[0], &a[N* N], &a[N * (N+1)], N)
 
-                           
 def readWigFile(char* filename, double [:] data, int chromCount,
                             bool useX, bool useY, bool useM,
                             int Xnum, int Ynum, int Mnum, int Mkb, int resolution):

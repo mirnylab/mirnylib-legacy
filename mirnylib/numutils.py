@@ -405,13 +405,30 @@ def trimZeros(x):
 
 
 def zoomArray(inArray, finalShape, sameSum=False, order=1):
-    assert len(inArray.shape) == 2
     inArray = np.asarray(inArray, dtype = np.double)
-    curshape = inArray.shape
-    multipliers = np.array(finalShape) / np.array(curshape) + 0.0000001
-    rescaled = zoom(inArray, multipliers, order = order, prefilter=False)
+    inShape = inArray.shape
+    assert len(inShape) == len(finalShape)
+    mults = []
+    for i in range(len(inShape)):
+        if finalShape[i] < inShape[i]:
+            mults.append(int(np.ceil(np.array(inShape)[i]//np.array(finalShape)[i])))
+        else:
+            mults.append(1)
+    targetShape = tuple([i * j for i,j in zip(finalShape, mults)])
+
+    zoomMultipliers = np.array(targetShape) / np.array(inShape) + 0.0000001
+    rescaled = zoom(inArray, zoomMultipliers, order = order, prefilter=False)
+
+    for ind, i in enumerate(mults):
+        if i != 1:
+            sh= list(rescaled.shape)
+            newshape = sh[:ind] + [sh[ind] / i, i] + sh[ind+1:]
+            rescaled.shape = newshape
+            rescaled = np.mean(rescaled, axis = ind+1)
+    assert rescaled.shape == finalShape
+
     if sameSum:
-        extraSize = np.prod(finalShape) / np.prod(curshape)
+        extraSize = np.prod(finalShape) / np.prod(inShape)
         rescaled /= extraSize
     return  rescaled
 
@@ -425,6 +442,7 @@ def sliceAlongAxis(array, myslice, axis):
     sliceArray = [slice(None) for _ in array.shape]
     sliceArray[axis] = myslice
     return array[tuple(sliceArray)]
+
 
 
 def coarsegrain(array, size, extendEdge=False):
@@ -1471,7 +1489,7 @@ def __testZoomCoarsegrain():
 
     a = np.random.random((500,500)) +1
     asum = a.sum()
-    for s1, s2 in np.random.randint(20,300,(20,2)):
+    for s1, s2 in np.random.randint(20,800,(20,2)):
         rescaled1 = zoomArray(a, (s1, s2), True, order=1)
         assert rescaled1.shape == (s1, s2)
 

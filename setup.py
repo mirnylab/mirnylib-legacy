@@ -12,7 +12,18 @@ try:
             language = "c++",
                   include_dirs=[numpy.get_include()]),
     ]
+    ext_modules += [
+        Extension("mirnylib.fastExtensions", [ "mirnylib/fastExtensions/fastExtensionspy.pyx", "mirnylib/fastExtensions/fastExtensions.cpp"  ],
+            language = "c++",
+             include_dirs=[numpy.get_include()], 
+             extra_compile_args = ["-march=native" , "-Ofast", "-fopenmp"],
+             extra_link_args = ["-march=native" , "-Ofast", "-lgomp"]),
+    ]
+
+
     cmdclass.update( {'build_ext': build_ext} )
+
+
 except ImportError:
     if not os.path.isfile('mirnylib/numutils_new.c'):
         raise RuntimeError("Cython is required to build extension modules for mirnylib.")
