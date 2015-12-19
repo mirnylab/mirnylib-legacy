@@ -404,25 +404,27 @@ def trimZeros(x):
 
 
 
-def zoomArray(inArray, finalShape, sameSum=False, order=1):
+def zoomArray(inArray, finalShape, sameSum=False, **zoomKwargs):
     inArray = np.asarray(inArray, dtype = np.double)
     inShape = inArray.shape
     assert len(inShape) == len(finalShape)
     mults = []
     for i in range(len(inShape)):
         if finalShape[i] < inShape[i]:
-            mults.append(int(np.ceil(np.array(inShape)[i]//np.array(finalShape)[i])))
+            mults.append(int(np.ceil(inShape[i]/finalShape[i])))
         else:
             mults.append(1)
-    targetShape = tuple([i * j for i,j in zip(finalShape, mults)])
+    tempShape = tuple([i * j for i,j in zip(finalShape, mults)])
 
-    zoomMultipliers = np.array(targetShape) / np.array(inShape) + 0.0000001
-    rescaled = zoom(inArray, zoomMultipliers, order = order, prefilter=False)
+    zoomMultipliers = np.array(tempShape) / np.array(inShape) + 0.0000001
+    assert zoomMultipliers.min() >= 1
+    rescaled = zoom(inArray, zoomMultipliers, **zoomKwargs)
 
-    for ind, i in enumerate(mults):
-        if i != 1:
-            sh= list(rescaled.shape)
-            newshape = sh[:ind] + [sh[ind] / i, i] + sh[ind+1:]
+    for ind, mult in enumerate(mults):
+        if mult != 1:
+            sh = list(rescaled.shape)
+            assert sh[ind] % mult == 0
+            newshape = sh[:ind] + [sh[ind] / mult, mult] + sh[ind+1:]
             rescaled.shape = newshape
             rescaled = np.mean(rescaled, axis = ind+1)
     assert rescaled.shape == finalShape
@@ -430,7 +432,7 @@ def zoomArray(inArray, finalShape, sameSum=False, order=1):
     if sameSum:
         extraSize = np.prod(finalShape) / np.prod(inShape)
         rescaled /= extraSize
-    return  rescaled
+    return rescaled
 
 zoomOut = systemutils.deprecate(
     zoomArray, "zoomOut")  # backwards compatibility
@@ -635,7 +637,7 @@ def _sumByArray(array, filterarray, dtype="int64"):
     return c
 
 
-def sumByArray(array, filterarray, dtype="int64", chunkSize="auto"):
+def sumByArray(array, filterarray, dtype="int64", chunkSize=None):
     """faster [sum(array == i) for i in filterarray]
     Current method is a wrapper that
     optimizes this method for speed and memory efficiency.
@@ -652,11 +654,9 @@ def sumByArray(array, filterarray, dtype="int64", chunkSize="auto"):
     else:
         filterarray = np.asarray(filterarray, dtype=arDtype)
 
-
-    if chunkSize == "auto":
-        if (len(array) / len(filterarray) > 2) and (len(array) > 20000000):
-            M = len(array) / len(filterarray) + 1
-            chunkSize = min(len(filterarray) * M, 10000000)
+    if chunkSize is None:
+        M = len(array) / len(filterarray) + 1
+        chunkSize = min(len(filterarray) * M, 40000000)
 
     if chunkSize < 0.5 * len(array):
         bins = list(range(0, len(array), chunkSize)) + [len(array)]
@@ -1494,10 +1494,12 @@ def __testZoomCoarsegrain():
         assert rescaled1.shape == (s1, s2)
 
         assert np.allclose(rescaled1.sum(), asum, rtol=0.1)
-    for i in range(2,10):
+    for i in [2,4,5,10]:
         ar1 = zoomArray(a, (500//i ,500//i), True, order = 1)
         ar2 = coarsegrain(a, i)
+        assert ar1.shape == ar2.shape
         print (np.var(ar1), np.var(ar2))
+        print (np.mean(ar1), np.mean(ar2))
 
 
 def _test():

@@ -9,6 +9,7 @@ h5dict - HDF5-based persistent dict
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+import six
 import numpy as np
 import pickle
 import tempfile
@@ -94,8 +95,8 @@ class h5dict(collections.MutableMapping):
             self._h5file.__delitem__(self.self_key)
 
         data = {'_types': self._types, '_dtypes': self._dtypes}
-        dsetData = pickle.dumps(data, protocol=0)
-        self._h5file.create_dataset(name=self.self_key, data=dsetData)
+        dsetData = pickle.dumps(data, protocol=-1)
+        self._h5file.create_dataset(name=self.self_key, data=np.array(dsetData))
 
     def __self_load__(self):
         if self.self_key in list(self._h5file.keys()):
@@ -156,6 +157,8 @@ class h5dict(collections.MutableMapping):
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
         if key in list(self.keys()):
             self.__delitem__(key)
+        if issubclass(key, six.string_types):
+            key = str(key)
 
         if issubclass(value.__class__, np.ndarray):
             self._h5file.create_dataset(name=key, data=value,

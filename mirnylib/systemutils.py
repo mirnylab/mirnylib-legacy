@@ -136,7 +136,10 @@ def fmap(f, *a, **kw):
     forkmap.map(..., n=nprocessors), same as map(...).
     n must be a keyword arg; default n is number of physical processors.
     """
-    n = max([kw.get(i, nproc) for i in ['n','N', "nproc", "Nproc", "NProc"]])
+    n = max([kw.get(i, 0) for i in ['n','N', "nproc", "Nproc", "NProc"]])
+    if n == 0:
+        n = nproc
+
     if n == 1:
         return list(map(f, *a))
 
