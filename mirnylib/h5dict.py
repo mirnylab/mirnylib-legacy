@@ -157,7 +157,7 @@ class h5dict(collections.MutableMapping):
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
         if key in list(self.keys()):
             self.__delitem__(key)
-        if issubclass(six.string_types, key):
+        if isinstance(key, six.string_types):
             key = str(key)
 
         if issubclass(value.__class__, np.ndarray):
