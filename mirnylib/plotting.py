@@ -380,7 +380,7 @@ def matToImage(matrix, saveto, vmin=None, vmax=None, cmap="jet"):
     Alternative to imshow, but faster, and actually by-pixel.
     Image type autodetected, but use .png"""
     import matplotlib.cm as cm
-    import Image
+    import PIL.Image as Image
     matrix = np.asarray(matrix, dtype=float)
     if vmin == None:
         vmin = matrix.min()

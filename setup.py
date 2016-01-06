@@ -42,10 +42,8 @@ setup(
     cmdclass=cmdclass,
     install_requires=[
         'biopython',
-        'pysam',
         'joblib>=0.6.3',
         'h5py',
-        'bx-python',
     ],
     dependency_links=[
         'https://bitbucket.org/james_taylor/bx-python/get/tip.tar.bz2'

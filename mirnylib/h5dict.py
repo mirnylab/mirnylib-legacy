@@ -29,7 +29,7 @@ def merge_two_dicts(x, y):
 
 
 class h5dict(collections.MutableMapping):
-    self_key = '_self_key'
+    self_key = str('_self_key')
 
     def __init__(self, path=None, mode='a', autoflush=True, in_memory=False):
         '''A persistent dictionary with data stored in an HDF5 file.
@@ -124,10 +124,12 @@ class h5dict(collections.MutableMapping):
 
     def __getitem__(self, key):
 
+        if isinstance(key, six.string_types):
+            key = str(key)
+
         if key not in list(self._h5file.keys()):
 
             raise KeyError('\'%s\' is not in the keys' % key)
-
 
         value = self._h5file[key].value
 
