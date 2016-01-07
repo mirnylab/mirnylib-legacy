@@ -30,7 +30,7 @@ from math import cos, log, sin, sqrt
 
 #----------Importing cytonised functions----------
 
-fasterBooleanIndexing
+#fasterBooleanIndexing
 
 
 def generalizedDtype(inObject):
