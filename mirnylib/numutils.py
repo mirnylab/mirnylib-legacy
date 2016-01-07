@@ -3,21 +3,25 @@
 # Anton Goloborodko (golobor@mit.edu)
 from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
+import os
 import warnings
 import scipy.ndimage.interpolation
 from scipy.stats.stats import pearsonr
 from . import systemutils
-from .numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
-from .numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
-from .numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
-from .numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
+if os.name != "nt":
+    from .numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
+    from .numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
+    from .numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
+    from .numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
+    from . import numutils_new
+
 from scipy.ndimage.filters import  gaussian_filter
 na = np.array
 import  scipy.sparse.linalg
 import scipy.stats
 from scipy.ndimage.interpolation import zoom
 from math import cos, log, sin, sqrt
-from . import numutils_new
+
 #-----------------------------
 "Mathematical & programming utilities first"
 #-----------------------------
