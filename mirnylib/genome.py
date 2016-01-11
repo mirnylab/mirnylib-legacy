@@ -680,11 +680,23 @@ class Genome(object):
         if hasattr(self, '_mymem'):
             self._mymem.clear()
 
-    def setEnzyme(self, enzymeName):
+    def setEnzyme(self, enzymeName, rsites=None):
         """Apply a specified restriction enzyme to the genomic sequences and
         calculate the positions of restriction sites.
 
+        Parameters
+        ----------
+
+        enzymeName : str
+            The name of the restriction enzyme from Biopython Restriction module.
+
+        rsites : list of np.arrays
+            Use only if your restriction enzyme is not present in Biopython.
+            Contains positions of restriction sites for each chromosome.
+            By default is None and ignored.
+
         The following attributes are set with this method:
+        --------------------------------------------------
 
         enzymeName : str
             The restriction enzyme used to find the restriction sites.
@@ -732,9 +744,29 @@ class Genome(object):
             The indices of restriction fragments delimiting each chromosome.
         """
 
-        self.enzymeName = enzymeName
+        if not (rsites is None):
+            if enzymeName in Bio.Restriction.__dict__:
+                raise Exception('Since you are using a custom restriction '
+                    'enzyme, you cannot use a name of an existing enzyme.')
+            if len(rsites) != self.chrmCount:
+                raise Exception('Please, specify restriction sites for each '
+                                'chromosome.')
 
-        self.rsites, self.rfragMids = self.getRsites(enzymeName)
+            rsites = [np.sort(i) for i in rsites]
+            rfragMids = []
+            for i in range(self.chrmCount):
+                if rsites[i][0] != 0:
+                    rsites[i] = np.hstack([[0], rsites[i]])
+                if rsites[i][-1] != 0:
+                    rsites[i] = np.hstack([rsites[i], len(self.seqs[i].seq)])
+                rfragMids.append((rsites[i][:-1] + rsites[i][1:]) / 2)
+                rsites[i] = rsites[i][1:]
+            self.rsites = rsites
+            self.rfragMids = rfragMids
+        else:
+            self.rsites, self.rfragMids = self.getRsites(enzymeName)
+
+        self.enzymeName = enzymeName
 
         self.rfragLens = [
             numpy.diff(numpy.r_[0, i]) for i in self.rsites]
@@ -761,7 +793,6 @@ class Genome(object):
              for chrm in range(self.chrmCount)])
 
         assert (len(self.rsiteIds) == len(self.rfragMidIds))
-
     def hasEnzyme(self):
         return hasattr(self, "enzymeName")
 
