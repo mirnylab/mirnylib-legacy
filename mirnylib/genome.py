@@ -618,11 +618,19 @@ class Genome(object):
         self.numBins = self.chrmEndsBinCont[-1]
 
         self.chrmIdxBinCont = numpy.zeros(self.numBins, int)
-        for i in range(self.chrmCount):
-            self.chrmIdxBinCont[
-                self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]] = i
-
+        self.binStartPosCont = numpy.zeros(self.numBins, int)
+        self.binEndPosCont = numpy.zeros(self.numBins, int)
         self.posBinCont = numpy.zeros(self.numBins, int)
+        
+        for i in range(self.chrmCount):
+            st = self.chrmStartsBinCont[i]
+            end = self.chrmEndsBinCont[i]
+            self.chrmIdxBinCont[st:end] = i
+            self.binStartPosCont[st:end] = resolution * np.arange(end - st, dtype = int)
+            self.binEndPosCont[st:end-1] = self.binStartPosCont[st+1:end]
+            self.binEndPosCont[end-1] = self.chrmLens[i]
+
+        
         for i in range(self.chrmCount):
             self.posBinCont[
                 self.chrmStartsBinCont[i]:self.chrmEndsBinCont[i]] = (
