@@ -8,17 +8,18 @@ h5dict - HDF5-based persistent dict
 ===================================
 """
 
-from six.moves import cPickle as pickle
-import collections
-import tempfile
-import logging
-import os
-
+from __future__ import absolute_import, division, print_function, unicode_literals
+import six
 import numpy as np
+import pickle
+import tempfile
+import os
+import collections
+import logging
+
 import h5py
 
 log = logging.getLogger(__name__)
-
 
 def merge_two_dicts(x, y):
     '''Given two dicts, merge them into a new dict as a shallow copy.'''
@@ -28,7 +29,7 @@ def merge_two_dicts(x, y):
 
 
 class h5dict(collections.MutableMapping):
-    self_key = '_self_key'
+    self_key = str('_self_key')
 
     def __init__(self, path=None, mode='a', autoflush=True, in_memory=False):
         '''A persistent dictionary with data stored in an HDF5 file.
@@ -63,11 +64,6 @@ class h5dict(collections.MutableMapping):
             self.__self_load__()
             self.autoflush = False
             self.is_tmp = False  # In-memory h5dict doesn't have any tmp files.
-            if path:
-                if os.path.exists(path):
-                    tmpH5dict = h5dict(path, mode='r')
-                    self.update(tmpH5dict)
-                    del tmpH5dict
 
         else:
             if path is None:
@@ -87,7 +83,7 @@ class h5dict(collections.MutableMapping):
             try:
                 self._h5file = h5py.File(self.path, mode)
             except Exception as inst:
-                print ('The file {0} is damaged or is used by other h5dict object.').format(self.path)
+                print(('The file {0} is damaged or is used by other h5dict object.').format(self.path))
                 raise inst
 
             self.__self_load__()
@@ -95,15 +91,15 @@ class h5dict(collections.MutableMapping):
 
 
     def __self_dump__(self):
-        if self.self_key in self._h5file.keys():
+        if self.self_key in list(self._h5file.keys()):
             self._h5file.__delitem__(self.self_key)
 
         data = {'_types': self._types, '_dtypes': self._dtypes}
-        dsetData = pickle.dumps(data, protocol=0)
-        self._h5file.create_dataset(name=self.self_key, data=dsetData)
+        dsetData = pickle.dumps(data, protocol=-1)
+        self._h5file.create_dataset(name=self.self_key, data=np.array(dsetData))
 
     def __self_load__(self):
-        if self.self_key in self._h5file.keys():
+        if self.self_key in list(self._h5file.keys()):
             data = pickle.loads(self._h5file[self.self_key].value)
             self._types = data['_types']
             self._dtypes = data['_dtypes']
@@ -121,18 +117,26 @@ class h5dict(collections.MutableMapping):
         return [i for i in self._h5file if i != self.self_key].__iter__()
 
     def __len__(self):
-        return len(self.keys() - 1)
+        return len(list(self.keys()) - 1)
 
     def keys(self):
-        return [i for i in self._h5file.keys() if i != self.self_key]
+        return [i for i in list(self._h5file.keys()) if i != self.self_key]
 
     def __getitem__(self, key):
-        if key not in self.keys():
+
+        if isinstance(key, six.string_types):
+            key = str(key)
+
+        if key not in list(self._h5file.keys()):
+
             raise KeyError('\'%s\' is not in the keys' % key)
 
         value = self._h5file[key].value
+
         # If it is a single string, then it is a pickled object.
-        if isinstance(value, str):
+        if "pickle" in self._h5file[key].attrs:
+            value = pickle.loads(value)
+        elif (self._h5file[key].shape == () ) and (self._h5file[key].dtype.kind in ["S", "O"]):  # old convension
             value = pickle.loads(value)
 
         return value
@@ -153,10 +157,10 @@ class h5dict(collections.MutableMapping):
             raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if key == self.self_key:
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
-        if not isinstance(key, str) and not isinstance(key, unicode):
-            raise Exception('h5dict only accepts string keys')
-        if key in self.keys():
+        if key in list(self.keys()):
             self.__delitem__(key)
+        if isinstance(key, six.string_types):
+            key = str(key)
 
         if issubclass(value.__class__, np.ndarray):
             self._h5file.create_dataset(name=key, data=value,
@@ -166,8 +170,9 @@ class h5dict(collections.MutableMapping):
             self._types[key] = type(value)
             self._dtypes[key] = value.dtype
         else:
-            self._h5file.create_dataset(name=key,
-                                        data=pickle.dumps(value, protocol=0))
+            self._h5file.create_dataset(name=key,data=np.array(pickle.dumps(value, protocol=-1)))
+
+            self._h5file[key].attrs["pickle"] = True
             self._types[key] = type(value)
             self._dtypes[key] = None
 
@@ -235,29 +240,29 @@ class h5dict(collections.MutableMapping):
         self._h5file.flush()
 
     def array_keys(self):
-        return [i for i in self._h5file.keys()
+        return [i for i in list(self._h5file.keys())
                 if i != self.self_key and
                 issubclass(self._types[i], np.ndarray)]
 
     def get_dataset(self, key):
-        return self._h5file[key]
+        dataset = self._h5file[str(key)]
+        return dataset
 
     def add_empty_dataset(self, key, shape, dtype, **kwargs):
         if self.read_only:
             raise Exception('You cannot modify an h5dict with mode=\'r\'')
         if key == self.self_key:
             raise Exception("'%d' key is reserved by h5dict" % self.self_key)
-        if not isinstance(key, str) and not isinstance(key, unicode):
-            raise Exception('h5dict only accepts string keys')
-        if key in self.keys():
+        if key in list(self.keys()):
             self.__delitem__(key)
 
 
         self._h5file.create_dataset(name=key, shape=shape, dtype=dtype,
-                                    chunks=True, **self.newDsetArgDict)
+                                    chunks=True, **merge_two_dicts(kwargs, self.newDsetArgDict))
         self._types[key] = np.ndarray
         self._dtypes[key] = dtype
         if self.autoflush:
             self._h5file.flush()
 
         return self.get_dataset(key)
+
