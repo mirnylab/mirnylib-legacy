@@ -196,19 +196,6 @@ class Genome(object):
         return chrm_label
 
     def _scanGenomeFolder(self):
-        if not os.path.isdir(self.genomePath):
-            raise Exception('{0} is not a folder'.format(self.genomePath))
-
-        self.fastaNames = [os.path.join(self.genomePath, i)
-                           for i in glob.glob(os.path.join(
-                                              self.genomePath,
-                                              self.chrmFileTemplate % ('*',)))]
-        log.debug('Scan genome folder: {0}'.format(self.genomePath))
-        log.debug('FASTA files are found: {0}'.format(self.fastaNames))
-
-        if len(self.fastaNames) == 0:
-            raise Exception('No Genome files found at %s' % self.genomePath)
-
         # Read chromosome IDs.
         self.chrmLabels = []
         filteredFastaNames = []
@@ -278,6 +265,7 @@ class Genome(object):
         self.fastaNames.sort(
             key=lambda path: self.label2idx[self._extractChrmLabel(path)])
         log.debug('The genome folder is scanned successfully.')
+
 
     def __init__(self,
                  genomePath,
@@ -439,6 +427,11 @@ class Genome(object):
         # Set the main attributes of the class.
         self.genomePath = os.path.abspath(os.path.expanduser(genomePath))
         self.forceOrder = forceOrder
+        self.singleFile = False
+        if os.path.isfile(self.genomePath):
+            self.singleFile = self.genomePath
+            self.genomePath = os.path.dirname(self.genomePath)
+
         if cacheDir == "default":
             cacheDir = self.genomePath
         self.cacheDir = cacheDir
@@ -452,7 +445,22 @@ class Genome(object):
                     self.readChrms, self.gapFile, self.chrmFileTemplate)
 
         # Scan the folder and obtain the list of chromosomes.
-        self._scanGenomeFolder()
+        if not self.singleFile:
+            self.fastaNames = [os.path.join(self.genomePath, i)
+                               for i in glob.glob(os.path.join(
+                                                  self.genomePath,
+                                                  self.chrmFileTemplate % ('*',)))]
+            log.debug('Scan genome folder: {0}'.format(self.genomePath))
+            log.debug('FASTA files are found: {0}'.format(self.fastaNames))
+            self._scanGenomeFolder()
+        else:
+            import pyfaidx
+            with open(self.singleFile, 'r') as f:
+                self.fastaNames = list(rec.name for rec in pyfaidx.Fasta(self.singleFile))
+            self.chrmLabels = self.fastaNames
+            self.chrmCount = len(self.chrmLabels)
+            self.label2idx = dict([(self.chrmLabels[i], i) for i in range(self.chrmCount)])
+            self.idx2label = dict([(i, self.chrmLabels[i]) for i in range(self.chrmCount)])
 
         # Get the lengths of the chromosomes.
         self.chrmLens = self.getChrmLen()
@@ -534,10 +542,20 @@ class Genome(object):
     @property
     def seqs(self):
         if not hasattr(self, "_seqs"):
-            self._seqs = []
-            for i in range(self.chrmCount):
-                self._seqs.append(Bio.SeqIO.read(open(self.fastaNames[i]),
-                                                 'fasta'))
+            if not self.singleFile:
+                self._seqs = []
+                for i in range(self.chrmCount):
+                    self._seqs.append(Bio.SeqIO.read(open(self.fastaNames[i]),
+                                                     'fasta'))
+            else:
+                import pyfaidx
+                fasta_records = pyfaidx.Fasta(self.singleFile)
+                self._seqs = []
+                for name in self.chrmLabels:
+                    # monkey patch to behave like SeqIO object for now
+                    seq = Bio.Seq.Seq(str(fasta_records[name]))
+                    seq.seq = seq
+                    self._seqs.append(seq)
         return self._seqs
 
     def setResolution(self, resolution):
@@ -768,6 +786,8 @@ class Genome(object):
 
         self.enzymeName = enzymeName
 
+        self.rsites, self.rfragMids = self.getRsites(enzymeName)
+
         self.rfragLens = [
             numpy.diff(numpy.r_[0, i]) for i in self.rsites]
         self.chrmEndsRfragCont = numpy.cumsum([len(i) for i in self.rsites])
@@ -793,6 +813,7 @@ class Genome(object):
              for chrm in range(self.chrmCount)])
 
         assert (len(self.rsiteIds) == len(self.rfragMidIds))
+
     def hasEnzyme(self):
         return hasattr(self, "enzymeName")
 
