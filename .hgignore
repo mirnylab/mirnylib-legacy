@@ -3,6 +3,8 @@ syntax: glob
 *~
 *.pyc
 *.pyo
+*.o
+*.so
 
 .DS_Store
 MANIFEST
