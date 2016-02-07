@@ -523,13 +523,20 @@ class Genome(object):
         '''
 
         # Memorized function
-        enzymeSearchFunc = eval('Bio.Restriction.%s.search' % enzymeName)
         rsites = []
         rfragMids = []
+
+        if type(enzymeName) == int:
+            for i in range(self.chrmCount):
+                rsites.append(np.r_[np.arange(0, self.chrmLens[i]-100, enzymeName), self.chrmLens[i]])
+        else:
+            enzymeSearchFunc = eval('Bio.Restriction.%s.search' % enzymeName)
+            for i in range(self.chrmCount):
+                rsites.append(numpy.r_[
+                    0, numpy.array(enzymeSearchFunc(self.seqs[i].seq)) + 1,
+                    len(self.seqs[i].seq)])
+
         for i in range(self.chrmCount):
-            rsites.append(numpy.r_[
-                0, numpy.array(enzymeSearchFunc(self.seqs[i].seq)) + 1,
-                len(self.seqs[i].seq)])
             rfragMids.append((rsites[i][:-1] + rsites[i][1:]) // 2)
 
         # Remove the first trivial restriction site (0)
