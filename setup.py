@@ -23,15 +23,15 @@ if os.name != "nt":
                 'language': 'c++',
                 'include_dirs': [numpy.get_include(), '/usr/local/include'],
                 'library_dirs': ['/usr/local/lib'],
-                'extra_compile_args': ["-march=native" , "-Ofast", "-fopenmp"],
-                'extra_link_args': ["-march=native" , "-Ofast", "-liomp5"],
+                'extra_compile_args': ["-march=native" , "-O3", "-ffast-math", "-fopenmp"],
+                'extra_link_args': ["-march=native" , "-O3", "-ffast-math", "-liomp5"],
             }
         else:
             opts = {
                 'language': 'c++',
                 'include_dirs': [numpy.get_include()],
-                'extra_compile_args': ["-march=native" , "-Ofast", "-fopenmp"],
-                'extra_link_args': ["-march=native" , "-Ofast", "-lgomp"],
+                'extra_compile_args': ["-march=native" , "-O3", "-ffast-math", "-fopenmp"],
+                'extra_link_args': ["-march=native" , "-O3", "-ffast-math", "-lgomp"],
             }
 
         ext_modules += [
