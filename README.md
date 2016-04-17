@@ -9,11 +9,12 @@ Get the latest:
 
 `$ pip install https://bitbucket.org/mirnylab/mirnylib/get/tip.tar.gz`
 
-Or clone the repo and install in development mode:
+Or clone the repo, build extensions, and install in development mode:
 
 ```sh
 $ hg clone https://bitbucket.org/mirnylab/mirnylib
 $ cd mirnylib
+$ python setup.py build_ext --inplace
 $ pip install -e .
 ```
 
@@ -34,11 +35,7 @@ Required:
 - h5py
 - biopython
 - joblib (0.6.3+)
-- bx-python (preferably from the [bitbucket repo](https://bitbucket.org/james_taylor/bx-python/wiki/Home) by james_taylor)
-
-
-### Build dependencies
-
+- bx-python (preferably from the [bitbucket repo](https://bitbucket.org/james_taylor/bx-python/wiki/Home) by james\_taylor)
 - Cython (0.16+) to build Cython extensions from .pyx source (C files no longer provided)
 
 ### Notes
