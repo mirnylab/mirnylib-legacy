@@ -139,11 +139,15 @@ class h5dict(collections.MutableMapping):
                 value = pickle.loads(value)
             except UnicodeDecodeError:
                 value = pickle.loads(value, encoding='bytes')
+            except:
+                raise Exception('Can\'t unpickle!')
         elif (self._h5file[key].shape == () ) and (self._h5file[key].dtype.kind in ["S", "O"]):  # old convension
             try:
                 value = pickle.loads(value)
             except UnicodeDecodeError:
                 value = pickle.loads(value, encoding='bytes')
+            except:
+                raise Exception('Can\'t unpickle!')
                 
 
         return value
