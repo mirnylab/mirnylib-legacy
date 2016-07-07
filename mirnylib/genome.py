@@ -800,9 +800,6 @@ class Genome(object):
             self.rsites, self.rfragMids = self.getRsites(enzymeName)
 
         self.enzymeName = enzymeName
-
-        self.rsites, self.rfragMids = self.getRsites(enzymeName)
-
         self.rfragLens = [
             numpy.diff(numpy.r_[0, i]) for i in self.rsites]
         self.chrmEndsRfragCont = numpy.cumsum([len(i) for i in self.rsites])
