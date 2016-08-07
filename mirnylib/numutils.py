@@ -1142,7 +1142,7 @@ def PCA(A, numPCs=6, verbose=False):
     return (np.transpose(coeff[:, ::-1]), latent[::-1])
 
 
-def EIG(A, numPCs=3):
+def EIG(A, numPCs=3, subtractMean=True, divideByMean=False):
     """Performs mean-centered engenvector expansion
     result[0] is the first EV, etc.;
     by default returns 3 EV
@@ -1150,7 +1150,11 @@ def EIG(A, numPCs=3):
     A = np.array(A, float)
     if np.sum(np.sum(A, axis=0) == 0) > 0 :
         warnings.warn("Columns with zero sum detected. Use zeroEIG instead")
-    M = (A - np.mean(A))  # subtract the mean (along columns)
+    M = np.copy(A)
+    if subtractMean: 
+        M -= np.mean(A)  # subtract the mean (along columns)
+    if divideByMean:
+        M /= np.mean(A)
     if isSymmetric(A):
         [latent, coeff] = scipy.sparse.linalg.eigsh(M, numPCs)
     else:
