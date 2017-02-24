@@ -206,9 +206,9 @@ def _testRank():
 
 
 
-def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
+def externalMergeSort(inDataset, tempDataset, outDataset=None, chunkSize=300000000,
                       sorter=np.sort,
-                      searchsorted=lambda x, y:np.searchsorted(x, y, side="right")):
+                      searchsorted=lambda x, y:np.searchsorted(x, y, side="right"), presortAction = lambda x:x):
     """
     An in-place merge sort to work with persistent numpy-type arrays,
     in particular, h5py datasets.
@@ -219,10 +219,11 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
     It is a two-pass algorithm, meaning that the entire dataset will be
     read and written twice to the HDD. Which is not that bad :)
     """
-
+    if outDataset is None:
+        outDataset = inDataset
     if (len(inDataset) < chunkSize):
         data = np.array(inDataset)
-        inDataset[:] = sorter(data)
+        outDataset[:] = sorter(presortAction(data))
         print("Sorted using default sort", chunkSize, len(inDataset))
         return
     elif chunkSize < 5 * sqrt(len(inDataset)):
@@ -237,7 +238,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
 
     # Initial pre-sorting inDataset - tempDataset
     for start, stop in bins:
-        chunk = inDataset[start:stop]
+        chunk = presortAction(inDataset[start:stop])
         chunk = sorter(chunk)
         tempDataset[start:stop] = chunk
 
@@ -283,7 +284,7 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
 
         positions = limits  # we've merged up to here
         currentMerge = sorter(currentMerge)  # Poor man's merge
-        inDataset[outputPosition:outputPosition + len(currentMerge)
+        outDataset[outputPosition:outputPosition + len(currentMerge)
                   ] = currentMerge  # write sorted merge output here.
         outputPosition += len(currentMerge)
 
@@ -301,6 +302,8 @@ def externalMergeSort(inDataset, tempDataset, chunkSize=300000000,
             maxes.pop(chInd)
 
         if len(currentChunks) == 0:  # If we don't have chunks
+            if outputPosition != N:
+                print(outputPosition, N)
             assert outputPosition == N  # happily exit
             return
 

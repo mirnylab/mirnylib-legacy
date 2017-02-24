@@ -56,7 +56,6 @@ ctypedef fused my_type:
     uchar
 
 
-
 @cython.boundscheck(False)
 @cython.nonecheck(False)
 @cython.wraparound(False)

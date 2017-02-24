@@ -210,7 +210,12 @@ class h5dict(collections.MutableMapping):
         Use this to set gzip compression (or any others if available).
         Default is use gzip -4; but if you want higher compression, set compression_opts to higher values (6-7).
         """
-
+        if mode is None:
+            if "compression" in self.newDsetArgDict:
+                self.newDsetArgDict.pop("compression")
+            if "compression_opts" in self.newDsetArgDict:
+                self.newDsetArgDict.pop("compression_opts")
+            return
         self.newDsetArgDict["compression"] = mode
         if compression_opts is not None:
             self.newDsetArgDict["compression_opts"] = compression_opts
