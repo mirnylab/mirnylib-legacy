@@ -477,7 +477,7 @@ def coarsegrain(array, size, extendEdge=False):
     for axInd, axSize in enumerate(size):
         N = array.shape[axInd]
         if not extendEdge:
-            array = sliceAlongAxis(array, slice(0, (N / axSize) * axSize), axInd)
+            array = sliceAlongAxis(array, slice(0, (N // axSize) * axSize), axInd)
         M = int(np.ceil(array.shape[axInd] / float(axSize)))
         arShape = list(array.shape)
         arShape[axInd] = M
