@@ -276,6 +276,7 @@ def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1,
                                     tolerance=1e-5):
     """Main method for correcting DS and SS read data. Possibly excludes diagonal.
     By default does iterative correction, but can perform an M-time correction"""
+    print("Hi")
     if M == None:
         M = 599
     totalBias = np.ones(len(x),float)
@@ -286,13 +287,16 @@ def ultracorrectSymmetricWithVector(x,v = None,M=None,diag = -1,
     v = np.array(v,float,order = "C")
     cdef int i , j, N
     N = len(x)
-    for iternum in xrange(M):
+
+    for iternum in range(M):
         s0 = np.sum(_x,axis = 1)
-        mask = [s0 == 0]
+
+        mask = s0 == 0
+
         v[mask] = 0   #no SS reads if there are no DS reads here
         nv = v / (totalBias * (totalBias[mask==False]).mean())
         s = s0 + nv
-        for dd in xrange(diag + 1):   #excluding the diagonal
+        for dd in range(diag + 1):   #excluding the diagonal
             if dd == 0:
                 s -= np.diagonal(_x)
             else:

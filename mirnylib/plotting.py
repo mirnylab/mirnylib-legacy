@@ -31,7 +31,7 @@ try:
 except:
     pass
 
-matplotlib.rcParams['pdf.fonttype'] = 42
+#matplotlib.rcParams['pdf.fonttype'] = 42
 
 
 

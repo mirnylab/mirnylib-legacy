@@ -24,7 +24,6 @@ import logging
 from functools import reduce
 log = logging.getLogger(__name__)
 
-print("hi")
 
 def commandExists(command):
     "checks if the bash command exists"

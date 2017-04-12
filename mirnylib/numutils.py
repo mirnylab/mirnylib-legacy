@@ -9,11 +9,11 @@ import scipy.ndimage.interpolation
 from scipy.stats.stats import pearsonr
 from . import systemutils
 if os.name != "nt":
-    from .numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
-    from .numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
-    from .numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
-    from .numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
-    from . import numutils_new
+    from mirnylib.numutils_new import _arrayInArray  # @UnresolvedImport @IgnorePep8
+    from mirnylib.numutils_new import fasterBooleanIndexing  # @UnresolvedImport @IgnorePep8
+    from mirnylib.numutils_new import fakeCisImpl  # @UnresolvedImport @IgnorePep8
+    from mirnylib.numutils_new import _arraySumByArray  # @UnresolvedImport @IgnorePep8
+    from mirnylib import numutils_new
 
 from scipy.ndimage.filters import  gaussian_filter
 na = np.array
@@ -431,7 +431,7 @@ def zoomArray(inArray, finalShape, sameSum=False, **zoomKwargs):
         if mult != 1:
             sh = list(rescaled.shape)
             assert sh[ind] % mult == 0
-            newshape = sh[:ind] + [sh[ind] / mult, mult] + sh[ind+1:]
+            newshape = sh[:ind] + [sh[ind] // mult, mult] + sh[ind+1:]
             rescaled.shape = newshape
             rescaled = np.mean(rescaled, axis = ind+1)
     assert rescaled.shape == finalShape
