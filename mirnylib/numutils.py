@@ -1455,8 +1455,8 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
         Check that values in rows/columns represent actual reads,
         and the sum over rows/columns exceeds minimumSum""")
 
-    hmc[-mask] = 0
-    hmc[:, -mask] = 0
+    hmc[~mask] = 0
+    hmc[:, ~mask] = 0
     if hmc.sum() == 0:
         if returnBias:
             return np.zeros_like(hm), np.zeros(len(hm))
@@ -1468,8 +1468,8 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
     dmean = np.median(np.diagonal(hm, diagsToRemove))
     for t in range(-diagsToRemove + 1, diagsToRemove):
         fillDiagonal(hm, dmean, t)
-    hm[-mask] = 0
-    hm[:, -mask] = 0
+    hm[~mask] = 0
+    hm[:, ~mask] = 0
 
     if returnBias:
         return hm, bias
