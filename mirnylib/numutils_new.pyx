@@ -81,31 +81,23 @@ def fakeCisImpl(np.ndarray[np.double_t, ndim = 2] data, np.ndarray[np.int64_t,nd
                             data[j,i] = data[j,s]
 
 
-def logbins(a, b, pace, N_in=0):
-    "create log-spaced bins"
+
+def logbinsnew(a, b, ratio=0, N=0):
     a = int(a)
     b = int(b)
-    beg = log(a)
-    end = log(b - 1)
-    pace = log(pace)
-    N = int((end - beg) / pace)
-
-    if N_in != 0: N = N_in
-    if N_in > (b-a):
-        raise ValueError("Cannot create more bins than elements")
-    else:
-        N = (b-a)
-
-    pace = (end - beg) / N
-    mas = np.arange(beg, end + 0.000000001, pace)
-    ret = np.exp(mas)
-    surpass = np.arange(a,a+N)
-    replace = surpass > ret[:N]-1
-    ret[replace] = surpass
-    ret = np.array(ret, dtype = np.int)
-    ret[-1] = b
-    return list(ret)
-
+    a10, b10 = np.log10([a, b])
+    if ratio != 0:
+        if N != 0:
+            raise ValueError("Please specify N or ratio")
+        N = np.log(b / a) / np.log(ratio)
+    elif N == 0:
+        raise ValueError("Please specify N or ratio")
+    data10 = np.logspace(a10, b10, N)
+    data10 = np.array(np.rint(data10), dtype=int)
+    data10 = np.sort(np.unique(data10))
+    assert data10[0] == a
+    assert data10[-1] == b
+    return data10
 
 
 
@@ -464,7 +456,7 @@ def observedOverExpected(matrix):
     N = _data.shape[0]
 
     cdef np.ndarray[np.double_t, ndim = 2] data = _data
-    _bins = logbins(1,N,1.05)
+    _bins = logbinsnew(1,N,1.03)
     _bins = [(0,1)] + [(_bins[i],_bins[i+1]) for i in xrange(len(_bins)-1)]
     _bins = np.array(_bins,dtype = np.int64, order = "C")
     cdef np.ndarray[np.int64_t, ndim = 2] bins = _bins
@@ -510,7 +502,7 @@ def observedOverExpectedWithMask(matrix,mask):
 
     cdef np.ndarray[np.double_t, ndim = 2] datamask = _datamask
 
-    _bins = logbins(1,N,1.05)
+    _bins = logbinsnew(1,N,1.03)
     _bins = [(0,1)] + [(_bins[i],_bins[i+1]) for i in xrange(len(_bins)-1)]
     _bins = np.array(_bins,dtype = np.int64, order = "C")
     cdef np.ndarray[np.int64_t, ndim = 2] bins = _bins
@@ -560,7 +552,7 @@ def calculateExpectedWithMask(matrix,mask):
 
     cdef np.ndarray[np.double_t, ndim = 2] datamask = _datamask
 
-    _bins = logbins(1,N,1.05)
+    _bins = logbinsnew(1,N,1.03)
     _bins = [(0,1)] + [(_bins[i],_bins[i+1]) for i in xrange(len(_bins)-1)]
     _bins = np.array(_bins,dtype = np.int64, order = "C")
     cdef np.ndarray[np.int64_t, ndim = 2] bins = _bins

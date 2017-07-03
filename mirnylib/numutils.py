@@ -410,30 +410,66 @@ def trimZeros(x):
     return x[ax1.min():ax1.max() + 1, ax2.min(): ax2.max() + 1]
 
 
+def zoomArray(inArray, finalShape, sameSum=False,
+              zoomFunction=scipy.ndimage.zoom, **zoomKwargs):
+    """
 
-def zoomArray(inArray, finalShape, sameSum=False, **zoomKwargs):
-    inArray = np.asarray(inArray, dtype = np.double)
+    Normally, one can use scipy.ndimage.zoom to do array/image rescaling.
+    However, scipy.ndimage.zoom does not coarsegrain images well. It basically
+    takes nearest neighbor, rather than averaging all the pixels, when
+    coarsegraining arrays. This increases noise. Photoshop doesn't do that, and
+    performs some smart interpolation-averaging instead.
+
+    If you were to coarsegrain an array by an integer factor, e.g. 100x100 ->
+    25x25, you just need to do block-averaging, that's easy, and it reduces
+    noise. But what if you want to coarsegrain 100x100 -> 30x30?
+
+    Then my friend you are in trouble. But this function will help you. This
+    function will blow up your 100x100 array to a 120x120 array using
+    scipy.ndimage zoom Then it will coarsegrain a 120x120 array by
+    block-averaging in 4x4 chunks.
+
+    It will do it independently for each dimension, so if you want a 100x100
+    array to become a 60x120 array, it will blow up the first and the second
+    dimension to 120, and then block-average only the first dimension.
+
+    Parameters
+    ----------
+
+    inArray: n-dimensional numpy array (1D also works)
+    finalShape: resulting shape of an array
+    sameSum: bool, preserve a sum of the array, rather than values.
+             by default, values are preserved
+    zoomFunction: by default, scipy.ndimage.zoom. You can plug your own.
+    zoomKwargs:  a dict of options to pass to zoomFunction.
+    """
+    inArray = np.asarray(inArray, dtype=np.double)
     inShape = inArray.shape
     assert len(inShape) == len(finalShape)
-    mults = []
+    mults = []  # multipliers for the final coarsegraining
     for i in range(len(inShape)):
         if finalShape[i] < inShape[i]:
-            mults.append(int(np.ceil(inShape[i]/finalShape[i])))
+            mults.append(int(np.ceil(inShape[i] / finalShape[i])))
         else:
             mults.append(1)
-    tempShape = tuple([i * j for i,j in zip(finalShape, mults)])
+    # shape to which to blow up
+    tempShape = tuple([i * j for i, j in zip(finalShape, mults)])
 
+    # stupid zoom doesn't accept the final shape. Carefully crafting the
+    # multipliers to make sure that it will work.
     zoomMultipliers = np.array(tempShape) / np.array(inShape) + 0.0000001
     assert zoomMultipliers.min() >= 1
-    rescaled = zoom(inArray, zoomMultipliers, **zoomKwargs)
+
+    # applying scipy.ndimage.zoom
+    rescaled = zoomFunction(inArray, zoomMultipliers, **zoomKwargs)
 
     for ind, mult in enumerate(mults):
         if mult != 1:
             sh = list(rescaled.shape)
             assert sh[ind] % mult == 0
-            newshape = sh[:ind] + [sh[ind] // mult, mult] + sh[ind+1:]
+            newshape = sh[:ind] + [sh[ind] // mult, mult] + sh[ind + 1:]
             rescaled.shape = newshape
-            rescaled = np.mean(rescaled, axis = ind+1)
+            rescaled = np.mean(rescaled, axis=ind + 1)
     assert rescaled.shape == finalShape
 
     if sameSum:
