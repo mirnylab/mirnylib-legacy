@@ -20,7 +20,7 @@ ctypedef unsigned char uchar
 
 
 from libcpp.string cimport string
-
+from libc.math cimport isnan
 
 
 cdef extern from "<sstream>" namespace "std":
@@ -448,37 +448,38 @@ def ultracorrectSymmetricByMask(x, mask, M=None, tolerance=1e-5):
 @cython.wraparound(False)
 @cython.cdivision(True)
 def observedOverExpected(matrix):
-    "Calculates observedOverExpected of any contact map"
-    cdef int i, j, bin, start, end, count, offset
-    cdef double ss, meanss
+    "Calculates observedOverExpected of any contact map. Ignores NaNs"
 
-    _data = np.array(matrix, dtype = np.double, order = "C")
-    N = _data.shape[0]
+    cdef int i, j, k, start, end, count, offset
+    cdef double x, ss, meanss
 
-    cdef np.ndarray[np.double_t, ndim = 2] data = _data
-    _bins = logbinsnew(1,N,1.03)
-    _bins = [(0,1)] + [(_bins[i],_bins[i+1]) for i in xrange(len(_bins)-1)]
-    _bins = np.array(_bins,dtype = np.int64, order = "C")
-    cdef np.ndarray[np.int64_t, ndim = 2] bins = _bins
-    cdef int M = len(bins)
-
-    for bin in range(M):
-        start = bins[bin,0]
-        end  = bins[bin,1]
+    cdef np.ndarray[np.double_t, ndim=2] data = np.array(matrix, dtype=np.double, order="C")
+    cdef int N = data.shape[0]
+    
+    _bins = logbinsnew(1, N, 1.03)
+    _bins = [(0, 1)] + [(_bins[i], _bins[i+1]) for i in range(len(_bins) - 1)]
+    cdef np.ndarray[np.int64_t, ndim=2] bins = np.array(_bins, dtype=np.int64, order="C")
+    cdef int M = bins.shape[0]
+    
+    for k in range(M):
+        start, end = bins[k, 0], bins[k, 1]
         ss = 0
         count = 0
-        for offset in range(start,end):
-            for j in range(0,N-offset):
-                ss += data[offset+j, j]
+        for offset in range(start, end):
+            for j in range(0, N - offset):
+                x = data[offset + j, j]
+                if isnan(x):
+                    continue
+                ss += x
                 count += 1
-        #print start, end, count
+        
         meanss = ss / count
         if meanss != 0:
             for offset in range(start,end):
                 for j in range(0,N-offset):
                     data[offset + j, j] /= meanss
-                    if offset > 0: data[j,offset+j] /= meanss
-    return _data
+                    if offset > 0: data[j, offset+j] /= meanss
+    return data
 
 
 @cython.boundscheck(False)
