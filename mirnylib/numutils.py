@@ -770,42 +770,6 @@ def corr2d(x):
     return np.real(np.fft.ifft2(t * np.conjugate(t)))
 
 
-def logbins(a, b, pace=0, N_in=0):
-    """Create log-spaced bins.
-
-    Parameters
-    ----------
-    a, b : int
-        the range of the bins
-    pace : float
-        approximate multiplier for each bin. Specify this or `N_in`.
-    N_in : int
-        number of bins. Specify this or `pace`.
-
-    """
-    a = int(a)
-    b = int(b)
-    beg = log(a)
-    end = log(b - 1)
-    if pace != 0:
-        pace = log(pace)
-        N = int((end - beg) / pace)
-        pace = (end - beg) / N
-    elif N_in != 0:
-        N = N_in
-        pace = (end - beg) / N
-    else:
-        raise ValueError("Specify either pace or N_in")
-    if N > (b - a):
-        raise ValueError("Cannot create more bins than elements")
-    mas = np.arange(beg, end + 0.000000001, pace)
-    ret = np.exp(mas)
-    surpass = np.arange(a, a + N)
-    replace = surpass > ret[:N] - 1
-    ret[replace] = surpass
-    ret = np.array(ret, dtype=np.int)
-    ret[-1] = b
-    return list(ret)
 
 
 def logbinsnew(a, b, ratio=0, N=0):
@@ -824,7 +788,7 @@ def logbinsnew(a, b, ratio=0, N=0):
     assert data10[0] == a
     assert data10[-1] == b
     return data10
-
+logbins = logbinsnew
 
 def averageOverBins(bins, function, maxEvaluations=10):
     """averages a function over bins, evaluating the function no more than maxEvaluations between any two pairs of bins
