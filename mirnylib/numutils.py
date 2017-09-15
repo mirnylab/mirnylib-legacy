@@ -1073,10 +1073,10 @@ def adaptiveSmoothing(matrix, cutoff, alpha="deprecated",  # @UnusedVariable
         if not silent:
             print(value)
 
-        test = np.zeros((8 * value, 8 * value), dtype=float)
-        test[4 * value, 4 * value] = 1
+        test = np.zeros((int(8 * value), int(8 * value)), dtype=float)
+        test[int(4 * value), int(4 * value)] = 1
         stest = gaussian_filter(test, value)
-        stest /= stest[4 * value, 4 * value]
+        stest /= stest[int(4 * value), int(4 * value)]
         norm = stest.sum()
 
         smoothed = gaussian_filter(1. * originalCounts, value) * norm
