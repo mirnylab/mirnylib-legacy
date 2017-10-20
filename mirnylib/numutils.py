@@ -1138,7 +1138,7 @@ def PCA(A, numPCs=6, verbose=False):
     if np.sum(np.sum(A, axis=0) == 0) > 0 :
         warnings.warn("Columns with zero sum detected. Use zeroPCA instead")
     if np.sum(np.isnan(A)) > 0:
-        warnings.warn('NaNs detected! could be bad!')
+        raise ValueError("NaNs detected in input matrix!")
     M = (A - np.mean(A.T, axis=1)).T
     covM = np.dot(M, M.T)
     [latent, coeff] = scipy.sparse.linalg.eigsh(covM, numPCs)
