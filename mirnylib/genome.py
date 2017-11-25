@@ -688,6 +688,7 @@ class Genome(object):
     def getUnmappedBases(self, chrmIdx, start, end):
         "Calculate the percentage of unmapped base pairs in a region."
         seq = self.seqs[chrmIdx][start:end]
+        seq.seq = seq
         if len(seq.seq) == 0:
             return 0.0
         else:
@@ -699,6 +700,7 @@ class Genome(object):
         are no mapped base pairs, return 50%.
         """
         seq = self.seqs[chrmIdx][start:end]
+        seq.seq = seq
         overall_GC = Bio.SeqUtils.GC(seq.seq)
         unmapped_content = self.getUnmappedBases(chrmIdx, start, end)
 
