@@ -688,20 +688,26 @@ class Genome(object):
     def getUnmappedBases(self, chrmIdx, start, end):
         "Calculate the percentage of unmapped base pairs in a region."
         seq = self.seqs[chrmIdx][start:end]
-        seq.seq = seq
-        if len(seq.seq) == 0:
+        if hasattr(seq, "seq"):
+            myseq = seq.seq
+        else:
+            myseq = seq 
+        if len(myseq) == 0:
             return 0.0
         else:
-            return (100.0 * (seq.seq.count('N') + seq.seq.count('n'))
-                    / float(len(seq.seq)))
+            return (100.0 * (myseq.count('N') + myseq.count('n'))
+                    / float(len(myseq)))
 
     def getGC(self, chrmIdx, start, end):
         """Calculate the GC content of the mapped part of a region. If there
         are no mapped base pairs, return 50%.
         """
         seq = self.seqs[chrmIdx][start:end]
-        seq.seq = seq
-        overall_GC = Bio.SeqUtils.GC(seq.seq)
+        if hasattr(seq, "seq"):
+            myseq = seq.seq
+        else:
+            myseq = seq 
+        overall_GC = Bio.SeqUtils.GC(myseq)
         unmapped_content = self.getUnmappedBases(chrmIdx, start, end)
 
         if unmapped_content == 100.0:
