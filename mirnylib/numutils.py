@@ -1430,7 +1430,7 @@ def completeIC(hm, minimumSum=40, diagsToRemove=2, returnBias=False, minimumNumb
             return np.zeros_like(hm), np.zeros(len(hm)), np.zeros(len(hm))
         return np.zeros_like(hm)
 
-    hm, bias = iterativeCorrection(hmc, skipDiags=1)
+    hm, bias = iterativeCorrection(hmc, skipDiags=diagsToRemove)
     dmean = np.median(np.diagonal(hm, diagsToRemove))
     for t in range(-diagsToRemove + 1, diagsToRemove):
         fillDiagonal(hm, dmean, t)
