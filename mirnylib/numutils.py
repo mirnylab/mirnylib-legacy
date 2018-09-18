@@ -22,6 +22,13 @@ import scipy.stats
 from scipy.ndimage.interpolation import zoom
 from math import cos, log, sin, sqrt
 
+try:
+    import mkl
+    mkl.set_num_threads(1)
+except:
+    pass 
+
+
 #-----------------------------
 "Mathematical & programming utilities first"
 #-----------------------------
