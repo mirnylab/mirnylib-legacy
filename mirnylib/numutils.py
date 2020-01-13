@@ -53,20 +53,8 @@ def generalizedDtype(inObject):
     complex -> complex
 
     """
-    if type(inObject) == type:
-        inObject = np.dtype(inObject)
-    if issubclass(type(inObject), np.ndarray):
-        inObject = inObject.dtype
-    if type(inObject) is not np.dtype:
-        inObject = np.array(inObject).dtype
-    if np.issubdtype(inObject, np.complex):
-        return np.complex
-    if np.issubdtype(inObject, np.float):
-        return np.double
-    if np.issubdtype(inObject, np.int):
-        return np.int
-    if np.issubdtype(inObject, np.bool):
-        return np.int
+    obj = np.asarray(inObject)
+    return obj.dtype
 
     raise ValueError("Data  type not supported")
 
@@ -100,7 +88,7 @@ def isInteger(inputData):
         pass
 
     inputData = np.asarray(inputData)
-    if generalizedDtype(inputData) == np.int:
+    if np.issubdtype(inputData.dtype, np.integer):
         return True
 
     # checking if variance of the data is significantly less than 1
@@ -124,46 +112,7 @@ def isSymmetric(inMatrix):
     return varDif < fastMatrixSTD(inMatrix) * 0.0000001 + 0.00001
 
 
-def _testMatrixUtils():
-    print("Testing isSymmetric")
-    a = np.random.randint(0, 1000, (1000, 1000))
-    assert not isSymmetric(a)
-    b = a + a.T
-    assert isSymmetric(b)
-    b = (b ** 0.01) ** 100
-    assert isSymmetric(b)
-    b[0] += 0.001
-    assert not isSymmetric(b)
-    print("Finished testing isSymmetric, test successful")
-    print()
-    print("Testing isInteger")
-    assert isInteger(1)
-    assert isInteger(0)
-    assert isInteger(np.zeros(100, int))
-    assert isInteger(np.zeros(100, float))
-    assert isInteger(np.zeros(100, float) + np.random.random(100) * 1e-10)
-    assert isInteger(True)
-    assert isInteger(1.)
-    assert isInteger(np.sqrt(3) ** 2)
-    assert isInteger([1, 2, 3, 4, 5])
-    assert isInteger(1.00000000000000000001)
-    myarray = np.random.randint(0, 10000, 1000000)
-    assert isInteger(myarray)
-    myarray = myarray * 1.
-    assert isInteger(myarray)
-    myarray = (myarray ** 0.01) ** 100
-    assert isInteger(myarray)
-    myarray[1] += 0.01
-    assert not isInteger(myarray)
-    print("finished testing isInteger")
-    print()
-    print("testing generalizedDtype")
-    assert generalizedDtype([1, 2]) == np.int
-    assert generalizedDtype([1., 2.]) == np.double
-    assert generalizedDtype([True, False]) == np.int
-    assert generalizedDtype(np.float16) == np.double
-    assert generalizedDtype(np.int8) == np.int
-    print("All tests finished successfully!")
+
 
 
 def openmpSum(in_array):
@@ -189,7 +138,7 @@ def zerorank(x, zerovalue = 0):
     ret[mask] = rank(x[mask])
     xsort = np.sort(x)
     zerorank = np.searchsorted(xsort, 0)
-    ret[-mask] = zerorank
+    ret[~mask] = zerorank
     return ret
 
 
@@ -509,7 +458,7 @@ def coarsegrain(array, size, extendEdge=False):
         coarsegrain(np.ones(10), 3, False) = [3,3,3]
 
     """
-    array = np.asarray(array, dtype=generalizedDtype(array.dtype))
+    array = np.asarray(array)
     if type(size) != tuple:
         try:
             size = int(size)
@@ -524,7 +473,7 @@ def coarsegrain(array, size, extendEdge=False):
         M = int(np.ceil(array.shape[axInd] / float(axSize)))
         arShape = list(array.shape)
         arShape[axInd] = M
-        newarray = np.zeros(tuple(arShape), dtype=generalizedDtype(array.dtype))
+        newarray = np.zeros(tuple(arShape), dtype=array.dtype)
         for st in range(axSize):
             addition = sliceAlongAxis(array, slice(st, None, axSize), axInd)
             oldArrayPart = sliceAlongAxis(newarray, slice(None, addition.shape[axInd]), axInd)
@@ -1541,18 +1490,52 @@ def __testZoomCoarsegrain():
         assert ar1.shape == ar2.shape
         print (np.var(ar1), np.var(ar2))
         print (np.mean(ar1), np.mean(ar2))
-
+        
+def _testMatrixUtils():
+    print("Testing isSymmetric")
+    a = np.random.randint(0, 1000, (1000, 1000))
+    assert not isSymmetric(a)
+    b = a + a.T
+    assert isSymmetric(b)
+    b = (b ** 0.01) ** 100
+    assert isSymmetric(b)
+    b[0] += 0.001
+    assert not isSymmetric(b)
+    print("Finished testing isSymmetric, test successful")
+    print()
+    print("Testing isInteger")
+    assert isInteger(1)
+    assert isInteger(0)
+    assert isInteger(np.zeros(100, int))
+    assert isInteger(np.zeros(100, float))
+    assert isInteger(np.zeros(100, float) + np.random.random(100) * 1e-10)
+    assert isInteger(True)
+    assert isInteger(1.)
+    assert isInteger(np.sqrt(3) ** 2)
+    assert isInteger([1, 2, 3, 4, 5])
+    assert isInteger(1.00000000000000000001)
+    myarray = np.random.randint(0, 10000, 1000000)
+    assert isInteger(myarray)
+    myarray = myarray * 1.
+    assert isInteger(myarray)
+    myarray = (myarray ** 0.01) ** 100
+    assert isInteger(myarray)
+    myarray[1] += 0.01
+    assert not isInteger(myarray)
+    print("finished testing isInteger")
+    print()
+    print("All tests finished successfully!")
 
 def _test():
+    _testMatrixUtils()
     __testZoomCoarsegrain()
     __testUnique()
     _testChunkedBincount()
+    _testProjectOnEigenvectors()
+    _testRank()
     _testArraySumByArray()
     _testArayInArray()
     _testExternalSort()
-    _testMatrixUtils()
-    _testProjectOnEigenvectors()
-    _testRank()
 
 if __name__ == "__main__":
     _test()
